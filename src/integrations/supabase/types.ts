@@ -204,6 +204,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      initialize_platform: {
+        Args: {
+          p_client_code: string
+          p_company_email?: string
+          p_company_name: string
+          p_company_phone?: string
+          p_full_name?: string
+          p_user_email?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       platform_initialized: { Args: never; Returns: boolean }
     }

@@ -108,69 +108,21 @@ export default function Setup() {
     }
 
     try {
-      // Create the first client
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .insert({
-          client_code: clientCode.toUpperCase(),
-          company_name: companyName,
-          email: companyEmail || null,
-          phone: companyPhone || null,
-          is_active: true,
-        })
-        .select()
-        .single();
+      // Use atomic initialize_platform function to bypass RLS
+      const { data, error } = await supabase.rpc('initialize_platform', {
+        p_user_id: userId,
+        p_client_code: clientCode.toUpperCase(),
+        p_company_name: companyName,
+        p_company_email: companyEmail || null,
+        p_company_phone: companyPhone || null,
+        p_full_name: fullName,
+        p_user_email: email,
+      });
 
-      if (clientError) {
-        toast.error(clientError.message);
+      if (error) {
+        toast.error(error.message);
         setSubmitting(false);
         return;
-      }
-
-      // Create profile for super admin
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          client_id: clientData.id,
-          full_name: fullName,
-          email: email,
-          is_active: true,
-        });
-
-      if (profileError) {
-        toast.error('Failed to create profile: ' + profileError.message);
-        setSubmitting(false);
-        return;
-      }
-
-      // Assign super_admin role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role: 'super_admin',
-        });
-
-      if (roleError) {
-        toast.error('Failed to assign role: ' + roleError.message);
-        setSubmitting(false);
-        return;
-      }
-
-      // Create default main branch
-      const { error: branchError } = await supabase
-        .from('branches')
-        .insert({
-          client_id: clientData.id,
-          branch_code: 'MAIN',
-          branch_name: 'Main Branch',
-          branch_type: 'main_branch',
-          is_active: true,
-        });
-
-      if (branchError) {
-        console.error('Branch creation error:', branchError);
       }
 
       localStorage.removeItem('setup_user_id');
