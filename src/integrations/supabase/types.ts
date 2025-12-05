@@ -113,6 +113,290 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          address: string | null
+          alternate_phone: string | null
+          branch_id: string
+          city: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          customer_code: string
+          date_of_birth: string | null
+          email: string | null
+          full_name: string
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          id: string
+          id_number: string | null
+          id_proof_url: string | null
+          id_type: Database["public"]["Enums"]["id_proof_type"] | null
+          is_active: boolean | null
+          monthly_income: number | null
+          occupation: string | null
+          phone: string
+          photo_url: string | null
+          pincode: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          alternate_phone?: string | null
+          branch_id: string
+          city?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_code: string
+          date_of_birth?: string | null
+          email?: string | null
+          full_name: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          id_number?: string | null
+          id_proof_url?: string | null
+          id_type?: Database["public"]["Enums"]["id_proof_type"] | null
+          is_active?: boolean | null
+          monthly_income?: number | null
+          occupation?: string | null
+          phone: string
+          photo_url?: string | null
+          pincode?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          alternate_phone?: string | null
+          branch_id?: string
+          city?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_code?: string
+          date_of_birth?: string | null
+          email?: string | null
+          full_name?: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          id_number?: string | null
+          id_proof_url?: string | null
+          id_type?: Database["public"]["Enums"]["id_proof_type"] | null
+          is_active?: boolean | null
+          monthly_income?: number | null
+          occupation?: string | null
+          phone?: string
+          photo_url?: string | null
+          pincode?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gold_items: {
+        Row: {
+          appraised_value: number
+          created_at: string | null
+          description: string | null
+          gross_weight_grams: number
+          id: string
+          image_url: string | null
+          item_type: Database["public"]["Enums"]["gold_item_type"]
+          loan_id: string
+          market_rate_per_gram: number
+          net_weight_grams: number
+          purity: Database["public"]["Enums"]["gold_purity"]
+          purity_percentage: number
+          stone_weight_grams: number | null
+        }
+        Insert: {
+          appraised_value: number
+          created_at?: string | null
+          description?: string | null
+          gross_weight_grams: number
+          id?: string
+          image_url?: string | null
+          item_type: Database["public"]["Enums"]["gold_item_type"]
+          loan_id: string
+          market_rate_per_gram: number
+          net_weight_grams: number
+          purity: Database["public"]["Enums"]["gold_purity"]
+          purity_percentage: number
+          stone_weight_grams?: number | null
+        }
+        Update: {
+          appraised_value?: number
+          created_at?: string | null
+          description?: string | null
+          gross_weight_grams?: number
+          id?: string
+          image_url?: string | null
+          item_type?: Database["public"]["Enums"]["gold_item_type"]
+          loan_id?: string
+          market_rate_per_gram?: number
+          net_weight_grams?: number
+          purity?: Database["public"]["Enums"]["gold_purity"]
+          purity_percentage?: number
+          stone_weight_grams?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gold_items_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          appraised_by: string | null
+          approved_by: string | null
+          branch_id: string
+          client_id: string
+          closed_date: string | null
+          closure_type: Database["public"]["Enums"]["closure_type"] | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          id: string
+          interest_rate: number
+          loan_date: string
+          loan_number: string
+          maturity_date: string
+          net_disbursed: number
+          principal_amount: number
+          processing_fee: number | null
+          remarks: string | null
+          scheme_id: string
+          status: Database["public"]["Enums"]["loan_status"]
+          tenure_days: number
+          updated_at: string | null
+        }
+        Insert: {
+          appraised_by?: string | null
+          approved_by?: string | null
+          branch_id: string
+          client_id: string
+          closed_date?: string | null
+          closure_type?: Database["public"]["Enums"]["closure_type"] | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          interest_rate: number
+          loan_date?: string
+          loan_number: string
+          maturity_date: string
+          net_disbursed: number
+          principal_amount: number
+          processing_fee?: number | null
+          remarks?: string | null
+          scheme_id: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          tenure_days: number
+          updated_at?: string | null
+        }
+        Update: {
+          appraised_by?: string | null
+          approved_by?: string | null
+          branch_id?: string
+          client_id?: string
+          closed_date?: string | null
+          closure_type?: Database["public"]["Enums"]["closure_type"] | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          interest_rate?: number
+          loan_date?: string
+          loan_number?: string
+          maturity_date?: string
+          net_disbursed?: number
+          principal_amount?: number
+          processing_fee?: number | null
+          remarks?: string | null
+          scheme_id?: string
+          status?: Database["public"]["Enums"]["loan_status"]
+          tenure_days?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_appraised_by_fkey"
+            columns: ["appraised_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_scheme_id_fkey"
+            columns: ["scheme_id"]
+            isOneToOne: false
+            referencedRelation: "schemes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -170,6 +454,74 @@ export type Database = {
           },
         ]
       }
+      schemes: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          grace_period_days: number | null
+          id: string
+          interest_rate: number
+          is_active: boolean | null
+          ltv_percentage: number
+          max_amount: number
+          max_tenure_days: number
+          min_amount: number
+          min_tenure_days: number
+          penalty_rate: number | null
+          processing_fee_percentage: number | null
+          scheme_code: string
+          scheme_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          grace_period_days?: number | null
+          id?: string
+          interest_rate: number
+          is_active?: boolean | null
+          ltv_percentage?: number
+          max_amount?: number
+          max_tenure_days?: number
+          min_amount?: number
+          min_tenure_days?: number
+          penalty_rate?: number | null
+          processing_fee_percentage?: number | null
+          scheme_code: string
+          scheme_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          grace_period_days?: number | null
+          id?: string
+          interest_rate?: number
+          is_active?: boolean | null
+          ltv_percentage?: number
+          max_amount?: number
+          max_tenure_days?: number
+          min_amount?: number
+          min_tenure_days?: number
+          penalty_rate?: number | null
+          processing_fee_percentage?: number | null
+          scheme_code?: string
+          scheme_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schemes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -218,6 +570,10 @@ export type Database = {
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       platform_initialized: { Args: never; Returns: boolean }
+      user_has_branch_access: {
+        Args: { _branch_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:
@@ -230,6 +586,26 @@ export type Database = {
         | "collection_agent"
         | "auditor"
       branch_type: "main_branch" | "company_owned" | "franchise" | "tenant"
+      closure_type: "redeemed" | "auctioned" | "written_off"
+      gender_type: "male" | "female" | "other"
+      gold_item_type:
+        | "necklace"
+        | "chain"
+        | "bangle"
+        | "ring"
+        | "earring"
+        | "pendant"
+        | "coin"
+        | "bar"
+        | "other"
+      gold_purity: "24k" | "22k" | "20k" | "18k" | "14k"
+      id_proof_type:
+        | "aadhaar"
+        | "pan"
+        | "voter_id"
+        | "passport"
+        | "driving_license"
+      loan_status: "active" | "closed" | "overdue" | "auctioned"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -368,6 +744,28 @@ export const Constants = {
         "auditor",
       ],
       branch_type: ["main_branch", "company_owned", "franchise", "tenant"],
+      closure_type: ["redeemed", "auctioned", "written_off"],
+      gender_type: ["male", "female", "other"],
+      gold_item_type: [
+        "necklace",
+        "chain",
+        "bangle",
+        "ring",
+        "earring",
+        "pendant",
+        "coin",
+        "bar",
+        "other",
+      ],
+      gold_purity: ["24k", "22k", "20k", "18k", "14k"],
+      id_proof_type: [
+        "aadhaar",
+        "pan",
+        "voter_id",
+        "passport",
+        "driving_license",
+      ],
+      loan_status: ["active", "closed", "overdue", "auctioned"],
     },
   },
 } as const
