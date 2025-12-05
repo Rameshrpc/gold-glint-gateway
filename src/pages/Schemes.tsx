@@ -30,6 +30,7 @@ interface Scheme {
   advance_interest_months: number;
   rate_per_gram: number | null;
   rate_18kt: number | null;
+  rate_22kt: number | null;
   ltv_percentage: number;
   processing_fee_percentage: number | null;
   penalty_rate: number | null;
@@ -58,6 +59,7 @@ export default function Schemes() {
   const [advanceInterestMonths, setAdvanceInterestMonths] = useState('3');
   const [ratePerGram, setRatePerGram] = useState('');
   const [rate18kt, setRate18kt] = useState('');
+  const [rate22kt, setRate22kt] = useState('');
   const [minAmount, setMinAmount] = useState('1000');
   const [maxAmount, setMaxAmount] = useState('10000000');
   const [minTenureDays, setMinTenureDays] = useState('30');
@@ -104,6 +106,7 @@ export default function Schemes() {
     setAdvanceInterestMonths('3');
     setRatePerGram('');
     setRate18kt('');
+    setRate22kt('');
     setMinAmount('1000');
     setMaxAmount('10000000');
     setMinTenureDays('30');
@@ -132,6 +135,7 @@ export default function Schemes() {
     setAdvanceInterestMonths(scheme.advance_interest_months?.toString() || '3');
     setRatePerGram(scheme.rate_per_gram?.toString() || '');
     setRate18kt(scheme.rate_18kt?.toString() || '');
+    setRate22kt(scheme.rate_22kt?.toString() || '');
     setMinAmount(scheme.min_amount.toString());
     setMaxAmount(scheme.max_amount.toString());
     setMinTenureDays(scheme.min_tenure_days.toString());
@@ -161,6 +165,7 @@ export default function Schemes() {
         advance_interest_months: parseInt(advanceInterestMonths) || 3,
         rate_per_gram: parseFloat(ratePerGram) || null,
         rate_18kt: parseFloat(rate18kt) || null,
+        rate_22kt: parseFloat(rate22kt) || null,
         min_amount: parseFloat(minAmount),
         max_amount: parseFloat(maxAmount),
         min_tenure_days: parseInt(minTenureDays),
@@ -367,6 +372,19 @@ export default function Schemes() {
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
+                        <Label htmlFor="rate22kt" className="text-amber-700 dark:text-amber-300 font-semibold">22KT Rate (₹/gram) *</Label>
+                        <Input
+                          id="rate22kt"
+                          type="number"
+                          value={rate22kt}
+                          onChange={(e) => setRate22kt(e.target.value)}
+                          placeholder="e.g., 5800"
+                          className="border-amber-500/50"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">Most common jewelry purity</p>
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="rate18kt" className="text-amber-700 dark:text-amber-300 font-semibold">18KT Rate (₹/gram) *</Label>
                         <Input
                           id="rate18kt"
@@ -375,19 +393,9 @@ export default function Schemes() {
                           onChange={(e) => setRate18kt(e.target.value)}
                           placeholder="e.g., 4800"
                           className="border-amber-500/50"
+                          required
                         />
-                        <p className="text-xs text-muted-foreground">Gold rate for appraisal</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="ratePerGram">Rate per Gram 24KT (₹)</Label>
-                        <Input
-                          id="ratePerGram"
-                          type="number"
-                          value={ratePerGram}
-                          onChange={(e) => setRatePerGram(e.target.value)}
-                          placeholder="e.g., 6400"
-                        />
-                        <p className="text-xs text-muted-foreground">Optional reference rate</p>
+                        <p className="text-xs text-muted-foreground">Lower purity items</p>
                       </div>
                     </div>
                   </div>

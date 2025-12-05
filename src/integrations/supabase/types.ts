@@ -727,6 +727,7 @@ export type Database = {
           penalty_rate: number | null
           processing_fee_percentage: number | null
           rate_18kt: number | null
+          rate_22kt: number | null
           rate_per_gram: number | null
           scheme_code: string
           scheme_name: string
@@ -752,6 +753,7 @@ export type Database = {
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
+          rate_22kt?: number | null
           rate_per_gram?: number | null
           scheme_code: string
           scheme_name: string
@@ -777,6 +779,7 @@ export type Database = {
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
+          rate_22kt?: number | null
           rate_per_gram?: number | null
           scheme_code?: string
           scheme_name?: string
