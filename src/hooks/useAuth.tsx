@@ -27,6 +27,7 @@ interface Branch {
   branch_code: string;
   branch_name: string;
   branch_type: string;
+  is_active: boolean;
 }
 
 interface AuthContextType {
@@ -84,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch branches
         const { data: branchesData } = await supabase
           .from('branches')
-          .select('id, branch_code, branch_name, branch_type')
+          .select('id, branch_code, branch_name, branch_type, is_active')
           .eq('client_id', profileData.client_id)
           .eq('is_active', true);
 

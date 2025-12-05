@@ -8,10 +8,15 @@ import {
   TrendingUp,
   Clock,
   AlertTriangle,
+  Building,
+  MapPin,
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
-  const { profile, client, currentBranch, roles } = useAuth();
+  const { profile, client, currentBranch, branches, roles } = useAuth();
+
+  const hasMultipleBranches = branches && branches.length > 1;
 
   const stats = [
     {
@@ -48,6 +53,16 @@ export default function Dashboard() {
     },
   ];
 
+  const getBranchTypeBadge = (type: string) => {
+    const colors: Record<string, string> = {
+      main_branch: 'bg-amber-100 text-amber-800',
+      company_owned: 'bg-blue-100 text-blue-800',
+      franchise: 'bg-green-100 text-green-800',
+      tenant: 'bg-purple-100 text-purple-800',
+    };
+    return colors[type] || 'bg-muted text-muted-foreground';
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -60,6 +75,59 @@ export default function Dashboard() {
             {client?.company_name}{currentBranch ? ` • ${currentBranch.branch_name}` : ''}
           </p>
         </div>
+
+        {/* Multi-Branch Overview Card */}
+        {hasMultipleBranches && (
+          <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Building className="h-5 w-5 text-amber-600" />
+                Branch Network Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {branches.map((branch) => (
+                  <div 
+                    key={branch.id} 
+                    className={`p-3 rounded-lg border ${
+                      currentBranch?.id === branch.id 
+                        ? 'border-amber-400 bg-amber-100/50' 
+                        : 'border-border bg-background'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{branch.branch_name}</p>
+                        <p className="text-xs text-muted-foreground font-mono">{branch.branch_code}</p>
+                      </div>
+                      <Badge 
+                        variant={branch.is_active ? 'default' : 'secondary'}
+                        className="text-xs"
+                      >
+                        {branch.is_active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge className={`${getBranchTypeBadge(branch.branch_type)} text-xs`}>
+                        {branch.branch_type.replace('_', ' ')}
+                      </Badge>
+                      {currentBranch?.id === branch.id && (
+                        <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Current
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                You have access to {branches.length} branches. Use the branch selector in the sidebar to switch between them.
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

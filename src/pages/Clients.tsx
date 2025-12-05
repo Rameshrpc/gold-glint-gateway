@@ -150,7 +150,18 @@ export default function Clients() {
       resetForm();
       fetchClients();
     } catch (error: any) {
-      toast.error(error.message || 'Operation failed');
+      // Handle specific error cases with user-friendly messages
+      if (error.code === '23505' || error.message?.includes('duplicate key')) {
+        if (error.message?.includes('client_code') || error.details?.includes('client_code')) {
+          toast.error('Client code already exists. Please use a different code.');
+        } else if (error.message?.includes('company_name') || error.details?.includes('company_name')) {
+          toast.error('A client with this company name already exists.');
+        } else {
+          toast.error('A record with this information already exists.');
+        }
+      } else {
+        toast.error(error.message || 'Operation failed');
+      }
     }
     setSubmitting(false);
   };
