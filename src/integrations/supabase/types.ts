@@ -113,8 +113,36 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_code_sequences: {
+        Row: {
+          client_id: string
+          last_sequence: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          last_sequence?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          last_sequence?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_code_sequences_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
+          aadhaar_back_url: string | null
+          aadhaar_front_url: string | null
           address: string | null
           alternate_phone: string | null
           branch_id: string
@@ -128,12 +156,14 @@ export type Database = {
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
-          id_number: string | null
-          id_proof_url: string | null
-          id_type: Database["public"]["Enums"]["id_proof_type"] | null
           is_active: boolean | null
           monthly_income: number | null
+          nominee_name: string | null
+          nominee_relation:
+            | Database["public"]["Enums"]["nominee_relation_type"]
+            | null
           occupation: string | null
+          pan_card_url: string | null
           phone: string
           photo_url: string | null
           pincode: string | null
@@ -141,6 +171,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
           address?: string | null
           alternate_phone?: string | null
           branch_id: string
@@ -154,12 +186,14 @@ export type Database = {
           full_name: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
-          id_number?: string | null
-          id_proof_url?: string | null
-          id_type?: Database["public"]["Enums"]["id_proof_type"] | null
           is_active?: boolean | null
           monthly_income?: number | null
+          nominee_name?: string | null
+          nominee_relation?:
+            | Database["public"]["Enums"]["nominee_relation_type"]
+            | null
           occupation?: string | null
+          pan_card_url?: string | null
           phone: string
           photo_url?: string | null
           pincode?: string | null
@@ -167,6 +201,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
           address?: string | null
           alternate_phone?: string | null
           branch_id?: string
@@ -180,12 +216,14 @@ export type Database = {
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
-          id_number?: string | null
-          id_proof_url?: string | null
-          id_type?: Database["public"]["Enums"]["id_proof_type"] | null
           is_active?: boolean | null
           monthly_income?: number | null
+          nominee_name?: string | null
+          nominee_relation?:
+            | Database["public"]["Enums"]["nominee_relation_type"]
+            | null
           occupation?: string | null
+          pan_card_url?: string | null
           phone?: string
           photo_url?: string | null
           pincode?: string | null
@@ -548,6 +586,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_customer_code: {
+        Args: { p_branch_code: string; p_client_id: string }
+        Returns: string
+      }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -606,6 +648,19 @@ export type Database = {
         | "passport"
         | "driving_license"
       loan_status: "active" | "closed" | "overdue" | "auctioned"
+      nominee_relation_type:
+        | "father"
+        | "mother"
+        | "spouse"
+        | "son"
+        | "daughter"
+        | "brother"
+        | "sister"
+        | "grandfather"
+        | "grandmother"
+        | "uncle"
+        | "aunt"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -766,6 +821,20 @@ export const Constants = {
         "driving_license",
       ],
       loan_status: ["active", "closed", "overdue", "auctioned"],
+      nominee_relation_type: [
+        "father",
+        "mother",
+        "spouse",
+        "son",
+        "daughter",
+        "brother",
+        "sister",
+        "grandfather",
+        "grandmother",
+        "uncle",
+        "aunt",
+        "other",
+      ],
     },
   },
 } as const
