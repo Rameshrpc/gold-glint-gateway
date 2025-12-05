@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Camera, Upload, X, Image as ImageIcon } from 'lucide-react';
@@ -16,10 +16,30 @@ interface ImageCaptureProps {
 export default function ImageCapture({ label, value, onChange, folder, clientId }: ImageCaptureProps) {
   const [uploading, setUploading] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Fetch signed URL when value changes
+  useEffect(() => {
+    const fetchSignedUrl = async () => {
+      if (value) {
+        const { data, error } = await supabase.storage
+          .from('loan-documents')
+          .createSignedUrl(value, 3600); // 1 hour expiry
+        if (data && !error) {
+          setImageUrl(data.signedUrl);
+        } else {
+          setImageUrl(null);
+        }
+      } else {
+        setImageUrl(null);
+      }
+    };
+    fetchSignedUrl();
+  }, [value]);
 
   const uploadImage = async (file: File) => {
     setUploading(true);
@@ -33,10 +53,6 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('loan-documents')
-        .getPublicUrl(filePath);
 
       onChange(filePath);
       toast.success('Image uploaded successfully');
@@ -103,11 +119,7 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
 
   const removeImage = () => {
     onChange(null);
-  };
-
-  const getImageUrl = (path: string) => {
-    const { data } = supabase.storage.from('loan-documents').getPublicUrl(path);
-    return data.publicUrl;
+    setImageUrl(null);
   };
 
   return (
@@ -133,11 +145,11 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
             </div>
           </CardContent>
         </Card>
-      ) : value ? (
+      ) : value && imageUrl ? (
         <Card className="overflow-hidden">
           <CardContent className="p-2 relative">
             <img 
-              src={getImageUrl(value)} 
+              src={imageUrl} 
               alt={label} 
               className="w-full h-48 object-cover rounded"
             />

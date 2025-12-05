@@ -545,38 +545,58 @@ export default function Loans() {
                     <Settings className="h-4 w-4 text-amber-600" />
                     Scheme Selection
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {schemes.map((scheme) => (
-                      <Card 
-                        key={scheme.id} 
-                        className={`cursor-pointer transition-all ${selectedSchemeId === scheme.id ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'hover:bg-muted/50'}`}
-                        onClick={() => { setSelectedSchemeId(scheme.id); setGoldItems([]); }}
-                      >
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
+                  <div className="space-y-3">
+                    <Select 
+                      value={selectedSchemeId} 
+                      onValueChange={(v) => { 
+                        setSelectedSchemeId(v); 
+                        setGoldItems([]); 
+                        const scheme = schemes.find(s => s.id === v);
+                        if (scheme) {
+                          setTenureDays(scheme.max_tenure_days.toString());
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select a scheme" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        {schemes.map((scheme) => (
+                          <SelectItem key={scheme.id} value={scheme.id}>
+                            {scheme.scheme_name} ({scheme.scheme_code}) - {scheme.shown_rate}% | LTV {scheme.ltv_percentage}% | 22KT: ₹{scheme.rate_22kt}/g
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    
+                    {selectedScheme && (
+                      <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/30">
+                        <CardContent className="p-3">
+                          <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm">
                             <div>
-                              <p className="font-semibold text-sm">{scheme.scheme_name}</p>
-                              <p className="text-xs text-muted-foreground">{scheme.scheme_code}</p>
+                              <p className="text-xs text-muted-foreground">Interest Rate</p>
+                              <p className="font-medium text-green-600">{selectedScheme.shown_rate}% p.a.</p>
                             </div>
-                            <Badge variant="secondary" className="text-xs">LTV {scheme.ltv_percentage}%</Badge>
-                          </div>
-                          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                             <div>
-                              <p className="text-muted-foreground">Rate</p>
-                              <p className="font-medium text-green-600">{scheme.shown_rate}% p.a.</p>
+                              <p className="text-xs text-muted-foreground">LTV</p>
+                              <p className="font-medium">{selectedScheme.ltv_percentage}%</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">22KT</p>
-                              <p className="font-medium text-amber-600">{scheme.rate_22kt ? `₹${scheme.rate_22kt}/g` : '-'}</p>
+                              <p className="text-xs text-muted-foreground">22KT Rate</p>
+                              <p className="font-medium text-amber-600">₹{selectedScheme.rate_22kt}/g</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">18KT</p>
-                              <p className="font-medium text-amber-500">{scheme.rate_18kt ? `₹${scheme.rate_18kt}/g` : '-'}</p>
+                              <p className="text-xs text-muted-foreground">18KT Rate</p>
+                              <p className="font-medium text-amber-500">₹{selectedScheme.rate_18kt}/g</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Tenure</p>
+                              <p className="font-medium">{selectedScheme.max_tenure_days} days</p>
                             </div>
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -709,19 +729,6 @@ export default function Loans() {
                       Loan Calculation
                     </h3>
 
-                    <div className="space-y-2">
-                      <Label>Tenure (days) *</Label>
-                      <Input
-                        type="number"
-                        value={tenureDays}
-                        onChange={(e) => setTenureDays(e.target.value)}
-                        placeholder={`${loanCalculation.scheme.min_tenure_days} - ${loanCalculation.scheme.max_tenure_days} days`}
-                        min={loanCalculation.scheme.min_tenure_days}
-                        max={loanCalculation.scheme.max_tenure_days}
-                        className="w-48"
-                      />
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Loan Calculation - Professional View */}
                       <Card className="border-green-500/30 bg-green-50/50 dark:bg-green-950/20">
@@ -744,6 +751,10 @@ export default function Loans() {
                             <span>Interest Rate</span>
                             <span>{loanCalculation.scheme.shown_rate}% p.a.</span>
                           </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Tenure</span>
+                            <span>{tenureDays} days</span>
+                          </div>
                           <div className="flex justify-between text-red-600">
                             <span>Less: Advance Interest ({loanCalculation.scheme.advance_interest_months} months)</span>
                             <span>-{formatIndianCurrency(loanCalculation.advanceCalc.shownInterest)}</span>
@@ -758,6 +769,15 @@ export default function Loans() {
                           <div className="flex justify-between font-bold text-lg text-green-700 dark:text-green-400">
                             <span>Net Cash to Customer</span>
                             <span>{formatIndianCurrency(loanCalculation.netCashToCustomer)}</span>
+                          </div>
+                          <Separator className="my-2" />
+                          <div className="flex justify-between text-amber-600">
+                            <span>Interest Adjustment (Added to Principal)</span>
+                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
+                          </div>
+                          <div className="flex justify-between font-bold text-amber-700">
+                            <span>Principal on Record</span>
+                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualPrincipal)}</span>
                           </div>
                         </CardContent>
                       </Card>
