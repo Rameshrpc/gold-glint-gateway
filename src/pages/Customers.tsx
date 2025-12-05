@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User } from 'lucide-react';
+import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User, Trash2, Download, Database } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -60,6 +62,24 @@ const NOMINEE_RELATIONS: { value: NomineeRelation; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+const MOCK_CUSTOMERS = [
+  { full_name: 'Rajesh Kumar', gender: 'male', city: 'Mumbai', state: 'Maharashtra', occupation: 'Business Owner', monthly_income: 75000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Priya Sharma', gender: 'female', city: 'Delhi', state: 'Delhi', occupation: 'Software Engineer', monthly_income: 120000, nominee_relation: 'father' as NomineeRelation },
+  { full_name: 'Amit Patel', gender: 'male', city: 'Ahmedabad', state: 'Gujarat', occupation: 'Shop Owner', monthly_income: 45000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Sunita Devi', gender: 'female', city: 'Jaipur', state: 'Rajasthan', occupation: 'Teacher', monthly_income: 35000, nominee_relation: 'son' as NomineeRelation },
+  { full_name: 'Vikram Singh', gender: 'male', city: 'Lucknow', state: 'Uttar Pradesh', occupation: 'Government Employee', monthly_income: 55000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Meera Krishnan', gender: 'female', city: 'Chennai', state: 'Tamil Nadu', occupation: 'Doctor', monthly_income: 150000, nominee_relation: 'father' as NomineeRelation },
+  { full_name: 'Suresh Reddy', gender: 'male', city: 'Hyderabad', state: 'Telangana', occupation: 'Farmer', monthly_income: 30000, nominee_relation: 'son' as NomineeRelation },
+  { full_name: 'Anjali Gupta', gender: 'female', city: 'Kolkata', state: 'West Bengal', occupation: 'Accountant', monthly_income: 60000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Mohan Das', gender: 'male', city: 'Bangalore', state: 'Karnataka', occupation: 'IT Professional', monthly_income: 100000, nominee_relation: 'mother' as NomineeRelation },
+  { full_name: 'Lakshmi Nair', gender: 'female', city: 'Kochi', state: 'Kerala', occupation: 'Nurse', monthly_income: 40000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Ramesh Yadav', gender: 'male', city: 'Patna', state: 'Bihar', occupation: 'Contractor', monthly_income: 80000, nominee_relation: 'brother' as NomineeRelation },
+  { full_name: 'Kavita Joshi', gender: 'female', city: 'Pune', state: 'Maharashtra', occupation: 'Lawyer', monthly_income: 90000, nominee_relation: 'father' as NomineeRelation },
+  { full_name: 'Arun Menon', gender: 'male', city: 'Trivandrum', state: 'Kerala', occupation: 'Architect', monthly_income: 85000, nominee_relation: 'spouse' as NomineeRelation },
+  { full_name: 'Deepa Chatterjee', gender: 'female', city: 'Bhopal', state: 'Madhya Pradesh', occupation: 'Shopkeeper', monthly_income: 25000, nominee_relation: 'son' as NomineeRelation },
+  { full_name: 'Sanjay Verma', gender: 'male', city: 'Indore', state: 'Madhya Pradesh', occupation: 'Restaurant Owner', monthly_income: 70000, nominee_relation: 'spouse' as NomineeRelation },
+];
+
 export default function Customers() {
   const { client, currentBranch, branches, isPlatformAdmin, hasRole } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -69,6 +89,12 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [viewingCustomer, setViewingCustomer] = useState<Customer | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [loadingMockData, setLoadingMockData] = useState(false);
   
   // Form state
   const [fullName, setFullName] = useState('');
@@ -87,6 +113,7 @@ export default function Customers() {
   const [nomineeName, setNomineeName] = useState('');
   const [nomineeRelation, setNomineeRelation] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
   // File upload state
   const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
@@ -146,6 +173,7 @@ export default function Customers() {
     setNomineeName('');
     setNomineeRelation('');
     setEditingCustomer(null);
+    setUploadProgress(null);
     // Reset file states
     setProfilePhotoFile(null);
     setProfilePhotoPreview(null);
@@ -243,6 +271,49 @@ export default function Customers() {
     return data;
   };
 
+  // Parallel document upload function
+  const uploadDocumentsInParallel = async (customerId: string): Promise<Record<string, string>> => {
+    const uploadTasks: { key: string; promise: Promise<string> }[] = [];
+
+    if (profilePhotoFile) {
+      uploadTasks.push({ 
+        key: 'photo_url', 
+        promise: uploadDocument(profilePhotoFile, 'profile', customerId) 
+      });
+    }
+    if (aadhaarFrontFile) {
+      uploadTasks.push({ 
+        key: 'aadhaar_front_url', 
+        promise: uploadDocument(aadhaarFrontFile, 'aadhaar_front', customerId) 
+      });
+    }
+    if (aadhaarBackFile) {
+      uploadTasks.push({ 
+        key: 'aadhaar_back_url', 
+        promise: uploadDocument(aadhaarBackFile, 'aadhaar_back', customerId) 
+      });
+    }
+    if (panCardFile) {
+      uploadTasks.push({ 
+        key: 'pan_card_url', 
+        promise: uploadDocument(panCardFile, 'pan_card', customerId) 
+      });
+    }
+
+    if (uploadTasks.length === 0) return {};
+
+    setUploadProgress(`Uploading ${uploadTasks.length} document(s)...`);
+    
+    const results = await Promise.all(
+      uploadTasks.map(async (task) => {
+        const url = await task.promise;
+        return { [task.key]: url };
+      })
+    );
+
+    return Object.assign({}, ...results);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!client || !selectedBranchId) {
@@ -318,21 +389,8 @@ export default function Customers() {
         customerId = data.id;
       }
 
-      // Upload documents
-      const documentUpdates: any = {};
-
-      if (profilePhotoFile) {
-        documentUpdates.photo_url = await uploadDocument(profilePhotoFile, 'profile', customerId);
-      }
-      if (aadhaarFrontFile) {
-        documentUpdates.aadhaar_front_url = await uploadDocument(aadhaarFrontFile, 'aadhaar_front', customerId);
-      }
-      if (aadhaarBackFile) {
-        documentUpdates.aadhaar_back_url = await uploadDocument(aadhaarBackFile, 'aadhaar_back', customerId);
-      }
-      if (panCardFile) {
-        documentUpdates.pan_card_url = await uploadDocument(panCardFile, 'pan_card', customerId);
-      }
+      // Upload documents in parallel
+      const documentUpdates = await uploadDocumentsInParallel(customerId);
 
       // Update customer with document URLs if any were uploaded
       if (Object.keys(documentUpdates).length > 0) {
@@ -355,6 +413,149 @@ export default function Customers() {
       }
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
+    }
+  };
+
+  // Delete customer function
+  const handleDeleteCustomer = async () => {
+    if (!customerToDelete) return;
+    
+    setDeleting(true);
+    try {
+      // Check for active loans
+      const { count, error: loanError } = await supabase
+        .from('loans')
+        .select('*', { count: 'exact', head: true })
+        .eq('customer_id', customerToDelete.id)
+        .eq('status', 'active');
+      
+      if (loanError) throw loanError;
+      
+      if (count && count > 0) {
+        toast.error(`Cannot delete customer with ${count} active loan(s). Please close loans first.`);
+        return;
+      }
+
+      // Delete the customer
+      const { error } = await supabase
+        .from('customers')
+        .delete()
+        .eq('id', customerToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success('Customer deleted successfully');
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete customer');
+    } finally {
+      setDeleting(false);
+      setDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+    }
+  };
+
+  // Export to CSV function
+  const exportToCSV = (exportType: 'all' | 'active' | 'filtered') => {
+    let dataToExport: Customer[] = [];
+    
+    switch (exportType) {
+      case 'all':
+        dataToExport = customers;
+        break;
+      case 'active':
+        dataToExport = customers.filter(c => c.is_active);
+        break;
+      case 'filtered':
+        dataToExport = filteredCustomers;
+        break;
+    }
+
+    if (dataToExport.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    const headers = [
+      'Customer Code', 'Full Name', 'Phone', 'Alternate Phone', 'Email',
+      'Date of Birth', 'Gender', 'Address', 'City', 'State', 'Pincode',
+      'Occupation', 'Monthly Income', 'Nominee Name', 'Nominee Relation',
+      'Branch', 'Status', 'Created At'
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...dataToExport.map(c => [
+        c.customer_code,
+        `"${c.full_name}"`,
+        c.phone,
+        c.alternate_phone || '',
+        c.email || '',
+        c.date_of_birth || '',
+        c.gender || '',
+        `"${(c.address || '').replace(/"/g, '""')}"`,
+        c.city || '',
+        c.state || '',
+        c.pincode || '',
+        c.occupation || '',
+        c.monthly_income || '',
+        c.nominee_name || '',
+        c.nominee_relation || '',
+        getBranchName(c.branch_id),
+        c.is_active ? 'Active' : 'Inactive',
+        new Date(c.created_at).toLocaleDateString()
+      ].join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `customers_${exportType}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    
+    toast.success(`Exported ${dataToExport.length} customer(s)`);
+  };
+
+  // Load mock data function
+  const loadMockData = async () => {
+    if (!client || !currentBranch) {
+      toast.error('Please select a branch first');
+      return;
+    }
+
+    setLoadingMockData(true);
+    try {
+      for (const sample of MOCK_CUSTOMERS) {
+        const customerCode = await generateCustomerCode();
+        const mockPhone = `98${Math.floor(10000000 + Math.random() * 90000000)}`;
+        
+        const customerData = {
+          client_id: client.id,
+          branch_id: currentBranch.id,
+          customer_code: customerCode,
+          full_name: sample.full_name,
+          phone: mockPhone,
+          gender: sample.gender as any,
+          city: sample.city,
+          state: sample.state,
+          occupation: sample.occupation,
+          monthly_income: sample.monthly_income,
+          nominee_name: `${sample.full_name.split(' ')[0]}'s ${sample.nominee_relation === 'spouse' ? 'Partner' : sample.nominee_relation}`,
+          nominee_relation: sample.nominee_relation,
+          is_active: true
+        };
+        
+        const { error } = await supabase.from('customers').insert(customerData);
+        if (error) throw error;
+      }
+      
+      toast.success(`Created ${MOCK_CUSTOMERS.length} test customers`);
+      fetchCustomers();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load mock data');
+    } finally {
+      setLoadingMockData(false);
     }
   };
 
@@ -465,288 +666,317 @@ export default function Customers() {
             <h1 className="text-2xl font-bold">Customers</h1>
             <p className="text-muted-foreground">Manage your customer database</p>
           </div>
-          {canManageCustomers && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Customer
+          <div className="flex gap-2">
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Profile Photo & Branch Selection */}
-                  <div className="flex gap-6 items-start">
-                    <div className="flex-shrink-0">
-                      <ImageUploadField
-                        label="Profile Photo"
-                        required={!editingCustomer}
-                        fileRef={profilePhotoRef}
-                        file={profilePhotoFile}
-                        setFile={setProfilePhotoFile}
-                        preview={profilePhotoPreview}
-                        setPreview={setProfilePhotoPreview}
-                        existingUrl={editingCustomer?.photo_url}
-                      />
-                    </div>
-                    <div className="flex-1 space-y-4">
-                      {editingCustomer && (
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportToCSV('all')}>
+                  Export All ({customers.length})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV('active')}>
+                  Export Active Only ({customers.filter(c => c.is_active).length})
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV('filtered')}>
+                  Export Current Filter ({filteredCustomers.length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {canManageCustomers && (
+              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Customer
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Profile Photo & Branch Selection */}
+                    <div className="flex gap-6 items-start">
+                      <div className="flex-shrink-0">
+                        <ImageUploadField
+                          label="Profile Photo"
+                          required={!editingCustomer}
+                          fileRef={profilePhotoRef}
+                          file={profilePhotoFile}
+                          setFile={setProfilePhotoFile}
+                          preview={profilePhotoPreview}
+                          setPreview={setProfilePhotoPreview}
+                          existingUrl={editingCustomer?.photo_url}
+                        />
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        {editingCustomer && (
+                          <div className="space-y-2">
+                            <Label>Customer Code</Label>
+                            <Input value={editingCustomer.customer_code} disabled className="bg-muted" />
+                          </div>
+                        )}
+                        {!editingCustomer && (
+                          <div className="p-3 bg-muted rounded-lg">
+                            <p className="text-sm text-muted-foreground">
+                              <FileCheck className="h-4 w-4 inline mr-1" />
+                              Customer code will be auto-generated on save
+                            </p>
+                          </div>
+                        )}
                         <div className="space-y-2">
-                          <Label>Customer Code</Label>
-                          <Input value={editingCustomer.customer_code} disabled className="bg-muted" />
+                          <Label htmlFor="branch">Branch *</Label>
+                          <Select value={selectedBranchId} onValueChange={setSelectedBranchId} required>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select branch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {branches.filter(b => b.is_active).map((branch) => (
+                                <SelectItem key={branch.id} value={branch.id}>
+                                  {branch.branch_name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </div>
-                      )}
-                      {!editingCustomer && (
-                        <div className="p-3 bg-muted rounded-lg">
-                          <p className="text-sm text-muted-foreground">
-                            <FileCheck className="h-4 w-4 inline mr-1" />
-                            Customer code will be auto-generated on save
-                          </p>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label htmlFor="branch">Branch *</Label>
-                        <Select value={selectedBranchId} onValueChange={setSelectedBranchId} required>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select branch" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {branches.filter(b => b.is_active).map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                {branch.branch_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Personal Details */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Personal Details</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name *</Label>
-                      <Input
-                        id="fullName"
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
-                        placeholder="Enter full name"
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Personal Details */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Personal Details</h3>
                       <div className="space-y-2">
-                        <Label htmlFor="phone">Phone *</Label>
+                        <Label htmlFor="fullName">Full Name *</Label>
                         <Input
-                          id="phone"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="Enter phone number"
+                          id="fullName"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Enter full name"
                           required
                         />
                       </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Phone *</Label>
+                          <Input
+                            id="phone"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Enter phone number"
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="alternatePhone">Alternate Phone</Label>
+                          <Input
+                            id="alternatePhone"
+                            value={alternatePhone}
+                            onChange={(e) => setAlternatePhone(e.target.value)}
+                            placeholder="Enter alternate phone"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="Enter email"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                          <Input
+                            id="dateOfBirth"
+                            type="date"
+                            value={dateOfBirth}
+                            onChange={(e) => setDateOfBirth(e.target.value)}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="gender">Gender</Label>
+                          <Select value={gender} onValueChange={setGender}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="male">Male</SelectItem>
+                              <SelectItem value="female">Female</SelectItem>
+                              <SelectItem value="other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="occupation">Occupation</Label>
+                          <Input
+                            id="occupation"
+                            value={occupation}
+                            onChange={(e) => setOccupation(e.target.value)}
+                            placeholder="Enter occupation"
+                          />
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
-                        <Label htmlFor="alternatePhone">Alternate Phone</Label>
+                        <Label htmlFor="monthlyIncome">Monthly Income (₹)</Label>
                         <Input
-                          id="alternatePhone"
-                          value={alternatePhone}
-                          onChange={(e) => setAlternatePhone(e.target.value)}
-                          placeholder="Enter alternate phone"
+                          id="monthlyIncome"
+                          type="number"
+                          value={monthlyIncome}
+                          onChange={(e) => setMonthlyIncome(e.target.value)}
+                          placeholder="Enter monthly income"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Address */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Address</h3>
                       <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="Enter email"
+                        <Label htmlFor="address">Street Address</Label>
+                        <Textarea
+                          id="address"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Enter full address"
+                          rows={2}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                        <Input
-                          id="dateOfBirth"
-                          type="date"
-                          value={dateOfBirth}
-                          onChange={(e) => setDateOfBirth(e.target.value)}
+
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="city">City</Label>
+                          <Input
+                            id="city"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            placeholder="City"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="state">State</Label>
+                          <Input
+                            id="state"
+                            value={state}
+                            onChange={(e) => setState(e.target.value)}
+                            placeholder="State"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="pincode">Pincode</Label>
+                          <Input
+                            id="pincode"
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value)}
+                            placeholder="Pincode"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KYC Documents */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                        KYC Documents {!editingCustomer && <span className="text-destructive">(All Mandatory)</span>}
+                      </h3>
+                      <div className="grid grid-cols-3 gap-4">
+                        <ImageUploadField
+                          label="Aadhaar Front"
+                          required={!editingCustomer}
+                          fileRef={aadhaarFrontRef}
+                          file={aadhaarFrontFile}
+                          setFile={setAadhaarFrontFile}
+                          preview={aadhaarFrontPreview}
+                          setPreview={setAadhaarFrontPreview}
+                          existingUrl={editingCustomer?.aadhaar_front_url}
+                        />
+                        <ImageUploadField
+                          label="Aadhaar Back"
+                          required={!editingCustomer}
+                          fileRef={aadhaarBackRef}
+                          file={aadhaarBackFile}
+                          setFile={setAadhaarBackFile}
+                          preview={aadhaarBackPreview}
+                          setPreview={setAadhaarBackPreview}
+                          existingUrl={editingCustomer?.aadhaar_back_url}
+                        />
+                        <ImageUploadField
+                          label="PAN Card"
+                          required={!editingCustomer}
+                          fileRef={panCardRef}
+                          file={panCardFile}
+                          setFile={setPanCardFile}
+                          preview={panCardPreview}
+                          setPreview={setPanCardPreview}
+                          existingUrl={editingCustomer?.pan_card_url}
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="gender">Gender</Label>
-                        <Select value={gender} onValueChange={setGender}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select gender" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="male">Male</SelectItem>
-                            <SelectItem value="female">Female</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="occupation">Occupation</Label>
-                        <Input
-                          id="occupation"
-                          value={occupation}
-                          onChange={(e) => setOccupation(e.target.value)}
-                          placeholder="Enter occupation"
-                        />
+                    {/* Nominee Details */}
+                    <div className="space-y-4">
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Nominee Details</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="nomineeRelation">Nominee Relation</Label>
+                          <Select value={nomineeRelation} onValueChange={setNomineeRelation}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select relation" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {NOMINEE_RELATIONS.map((rel) => (
+                                <SelectItem key={rel.value} value={rel.value}>
+                                  {rel.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="nomineeName">Nominee Name</Label>
+                          <Input
+                            id="nomineeName"
+                            value={nomineeName}
+                            onChange={(e) => setNomineeName(e.target.value)}
+                            placeholder="Enter nominee name"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="monthlyIncome">Monthly Income (₹)</Label>
-                      <Input
-                        id="monthlyIncome"
-                        type="number"
-                        value={monthlyIncome}
-                        onChange={(e) => setMonthlyIncome(e.target.value)}
-                        placeholder="Enter monthly income"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Address */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Address</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Street Address</Label>
-                      <Textarea
-                        id="address"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        placeholder="Enter full address"
-                        rows={2}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="city">City</Label>
-                        <Input
-                          id="city"
-                          value={city}
-                          onChange={(e) => setCity(e.target.value)}
-                          placeholder="City"
-                        />
+                    {uploadProgress && (
+                      <div className="p-3 bg-primary/10 rounded-lg">
+                        <p className="text-sm text-primary">{uploadProgress}</p>
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="state">State</Label>
-                        <Input
-                          id="state"
-                          value={state}
-                          onChange={(e) => setState(e.target.value)}
-                          placeholder="State"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="pincode">Pincode</Label>
-                        <Input
-                          id="pincode"
-                          value={pincode}
-                          onChange={(e) => setPincode(e.target.value)}
-                          placeholder="Pincode"
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* KYC Documents */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-                      KYC Documents {!editingCustomer && <span className="text-destructive">(All Mandatory)</span>}
-                    </h3>
-                    <div className="grid grid-cols-3 gap-4">
-                      <ImageUploadField
-                        label="Aadhaar Front"
-                        required={!editingCustomer}
-                        fileRef={aadhaarFrontRef}
-                        file={aadhaarFrontFile}
-                        setFile={setAadhaarFrontFile}
-                        preview={aadhaarFrontPreview}
-                        setPreview={setAadhaarFrontPreview}
-                        existingUrl={editingCustomer?.aadhaar_front_url}
-                      />
-                      <ImageUploadField
-                        label="Aadhaar Back"
-                        required={!editingCustomer}
-                        fileRef={aadhaarBackRef}
-                        file={aadhaarBackFile}
-                        setFile={setAadhaarBackFile}
-                        preview={aadhaarBackPreview}
-                        setPreview={setAadhaarBackPreview}
-                        existingUrl={editingCustomer?.aadhaar_back_url}
-                      />
-                      <ImageUploadField
-                        label="PAN Card"
-                        required={!editingCustomer}
-                        fileRef={panCardRef}
-                        file={panCardFile}
-                        setFile={setPanCardFile}
-                        preview={panCardPreview}
-                        setPreview={setPanCardPreview}
-                        existingUrl={editingCustomer?.pan_card_url}
-                      />
+                    <div className="flex justify-end gap-2 pt-4 border-t">
+                      <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={submitting}>
+                        {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Create Customer'}
+                      </Button>
                     </div>
-                  </div>
-
-                  {/* Nominee Details */}
-                  <div className="space-y-4">
-                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Nominee Details</h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="nomineeRelation">Nominee Relation</Label>
-                        <Select value={nomineeRelation} onValueChange={setNomineeRelation}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select relation" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {NOMINEE_RELATIONS.map((rel) => (
-                              <SelectItem key={rel.value} value={rel.value}>
-                                {rel.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="nomineeName">Nominee Name</Label>
-                        <Input
-                          id="nomineeName"
-                          value={nomineeName}
-                          onChange={(e) => setNomineeName(e.target.value)}
-                          placeholder="Enter nominee name"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end gap-2 pt-4 border-t">
-                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={submitting}>
-                      {submitting ? 'Saving...' : editingCustomer ? 'Update Customer' : 'Create Customer'}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
+                  </form>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
         </div>
 
         {/* Search */}
@@ -785,12 +1015,20 @@ export default function Customers() {
                   ? 'Try adjusting your search terms.'
                   : 'Start building your customer database. Add your first customer to begin creating loans.'}
               </p>
-              {!searchQuery && canManageCustomers && (
-                <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Customer
-                </Button>
-              )}
+              <div className="flex gap-2">
+                {!searchQuery && canManageCustomers && (
+                  <>
+                    <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Customer
+                    </Button>
+                    <Button variant="outline" onClick={loadMockData} disabled={loadingMockData}>
+                      <Database className="h-4 w-4 mr-2" />
+                      {loadingMockData ? 'Loading...' : 'Load Test Data'}
+                    </Button>
+                  </>
+                )}
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -884,13 +1122,26 @@ export default function Customers() {
                             <Eye className="h-4 w-4" />
                           </Button>
                           {canManageCustomers && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openEditDialog(customer)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(customer)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setCustomerToDelete(customer);
+                                  setDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
                           )}
                         </div>
                       </TableCell>
@@ -1053,6 +1304,29 @@ export default function Customers() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Customer</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>{customerToDelete?.full_name}</strong> ({customerToDelete?.customer_code})?
+                This action cannot be undone. Customers with active loans cannot be deleted.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteCustomer}
+                disabled={deleting}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
