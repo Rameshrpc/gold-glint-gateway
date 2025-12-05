@@ -8,9 +8,12 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 
 // Pages
 import Auth from "./pages/Auth";
+import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import Branches from "./pages/Branches";
+import Clients from "./pages/Clients";
+import Users from "./pages/Users";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -26,6 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/setup" element={<Setup />} />
             
             {/* Protected Routes */}
             <Route path="/dashboard" element={
@@ -41,6 +45,16 @@ const App = () => (
             <Route path="/branches" element={
               <ProtectedRoute>
                 <Branches />
+              </ProtectedRoute>
+            } />
+            <Route path="/clients" element={
+              <ProtectedRoute>
+                <Clients />
+              </ProtectedRoute>
+            } />
+            <Route path="/users" element={
+              <ProtectedRoute>
+                <Users />
               </ProtectedRoute>
             } />
             
@@ -73,11 +87,6 @@ const App = () => (
             <Route path="/schemes" element={
               <ProtectedRoute>
                 <PlaceholderPage title="Schemes" description="Configure loan schemes and rates" />
-              </ProtectedRoute>
-            } />
-            <Route path="/users" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="Users" description="Manage user accounts and roles" />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
