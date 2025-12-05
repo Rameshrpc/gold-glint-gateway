@@ -12,12 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
 import { calculateAdvanceInterest, formatIndianCurrency, type AdvanceInterestCalculation } from '@/lib/interestCalculations';
+import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
+import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
+import ImageCapture from '@/components/loans/ImageCapture';
 
 interface Customer {
   id: string;
@@ -41,6 +44,7 @@ interface Scheme {
   min_tenure_days: number;
   max_tenure_days: number;
   processing_fee_percentage: number | null;
+  rate_18kt: number | null;
 }
 
 interface GoldItem {
@@ -113,8 +117,14 @@ export default function Loans() {
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   const [tenureDays, setTenureDays] = useState('');
-  const [marketRate, setMarketRate] = useState('6000');
   const [submitting, setSubmitting] = useState(false);
+  
+  // Image captures
+  const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
+  const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
+  
+  // Customer creation dialog
+  const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   
   // Current gold item being added
   const [currentItem, setCurrentItem] = useState<Partial<GoldItem>>({
@@ -183,7 +193,7 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, rate_18kt')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('scheme_name');
@@ -196,6 +206,8 @@ export default function Loans() {
     setSelectedBranchId(currentBranch?.id || '');
     setGoldItems([]);
     setTenureDays('');
+    setJewelPhotoUrl(null);
+    setAppraiserSheetUrl(null);
     setCurrentItem({
       item_type: '',
       description: '',
@@ -205,16 +217,37 @@ export default function Loans() {
     });
   };
 
+  // Get rate from selected scheme (18kt converted to 24kt equivalent)
+  const getRate24kt = () => {
+    const scheme = schemes.find(s => s.id === selectedSchemeId);
+    if (scheme?.rate_18kt) {
+      // 18kt is 75% pure, so rate_24kt = rate_18kt / 0.75
+      return scheme.rate_18kt / 0.75;
+    }
+    return 6000; // fallback
+  };
+
   const addGoldItem = () => {
     if (!currentItem.item_type || !currentItem.gross_weight_grams) {
       toast.error('Please fill item type and weight');
       return;
     }
 
+    if (!selectedSchemeId) {
+      toast.error('Please select a scheme first');
+      return;
+    }
+
+    const scheme = schemes.find(s => s.id === selectedSchemeId);
+    if (!scheme?.rate_18kt) {
+      toast.error('Selected scheme does not have 18KT rate configured');
+      return;
+    }
+
     const netWeight = currentItem.gross_weight_grams! - (currentItem.stone_weight_grams || 0);
     const purityPercent = PURITY_MAP[currentItem.purity || '22k'];
-    const rate = parseFloat(marketRate);
-    const appraisedValue = netWeight * (purityPercent / 100) * rate;
+    const rate24kt = getRate24kt();
+    const appraisedValue = netWeight * (purityPercent / 100) * rate24kt;
 
     const newItem: GoldItem = {
       item_type: currentItem.item_type,
@@ -224,7 +257,7 @@ export default function Loans() {
       purity: currentItem.purity || '22k',
       purity_percentage: purityPercent,
       stone_weight_grams: currentItem.stone_weight_grams || 0,
-      market_rate_per_gram: rate,
+      market_rate_per_gram: rate24kt,
       appraised_value: appraisedValue,
     };
 
@@ -316,6 +349,8 @@ export default function Loans() {
         last_interest_paid_date: format(loanDate, 'yyyy-MM-dd'), // Advance interest counts as paid
         created_by: profile?.id,
         appraised_by: profile?.id,
+        jewel_photo_url: jewelPhotoUrl,
+        appraiser_sheet_url: appraiserSheetUrl,
       };
 
       const { data: loanResult, error: loanError } = await supabase
@@ -434,18 +469,28 @@ export default function Loans() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Customer *</Label>
-                      <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select customer" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {customers.map((customer) => (
-                            <SelectItem key={customer.id} value={customer.id}>
-                              {customer.customer_code} - {customer.full_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.customer_code} - {customer.full_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => setShowCustomerDialog(true)}
+                          className="shrink-0"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                     <div className="space-y-2">
                       <Label>Branch *</Label>
@@ -463,6 +508,11 @@ export default function Loans() {
                       </Select>
                     </div>
                   </div>
+                  
+                  {/* Customer Summary Card */}
+                  {selectedCustomerId && (
+                    <CustomerSummaryCard customerId={selectedCustomerId} />
+                  )}
                 </div>
 
                 <Separator />
@@ -478,7 +528,7 @@ export default function Loans() {
                       <Card 
                         key={scheme.id} 
                         className={`cursor-pointer transition-all ${selectedSchemeId === scheme.id ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'hover:bg-muted/50'}`}
-                        onClick={() => setSelectedSchemeId(scheme.id)}
+                        onClick={() => { setSelectedSchemeId(scheme.id); setGoldItems([]); }}
                       >
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
@@ -494,8 +544,8 @@ export default function Loans() {
                               <p className="font-medium text-green-600">{scheme.shown_rate}% p.a.</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">Effective Rate</p>
-                              <p className="font-medium text-amber-600">{scheme.effective_rate}% p.a.</p>
+                              <p className="text-muted-foreground">18KT Rate</p>
+                              <p className="font-medium text-amber-600">{scheme.rate_18kt ? `₹${scheme.rate_18kt}/g` : 'Not set'}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -508,20 +558,16 @@ export default function Loans() {
 
                 {/* Section 3: Gold Items */}
                 <div className="space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2 text-sm">
-                    <Package className="h-4 w-4 text-amber-600" />
-                    Gold Item Appraisal
-                  </h3>
-                  
-                  <div className="space-y-2">
-                    <Label>Market Rate (₹/gram for 24k)</Label>
-                    <Input
-                      type="number"
-                      value={marketRate}
-                      onChange={(e) => setMarketRate(e.target.value)}
-                      placeholder="Today's gold rate"
-                      className="w-48"
-                    />
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold flex items-center gap-2 text-sm">
+                      <Package className="h-4 w-4 text-amber-600" />
+                      Gold Item Appraisal
+                    </h3>
+                    {selectedSchemeId && schemes.find(s => s.id === selectedSchemeId)?.rate_18kt && (
+                      <Badge variant="outline" className="text-amber-600">
+                        Using 18KT Rate: ₹{schemes.find(s => s.id === selectedSchemeId)?.rate_18kt}/g
+                      </Badge>
+                    )}
                   </div>
 
                   <Card>
@@ -732,6 +778,32 @@ export default function Loans() {
                   </div>
                 )}
 
+                {/* Section 5: Loan Images */}
+                {client && (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold flex items-center gap-2 text-sm">
+                      <Camera className="h-4 w-4 text-amber-600" />
+                      Loan Images
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <ImageCapture
+                        label="Jewel Photo *"
+                        value={jewelPhotoUrl}
+                        onChange={setJewelPhotoUrl}
+                        folder="jewel-photos"
+                        clientId={client.id}
+                      />
+                      <ImageCapture
+                        label="Appraiser Sheet *"
+                        value={appraiserSheetUrl}
+                        onChange={setAppraiserSheetUrl}
+                        folder="appraiser-sheets"
+                        clientId={client.id}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {/* Create Button */}
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={() => { setIsFormOpen(false); resetForm(); }}>
@@ -749,6 +821,21 @@ export default function Loans() {
             </Card>
           </CollapsibleContent>
         </Collapsible>
+
+        {/* Inline Customer Creation Dialog */}
+        {client && (
+          <InlineCustomerForm
+            open={showCustomerDialog}
+            onClose={() => setShowCustomerDialog(false)}
+            onCustomerCreated={(customerId) => {
+              setSelectedCustomerId(customerId);
+              fetchCustomers();
+            }}
+            clientId={client.id}
+            branches={branches}
+            defaultBranchId={selectedBranchId}
+          />
+        )}
 
         {/* Filters */}
         <Card>
