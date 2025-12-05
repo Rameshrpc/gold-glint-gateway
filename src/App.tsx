@@ -17,6 +17,7 @@ import Users from "./pages/Users";
 import Schemes from "./pages/Schemes";
 import Loans from "./pages/Loans";
 import Interest from "./pages/Interest";
+import Redemption from "./pages/Redemption";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -79,7 +80,7 @@ const App = () => (
             } />
             <Route path="/redemption" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Redemption" description="Process loan closures and redemptions" />
+                <Redemption />
               </ProtectedRoute>
             } />
             <Route path="/agents" element={

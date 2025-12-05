@@ -617,6 +617,90 @@ export type Database = {
           },
         ]
       }
+      redemptions: {
+        Row: {
+          amount_received: number
+          approved_by: string | null
+          branch_id: string
+          client_id: string
+          created_at: string
+          gold_released: boolean | null
+          gold_released_date: string | null
+          id: string
+          identity_verified: boolean | null
+          interest_due: number
+          loan_id: string
+          outstanding_principal: number
+          payment_mode: string
+          payment_reference: string | null
+          penalty_amount: number | null
+          processed_by: string | null
+          rebate_amount: number | null
+          redemption_date: string
+          redemption_number: string
+          released_by: string | null
+          released_to: string | null
+          remarks: string | null
+          total_settlement: number
+          updated_at: string
+          verification_notes: string | null
+        }
+        Insert: {
+          amount_received: number
+          approved_by?: string | null
+          branch_id: string
+          client_id: string
+          created_at?: string
+          gold_released?: boolean | null
+          gold_released_date?: string | null
+          id?: string
+          identity_verified?: boolean | null
+          interest_due?: number
+          loan_id: string
+          outstanding_principal: number
+          payment_mode?: string
+          payment_reference?: string | null
+          penalty_amount?: number | null
+          processed_by?: string | null
+          rebate_amount?: number | null
+          redemption_date?: string
+          redemption_number: string
+          released_by?: string | null
+          released_to?: string | null
+          remarks?: string | null
+          total_settlement: number
+          updated_at?: string
+          verification_notes?: string | null
+        }
+        Update: {
+          amount_received?: number
+          approved_by?: string | null
+          branch_id?: string
+          client_id?: string
+          created_at?: string
+          gold_released?: boolean | null
+          gold_released_date?: string | null
+          id?: string
+          identity_verified?: boolean | null
+          interest_due?: number
+          loan_id?: string
+          outstanding_principal?: number
+          payment_mode?: string
+          payment_reference?: string | null
+          penalty_amount?: number | null
+          processed_by?: string | null
+          rebate_amount?: number | null
+          redemption_date?: string
+          redemption_number?: string
+          released_by?: string | null
+          released_to?: string | null
+          remarks?: string | null
+          total_settlement?: number
+          updated_at?: string
+          verification_notes?: string | null
+        }
+        Relationships: []
+      }
       schemes: {
         Row: {
           advance_interest_months: number
@@ -731,6 +815,10 @@ export type Database = {
         Returns: string
       }
       generate_receipt_number: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      generate_redemption_number: {
         Args: { p_client_id: string }
         Returns: string
       }
