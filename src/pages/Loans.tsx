@@ -152,10 +152,10 @@ export default function Loans() {
   }, [client]);
 
   useEffect(() => {
-    if (currentBranch) {
+    if (currentBranch?.id && !selectedBranchId) {
       setSelectedBranchId(currentBranch.id);
     }
-  }, [currentBranch]);
+  }, [currentBranch, selectedBranchId]);
 
   const fetchLoans = async () => {
     if (!client) return;
@@ -338,8 +338,33 @@ export default function Loans() {
   };
 
   const handleCreateLoan = async () => {
-    if (!client || !selectedBranchId || !selectedCustomerId || !selectedSchemeId || goldItems.length === 0 || !tenureDays || !loanCalculation) {
-      toast.error('Please complete all required fields');
+    // Specific validation with clear messages
+    if (!client) {
+      toast.error('Client not loaded - please refresh the page');
+      return;
+    }
+    if (!selectedCustomerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (!selectedBranchId) {
+      toast.error('Please select a branch');
+      return;
+    }
+    if (!selectedSchemeId) {
+      toast.error('Please select a scheme');
+      return;
+    }
+    if (goldItems.length === 0) {
+      toast.error('Please add at least one gold item');
+      return;
+    }
+    if (!tenureDays) {
+      toast.error('Tenure days not set - please select a scheme');
+      return;
+    }
+    if (!loanCalculation) {
+      toast.error('Loan calculation failed - please check scheme and gold items');
       return;
     }
 
@@ -850,6 +875,7 @@ export default function Loans() {
                     Cancel
                   </Button>
                   <Button 
+                    type="button"
                     onClick={handleCreateLoan} 
                     disabled={submitting || !selectedCustomerId || !selectedSchemeId || !selectedBranchId || goldItems.length === 0 || !tenureDays}
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
