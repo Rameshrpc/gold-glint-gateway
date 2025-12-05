@@ -43,7 +43,8 @@ export interface DualRateInterest {
 export interface AdvanceInterestCalculation {
   shownInterest: number;      // Shown on receipt (deducted from disbursement)
   actualInterest: number;     // Internal calculation
-  differential: number;       // Added to principal
+  differential: number;       // Differential for full tenure (added to principal)
+  differentialForAdvance: number; // Differential for advance months only
   netCashToCustomer: number;  // Principal - shown interest
   actualPrincipal: number;    // Principal + differential (books entry)
 }
@@ -62,7 +63,19 @@ export interface RebateCalculation {
   usedDays: number;
   unusedDays: number;
   rebateAmount: number;
+  percentage: number;
   reason: string;
+}
+
+export interface RebateSlot {
+  dayRange: string;
+  percentage: number;
+  rebateAmount: number;
+}
+
+export interface RebateSchedule {
+  differentialAmount: number;
+  slots: RebateSlot[];
 }
 
 /**
@@ -77,35 +90,114 @@ export function calculateInterest(
 }
 
 /**
+ * Calculate rebate schedule for loan agreement display
+ * Shows rebate amounts (not percentages) for each time slab
+ */
+export function calculateRebateSchedule(differentialAmount: number): RebateSchedule {
+  return {
+    differentialAmount,
+    slots: [
+      { dayRange: '1-30 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
+      { dayRange: '30-45 days', percentage: 50, rebateAmount: Math.round(differentialAmount * 0.50) },
+      { dayRange: '45-60 days', percentage: 33.33, rebateAmount: Math.round(differentialAmount * 0.3333) },
+      { dayRange: '60-75 days', percentage: 16.67, rebateAmount: Math.round(differentialAmount * 0.1667) },
+    ],
+  };
+}
+
+/**
+ * Calculate rebate at redemption based on days since loan
+ * Uses slab-based percentages: 1-30 days = 66.67%, 30-45 = 50%, 45-60 = 33.33%, 60-75 = 16.67%
+ */
+export function calculateRebateAtRedemption(
+  daysSinceLoan: number,
+  differentialAmount: number
+): RebateCalculation {
+  if (daysSinceLoan >= 1 && daysSinceLoan < 30) {
+    return {
+      eligible: true,
+      usedDays: daysSinceLoan,
+      unusedDays: 0,
+      rebateAmount: Math.round(differentialAmount * 0.6667),
+      percentage: 66.67,
+      reason: 'Early release benefit (within 30 days)',
+    };
+  } else if (daysSinceLoan >= 30 && daysSinceLoan < 45) {
+    return {
+      eligible: true,
+      usedDays: daysSinceLoan,
+      unusedDays: 0,
+      rebateAmount: Math.round(differentialAmount * 0.50),
+      percentage: 50,
+      reason: 'Early release benefit (30-45 days)',
+    };
+  } else if (daysSinceLoan >= 45 && daysSinceLoan < 60) {
+    return {
+      eligible: true,
+      usedDays: daysSinceLoan,
+      unusedDays: 0,
+      rebateAmount: Math.round(differentialAmount * 0.3333),
+      percentage: 33.33,
+      reason: 'Early release benefit (45-60 days)',
+    };
+  } else if (daysSinceLoan >= 60 && daysSinceLoan < 75) {
+    return {
+      eligible: true,
+      usedDays: daysSinceLoan,
+      unusedDays: 0,
+      rebateAmount: Math.round(differentialAmount * 0.1667),
+      percentage: 16.67,
+      reason: 'Early release benefit (60-75 days)',
+    };
+  }
+  return {
+    eligible: false,
+    usedDays: daysSinceLoan,
+    unusedDays: 0,
+    rebateAmount: 0,
+    percentage: 0,
+    reason: 'No early release benefit after 75 days',
+  };
+}
+
+/**
  * Calculate advance interest for loan creation (dual-rate)
- * Differential is added to principal
+ * Differential is calculated for FULL TENURE and added to principal
  */
 export function calculateAdvanceInterest(
   principal: number,
-  scheme: Scheme
+  scheme: Scheme,
+  tenureDays: number = 90
 ): AdvanceInterestCalculation {
   const months = scheme.advance_interest_months;
-  const days = months * 30;
+  const advanceDays = months * 30;
   
-  // Shown interest (18% or shown_rate) - deducted from disbursement
-  const shownInterest = calculateInterest(principal, scheme.shown_rate, days);
+  // Shown interest (18% or shown_rate) for advance months - deducted from disbursement
+  const shownInterest = calculateInterest(principal, scheme.shown_rate, advanceDays);
   
-  // Actual interest (effective rate)
-  const actualInterest = calculateInterest(principal, scheme.effective_rate, days);
+  // Actual interest (effective rate) for advance months
+  const actualInterest = calculateInterest(principal, scheme.effective_rate, advanceDays);
   
-  // Differential = Actual - Shown (added to principal)
-  const differential = actualInterest - shownInterest;
+  // Differential rate = Effective - Shown
+  const differentialRate = scheme.effective_rate - scheme.shown_rate;
+  
+  // Differential for FULL TENURE (added to principal at creation)
+  const differential = calculateInterest(principal, differentialRate, tenureDays);
+  
+  // Differential for advance months only (for reference)
+  const differentialForAdvance = calculateInterest(principal, differentialRate, advanceDays);
   
   // Customer receives: principal - shown interest
   const netCashToCustomer = principal - shownInterest;
   
-  // Actual principal = original + differential (books entry)
+  // Actual principal = original + differential for full tenure (books entry)
   const actualPrincipal = principal + differential;
   
   return {
     shownInterest: Math.round(shownInterest),
     actualInterest: Math.round(actualInterest),
     differential: Math.round(differential),
+    differentialForAdvance: Math.round(differentialForAdvance),
     netCashToCustomer: Math.round(netCashToCustomer),
     actualPrincipal: Math.round(actualPrincipal),
   };
@@ -204,21 +296,29 @@ export function processInterestPayment(
 }
 
 /**
- * Calculate rebate for early redemption
- * Rebate ONLY on unused differential portion (never on 18% part)
+ * Calculate rebate for early redemption - DEPRECATED, use calculateRebateAtRedemption
+ * Kept for backward compatibility
  */
 export function calculateRebate(
   scheme: Scheme,
   usedDays: number,
   totalTenureDays: number,
-  actualPrincipal: number
+  actualPrincipal: number,
+  differentialCapitalized?: number
 ): RebateCalculation {
+  // Use new slab-based calculation if differential is provided
+  if (differentialCapitalized !== undefined && differentialCapitalized > 0) {
+    return calculateRebateAtRedemption(usedDays, differentialCapitalized);
+  }
+  
+  // Legacy calculation for backward compatibility
   if (usedDays < scheme.minimum_days) {
     return {
       eligible: false,
       usedDays,
       unusedDays: 0,
       rebateAmount: 0,
+      percentage: 0,
       reason: `Minimum ${scheme.minimum_days} days required for rebate. Only ${usedDays} days used.`,
     };
   }
@@ -231,6 +331,7 @@ export function calculateRebate(
       usedDays,
       unusedDays: 0,
       rebateAmount: 0,
+      percentage: 0,
       reason: 'No unused days for rebate',
     };
   }
@@ -246,6 +347,7 @@ export function calculateRebate(
     usedDays,
     unusedDays,
     rebateAmount: Math.round(rebateAmount),
+    percentage: 0,
     reason: `Rebate on ${unusedDays} unused days (differential rate ${differentialRate}%)`,
   };
 }
@@ -257,7 +359,8 @@ export function calculateRedemptionAmount(
   actualPrincipal: number,
   scheme: Scheme,
   daysSinceLoan: number,
-  totalTenureDays: number
+  totalTenureDays: number,
+  differentialCapitalized?: number
 ): {
   principalDue: number;
   interestDue: DualRateInterest;
@@ -278,7 +381,10 @@ export function calculateRedemptionAmount(
     scheme.grace_period_days || 7
   );
   
-  const rebate = calculateRebate(scheme, daysSinceLoan, totalTenureDays, actualPrincipal);
+  // Use new slab-based rebate if differential is available
+  const rebate = differentialCapitalized && differentialCapitalized > 0
+    ? calculateRebateAtRedemption(daysSinceLoan, differentialCapitalized)
+    : calculateRebate(scheme, daysSinceLoan, totalTenureDays, actualPrincipal);
   
   // Total = actual principal + interest due - rebate
   const grossPayable = actualPrincipal + interestDue.totalDue;
