@@ -1,5 +1,6 @@
 // Interest Calculation Utilities for Dual-Rate NBFC Logic
 // 18% shown rate to customer, 24-36% effective rate internally
+// Differential is added to principal at creation, debited as part payment when interest is paid
 
 export interface Scheme {
   id: string;
@@ -31,29 +32,28 @@ export interface Loan {
 }
 
 export interface DualRateInterest {
-  shownInterest: number;      // 18% portion (on receipt)
-  actualInterest: number;     // Effective rate portion
-  differential: number;       // To be capitalized
+  shownInterest: number;      // 18% portion (on receipt as Interest)
+  actualInterest: number;     // Effective rate portion (internal)
+  differential: number;       // Part payment (reduces principal)
   penalty: number;            // Overdue penalty
   totalDue: number;           // Amount customer should pay
   days: number;
 }
 
 export interface AdvanceInterestCalculation {
-  shownInterest: number;      // Shown on receipt
+  shownInterest: number;      // Shown on receipt (deducted from disbursement)
   actualInterest: number;     // Internal calculation
   differential: number;       // Added to principal
-  netCashToCustomer: number;
-  actualPrincipal: number;    // Principal + differential
+  netCashToCustomer: number;  // Principal - shown interest
+  actualPrincipal: number;    // Principal + differential (books entry)
 }
 
 export interface PaymentAllocation {
-  shownInterest: number;
-  actualInterest: number;
-  differentialCapitalized: number;
-  principalReduction: number;
-  penalty: number;
-  change: number;
+  interestPaid: number;       // 18% interest (shown on receipt)
+  partPayment: number;        // Differential as principal reduction
+  penalty: number;            // Overdue penalty
+  excessPaid: number;         // Extra amount towards principal
+  totalPrincipalReduction: number;  // Part payment + excess
   newActualPrincipal: number;
 }
 
@@ -78,6 +78,7 @@ export function calculateInterest(
 
 /**
  * Calculate advance interest for loan creation (dual-rate)
+ * Differential is added to principal
  */
 export function calculateAdvanceInterest(
   principal: number,
@@ -86,19 +87,19 @@ export function calculateAdvanceInterest(
   const months = scheme.advance_interest_months;
   const days = months * 30;
   
-  // Shown interest (18% or shown_rate)
+  // Shown interest (18% or shown_rate) - deducted from disbursement
   const shownInterest = calculateInterest(principal, scheme.shown_rate, days);
   
   // Actual interest (effective rate)
   const actualInterest = calculateInterest(principal, scheme.effective_rate, days);
   
-  // Differential = Actual - Shown (silently capitalized)
+  // Differential = Actual - Shown (added to principal)
   const differential = actualInterest - shownInterest;
   
-  // Customer sees net cash = principal - shown interest
+  // Customer receives: principal - shown interest
   const netCashToCustomer = principal - shownInterest;
   
-  // Actual principal = original + differential capitalized
+  // Actual principal = original + differential (books entry)
   const actualPrincipal = principal + differential;
   
   return {
@@ -112,7 +113,8 @@ export function calculateAdvanceInterest(
 
 /**
  * Calculate interest due with dual-rate system
- * Customer pays based on shown rate, differential is capitalized
+ * Customer pays: shown interest (18%) + penalty
+ * Differential is shown as part payment reducing principal
  */
 export function calculateDualRateInterest(
   actualPrincipal: number,
@@ -120,21 +122,21 @@ export function calculateDualRateInterest(
   days: number,
   gracePeriodDays: number = 7
 ): DualRateInterest {
-  // Calculate on actual principal (includes capitalized differential)
+  // Calculate on actual principal
   const shownInterest = calculateInterest(actualPrincipal, scheme.shown_rate, days);
   const actualInterest = calculateInterest(actualPrincipal, scheme.effective_rate, days);
   const differential = actualInterest - shownInterest;
   
-  // Penalty if overdue (beyond grace period)
+  // Penalty if overdue (beyond grace period after 30 days)
   let penalty = 0;
   const overdueDays = Math.max(0, days - 30 - gracePeriodDays);
   if (overdueDays > 0 && scheme.penalty_rate) {
     penalty = calculateInterest(actualPrincipal, scheme.penalty_rate * 12, overdueDays);
   }
   
-  // Customer pays shown interest + penalty
-  // But actual accounting includes differential capitalization
-  const totalDue = shownInterest + penalty;
+  // Customer pays: shown interest + differential (as part payment) + penalty
+  // On receipt: Interest (18%) + Part Payment (differential) + Penalty
+  const totalDue = shownInterest + differential + penalty;
   
   return {
     shownInterest: Math.round(shownInterest),
@@ -148,7 +150,7 @@ export function calculateDualRateInterest(
 
 /**
  * Process interest payment and allocate funds
- * Returns receipt amounts (shown rate only) and internal accounting
+ * Receipt shows: Interest (18%) + Part Payment (differential) + Penalty
  */
 export function processInterestPayment(
   amountPaid: number,
@@ -157,8 +159,9 @@ export function processInterestPayment(
 ): PaymentAllocation {
   let remaining = amountPaid;
   let penalty = 0;
-  let shownInterest = 0;
-  let principalReduction = 0;
+  let interestPaid = 0;
+  let partPayment = 0;
+  let excessPaid = 0;
   
   // First: Pay penalty (if any)
   if (interestDue.penalty > 0 && remaining > 0) {
@@ -166,31 +169,36 @@ export function processInterestPayment(
     remaining -= penalty;
   }
   
-  // Second: Pay shown interest
+  // Second: Pay shown interest (18%)
   if (remaining > 0) {
-    shownInterest = Math.min(interestDue.shownInterest, remaining);
-    remaining -= shownInterest;
+    interestPaid = Math.min(interestDue.shownInterest, remaining);
+    remaining -= interestPaid;
   }
   
-  // Third: Any excess goes to principal reduction
+  // Third: Pay differential as part payment (reduces principal)
   if (remaining > 0) {
-    principalReduction = remaining;
+    partPayment = Math.min(interestDue.differential, remaining);
+    remaining -= partPayment;
+  }
+  
+  // Fourth: Any excess goes to additional principal reduction
+  if (remaining > 0) {
+    excessPaid = remaining;
     remaining = 0;
   }
   
-  // Differential is always capitalized (hidden from customer)
-  const differentialCapitalized = interestDue.differential;
+  // Total principal reduction = part payment + excess
+  const totalPrincipalReduction = partPayment + excessPaid;
   
-  // New actual principal = current + differential - principal reduction
-  const newActualPrincipal = currentActualPrincipal + differentialCapitalized - principalReduction;
+  // New actual principal = current - total principal reduction
+  const newActualPrincipal = currentActualPrincipal - totalPrincipalReduction;
   
   return {
-    shownInterest: Math.round(shownInterest),
-    actualInterest: Math.round(interestDue.actualInterest),
-    differentialCapitalized: Math.round(differentialCapitalized),
-    principalReduction: Math.round(principalReduction),
+    interestPaid: Math.round(interestPaid),
+    partPayment: Math.round(partPayment),
     penalty: Math.round(penalty),
-    change: Math.round(remaining),
+    excessPaid: Math.round(excessPaid),
+    totalPrincipalReduction: Math.round(totalPrincipalReduction),
     newActualPrincipal: Math.round(newActualPrincipal),
   };
 }
@@ -198,7 +206,6 @@ export function processInterestPayment(
 /**
  * Calculate rebate for early redemption
  * Rebate ONLY on unused differential portion (never on 18% part)
- * No rebate if redeemed before minimum days
  */
 export function calculateRebate(
   scheme: Scheme,
@@ -206,7 +213,6 @@ export function calculateRebate(
   totalTenureDays: number,
   actualPrincipal: number
 ): RebateCalculation {
-  // Check minimum days requirement
   if (usedDays < scheme.minimum_days) {
     return {
       eligible: false,
@@ -229,7 +235,7 @@ export function calculateRebate(
     };
   }
   
-  // Differential rate = effective - shown (e.g., 30% - 18% = 12%)
+  // Differential rate = effective - shown
   const differentialRate = scheme.effective_rate - scheme.shown_rate;
   
   // Rebate = unused differential interest only
@@ -274,8 +280,8 @@ export function calculateRedemptionAmount(
   
   const rebate = calculateRebate(scheme, daysSinceLoan, totalTenureDays, actualPrincipal);
   
-  // Total = actual principal + actual interest - rebate
-  const grossPayable = actualPrincipal + interestDue.actualInterest + interestDue.penalty;
+  // Total = actual principal + interest due - rebate
+  const grossPayable = actualPrincipal + interestDue.totalDue;
   const totalPayable = grossPayable - rebate.rebateAmount;
   
   return {
@@ -285,7 +291,7 @@ export function calculateRedemptionAmount(
     totalPayable: Math.round(totalPayable),
     breakdown: {
       principal: Math.round(actualPrincipal),
-      interest: Math.round(interestDue.actualInterest),
+      interest: Math.round(interestDue.totalDue),
       penalty: Math.round(interestDue.penalty),
       rebate: Math.round(rebate.rebateAmount),
       total: Math.round(totalPayable),

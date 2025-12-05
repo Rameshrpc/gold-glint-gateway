@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, FileText, Search, Eye, User, Settings, Package, Calculator, ArrowRight, Trash2 } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { format, addDays } from 'date-fns';
+import { format, addDays, addMonths } from 'date-fns';
+import { calculateAdvanceInterest, formatIndianCurrency, type AdvanceInterestCalculation } from '@/lib/interestCalculations';
 
 interface Customer {
   id: string;
@@ -22,15 +26,16 @@ interface Customer {
   phone: string;
 }
 
-interface SchemeBase {
+interface Scheme {
   id: string;
   scheme_code: string;
   scheme_name: string;
   interest_rate: number;
+  shown_rate: number;
+  effective_rate: number;
+  minimum_days: number;
+  advance_interest_months: number;
   ltv_percentage: number;
-}
-
-interface Scheme extends SchemeBase {
   min_amount: number;
   max_amount: number;
   min_tenure_days: number;
@@ -56,13 +61,26 @@ interface Loan {
   loan_number: string;
   loan_date: string;
   principal_amount: number;
+  shown_principal: number | null;
+  actual_principal: number | null;
+  advance_interest_shown: number | null;
+  advance_interest_actual: number | null;
+  differential_capitalized: number | null;
   interest_rate: number;
   tenure_days: number;
   maturity_date: string;
   net_disbursed: number;
   status: 'active' | 'closed' | 'overdue' | 'auctioned';
   customer: Customer;
-  scheme: SchemeBase;
+  scheme: {
+    id: string;
+    scheme_code: string;
+    scheme_name: string;
+    interest_rate: number;
+    shown_rate: number | null;
+    effective_rate: number | null;
+    ltv_percentage: number;
+  };
   branch_id: string;
 }
 
@@ -77,9 +95,7 @@ const PURITY_MAP: Record<string, number> = {
   '14k': 58.5,
 };
 
-const ITEM_TYPES = [
-  'necklace', 'chain', 'bangle', 'ring', 'earring', 'pendant', 'coin', 'bar', 'other'
-];
+const ITEM_TYPES = ['necklace', 'chain', 'bangle', 'ring', 'earring', 'pendant', 'coin', 'bar', 'other'];
 
 export default function Loans() {
   const { client, currentBranch, branches, profile, isPlatformAdmin, hasRole } = useAuth();
@@ -87,26 +103,19 @@ export default function Loans() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewDialogOpen, setViewDialogOpen] = useState(false);
-  const [viewingLoan, setViewingLoan] = useState<Loan | null>(null);
-  const [viewingGoldItems, setViewingGoldItems] = useState<GoldItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-
-  // Wizard state
-  const [wizardStep, setWizardStep] = useState(1);
+  
+  // New loan form state
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedSchemeId, setSelectedSchemeId] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   const [tenureDays, setTenureDays] = useState('');
   const [marketRate, setMarketRate] = useState('6000');
-  const [loanAmount, setLoanAmount] = useState(0);
-  const [processingFee, setProcessingFee] = useState(0);
-  const [netDisbursed, setNetDisbursed] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-
+  
   // Current gold item being added
   const [currentItem, setCurrentItem] = useState<Partial<GoldItem>>({
     item_type: '',
@@ -114,8 +123,12 @@ export default function Loans() {
     gross_weight_grams: 0,
     stone_weight_grams: 0,
     purity: '22k',
-    market_rate_per_gram: 6000,
   });
+  
+  // View loan dialog
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
+  const [viewingLoan, setViewingLoan] = useState<Loan | null>(null);
+  const [viewingGoldItems, setViewingGoldItems] = useState<GoldItem[]>([]);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -135,14 +148,13 @@ export default function Loans() {
 
   const fetchLoans = async () => {
     if (!client) return;
-
     try {
       const { data, error } = await supabase
         .from('loans')
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, ltv_percentage)
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, ltv_percentage)
         `)
         .eq('client_id', client.id)
         .order('created_at', { ascending: false });
@@ -171,30 +183,25 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('scheme_name');
     setSchemes(data || []);
   };
 
-  const resetWizard = () => {
-    setWizardStep(1);
+  const resetForm = () => {
     setSelectedCustomerId('');
     setSelectedSchemeId('');
     setSelectedBranchId(currentBranch?.id || '');
     setGoldItems([]);
     setTenureDays('');
-    setLoanAmount(0);
-    setProcessingFee(0);
-    setNetDisbursed(0);
     setCurrentItem({
       item_type: '',
       description: '',
       gross_weight_grams: 0,
       stone_weight_grams: 0,
       purity: '22k',
-      market_rate_per_gram: 6000,
     });
   };
 
@@ -228,7 +235,6 @@ export default function Loans() {
       gross_weight_grams: 0,
       stone_weight_grams: 0,
       purity: '22k',
-      market_rate_per_gram: parseFloat(marketRate),
     });
   };
 
@@ -236,23 +242,38 @@ export default function Loans() {
     setGoldItems(goldItems.filter((_, i) => i !== index));
   };
 
-  const calculateLoan = () => {
+  // Calculate loan with dual-rate system
+  const loanCalculation = useMemo(() => {
     const scheme = schemes.find(s => s.id === selectedSchemeId);
-    if (!scheme || goldItems.length === 0) return;
+    if (!scheme || goldItems.length === 0) return null;
 
     const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
     const maxLoanAmount = totalAppraisedValue * (scheme.ltv_percentage / 100);
-    const clampedAmount = Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount);
-    const fee = clampedAmount * ((scheme.processing_fee_percentage || 0) / 100);
+    const loanAmount = Math.round(Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount));
+    const processingFee = Math.round(loanAmount * ((scheme.processing_fee_percentage || 0) / 100));
     
-    setLoanAmount(Math.round(clampedAmount));
-    setProcessingFee(Math.round(fee));
-    setNetDisbursed(Math.round(clampedAmount - fee));
-  };
+    // Calculate dual-rate advance interest
+    const advanceCalc = calculateAdvanceInterest(loanAmount, {
+      id: scheme.id,
+      scheme_name: scheme.scheme_name,
+      shown_rate: scheme.shown_rate || 18,
+      effective_rate: scheme.effective_rate || 24,
+      minimum_days: scheme.minimum_days || 30,
+      advance_interest_months: scheme.advance_interest_months || 3,
+    });
 
-  useEffect(() => {
-    calculateLoan();
-  }, [goldItems, selectedSchemeId]);
+    // Net cash to customer = loan amount - shown interest - processing fee
+    const netCashToCustomer = loanAmount - advanceCalc.shownInterest - processingFee;
+
+    return {
+      totalAppraisedValue,
+      loanAmount,
+      processingFee,
+      advanceCalc,
+      netCashToCustomer,
+      scheme,
+    };
+  }, [goldItems, selectedSchemeId, schemes]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -262,18 +283,16 @@ export default function Loans() {
   };
 
   const handleCreateLoan = async () => {
-    if (!client || !selectedBranchId || !selectedCustomerId || !selectedSchemeId || goldItems.length === 0 || !tenureDays) {
+    if (!client || !selectedBranchId || !selectedCustomerId || !selectedSchemeId || goldItems.length === 0 || !tenureDays || !loanCalculation) {
       toast.error('Please complete all required fields');
       return;
     }
-
-    const scheme = schemes.find(s => s.id === selectedSchemeId);
-    if (!scheme) return;
 
     setSubmitting(true);
     try {
       const loanDate = new Date();
       const maturityDate = addDays(loanDate, parseInt(tenureDays));
+      const nextInterestDueDate = addMonths(loanDate, loanCalculation.scheme.advance_interest_months || 3);
 
       const loanData = {
         client_id: client.id,
@@ -282,12 +301,19 @@ export default function Loans() {
         scheme_id: selectedSchemeId,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),
-        principal_amount: loanAmount,
-        interest_rate: scheme.interest_rate,
+        principal_amount: loanCalculation.loanAmount,
+        shown_principal: loanCalculation.loanAmount,
+        actual_principal: loanCalculation.advanceCalc.actualPrincipal, // Principal + differential
+        interest_rate: loanCalculation.scheme.shown_rate || 18,
         tenure_days: parseInt(tenureDays),
         maturity_date: format(maturityDate, 'yyyy-MM-dd'),
-        processing_fee: processingFee,
-        net_disbursed: netDisbursed,
+        processing_fee: loanCalculation.processingFee,
+        net_disbursed: loanCalculation.netCashToCustomer,
+        advance_interest_shown: loanCalculation.advanceCalc.shownInterest,
+        advance_interest_actual: loanCalculation.advanceCalc.actualInterest,
+        differential_capitalized: loanCalculation.advanceCalc.differential,
+        next_interest_due_date: format(nextInterestDueDate, 'yyyy-MM-dd'),
+        last_interest_paid_date: format(loanDate, 'yyyy-MM-dd'), // Advance interest counts as paid
         created_by: profile?.id,
         appraised_by: profile?.id,
       };
@@ -321,8 +347,8 @@ export default function Loans() {
       if (itemsError) throw itemsError;
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);
-      setDialogOpen(false);
-      resetWizard();
+      setIsFormOpen(false);
+      resetForm();
       fetchLoans();
     } catch (error: any) {
       toast.error(error.message || 'Failed to create loan');
@@ -333,12 +359,10 @@ export default function Loans() {
 
   const viewLoanDetails = async (loan: Loan) => {
     setViewingLoan(loan);
-    
     const { data } = await supabase
       .from('gold_items')
       .select('*')
       .eq('loan_id', loan.id);
-    
     setViewingGoldItems(data || []);
     setViewDialogOpen(true);
   };
@@ -348,9 +372,7 @@ export default function Loans() {
       loan.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loan.customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loan.customer.customer_code.toLowerCase().includes(searchQuery.toLowerCase());
-    
     const matchesStatus = statusFilter === 'all' || loan.status === statusFilter;
-    
     return matchesSearch && matchesStatus;
   });
 
@@ -369,353 +391,364 @@ export default function Loans() {
     return branch?.branch_name || 'Unknown';
   };
 
-  const selectedScheme = schemes.find(s => s.id === selectedSchemeId);
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-  const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
+  const selectedScheme = schemes.find(s => s.id === selectedSchemeId);
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Loans</h1>
             <p className="text-muted-foreground">Manage gold loans and disbursements</p>
           </div>
           {canManageLoans && (
-            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetWizard(); }}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Loan
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Create New Loan</DialogTitle>
-                </DialogHeader>
+            <Button 
+              onClick={() => setIsFormOpen(!isFormOpen)}
+              className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+            >
+              {isFormOpen ? <ChevronUp className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+              {isFormOpen ? 'Close Form' : 'New Loan'}
+            </Button>
+          )}
+        </div>
 
-                {/* Wizard Steps */}
-                <div className="flex items-center justify-center gap-2 mb-6">
-                  {[1, 2, 3, 4].map((step) => (
-                    <div key={step} className="flex items-center">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                        wizardStep >= step ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {step}
-                      </div>
-                      {step < 4 && <ArrowRight className="h-4 w-4 mx-2 text-muted-foreground" />}
+        {/* New Loan Form - Collapsible Single Page */}
+        <Collapsible open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <CollapsibleContent>
+            <Card className="border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20">
+              <CardHeader className="pb-4">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-amber-600" />
+                  Create New Loan
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Section 1: Customer & Branch */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2 text-sm">
+                    <User className="h-4 w-4 text-amber-600" />
+                    Customer & Branch
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Customer *</Label>
+                      <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select customer" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {customers.map((customer) => (
+                            <SelectItem key={customer.id} value={customer.id}>
+                              {customer.customer_code} - {customer.full_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                  ))}
+                    <div className="space-y-2">
+                      <Label>Branch *</Label>
+                      <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select branch" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {branches.filter(b => b.is_active).map((branch) => (
+                            <SelectItem key={branch.id} value={branch.id}>
+                              {branch.branch_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Step 1: Select Customer */}
-                {wizardStep === 1 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <User className="h-5 w-5 text-amber-600" />
-                      <h3 className="font-semibold">Step 1: Select Customer</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Customer *</Label>
-                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                {customer.customer_code} - {customer.full_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Branch *</Label>
-                        <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select branch" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {branches.filter(b => b.is_active).map((branch) => (
-                              <SelectItem key={branch.id} value={branch.id}>
-                                {branch.branch_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button onClick={() => setWizardStep(2)} disabled={!selectedCustomerId || !selectedBranchId}>
-                        Next <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                <Separator />
 
-                {/* Step 2: Select Scheme */}
-                {wizardStep === 2 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Settings className="h-5 w-5 text-amber-600" />
-                      <h3 className="font-semibold">Step 2: Select Scheme</h3>
-                    </div>
-                    <div className="grid gap-3">
-                      {schemes.map((scheme) => (
-                        <Card 
-                          key={scheme.id} 
-                          className={`cursor-pointer transition-all ${selectedSchemeId === scheme.id ? 'ring-2 ring-primary' : 'hover:bg-muted/50'}`}
-                          onClick={() => setSelectedSchemeId(scheme.id)}
-                        >
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-semibold">{scheme.scheme_name}</p>
-                                <p className="text-sm text-muted-foreground">{scheme.scheme_code}</p>
-                              </div>
-                              <div className="text-right text-sm">
-                                <p><span className="text-muted-foreground">Interest:</span> <span className="font-medium">{scheme.interest_rate}%/mo</span></p>
-                                <p><span className="text-muted-foreground">LTV:</span> <span className="font-medium">{scheme.ltv_percentage}%</span></p>
-                              </div>
+                {/* Section 2: Scheme Selection */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2 text-sm">
+                    <Settings className="h-4 w-4 text-amber-600" />
+                    Scheme Selection
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {schemes.map((scheme) => (
+                      <Card 
+                        key={scheme.id} 
+                        className={`cursor-pointer transition-all ${selectedSchemeId === scheme.id ? 'ring-2 ring-amber-500 bg-amber-50 dark:bg-amber-950/30' : 'hover:bg-muted/50'}`}
+                        onClick={() => setSelectedSchemeId(scheme.id)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-sm">{scheme.scheme_name}</p>
+                              <p className="text-xs text-muted-foreground">{scheme.scheme_code}</p>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                    <div className="flex justify-between">
-                      <Button variant="outline" onClick={() => setWizardStep(1)}>Back</Button>
-                      <Button onClick={() => setWizardStep(3)} disabled={!selectedSchemeId}>
-                        Next <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
+                            <Badge variant="secondary" className="text-xs">LTV {scheme.ltv_percentage}%</Badge>
+                          </div>
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <p className="text-muted-foreground">Shown Rate</p>
+                              <p className="font-medium text-green-600">{scheme.shown_rate}% p.a.</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">Effective Rate</p>
+                              <p className="font-medium text-amber-600">{scheme.effective_rate}% p.a.</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                {/* Step 3: Add Gold Items */}
-                {wizardStep === 3 && (
+                <Separator />
+
+                {/* Section 3: Gold Items */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2 text-sm">
+                    <Package className="h-4 w-4 text-amber-600" />
+                    Gold Item Appraisal
+                  </h3>
+                  
+                  <div className="space-y-2">
+                    <Label>Market Rate (₹/gram for 24k)</Label>
+                    <Input
+                      type="number"
+                      value={marketRate}
+                      onChange={(e) => setMarketRate(e.target.value)}
+                      placeholder="Today's gold rate"
+                      className="w-48"
+                    />
+                  </div>
+
+                  <Card>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Item Type *</Label>
+                          <Select value={currentItem.item_type} onValueChange={(v) => setCurrentItem({...currentItem, item_type: v})}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ITEM_TYPES.map(type => (
+                                <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Gross Weight (g) *</Label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            value={currentItem.gross_weight_grams || ''}
+                            onChange={(e) => setCurrentItem({...currentItem, gross_weight_grams: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Stone Weight (g)</Label>
+                          <Input
+                            type="number"
+                            step="0.001"
+                            value={currentItem.stone_weight_grams || ''}
+                            onChange={(e) => setCurrentItem({...currentItem, stone_weight_grams: parseFloat(e.target.value) || 0})}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Purity</Label>
+                          <Select value={currentItem.purity} onValueChange={(v) => setCurrentItem({...currentItem, purity: v})}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(PURITY_MAP).map(([k, v]) => (
+                                <SelectItem key={k} value={k}>{k} ({v}%)</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Description</Label>
+                          <Input
+                            value={currentItem.description || ''}
+                            onChange={(e) => setCurrentItem({...currentItem, description: e.target.value})}
+                            placeholder="Optional"
+                          />
+                        </div>
+                      </div>
+                      <Button type="button" onClick={addGoldItem} variant="outline" size="sm">
+                        <Plus className="h-4 w-4 mr-1" /> Add Item
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {goldItems.length > 0 && (
+                    <Card>
+                      <CardContent className="p-0">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Net Wt (g)</TableHead>
+                              <TableHead>Purity</TableHead>
+                              <TableHead className="text-right">Value</TableHead>
+                              <TableHead></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {goldItems.map((item, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="capitalize">{item.item_type}</TableCell>
+                                <TableCell>{item.net_weight_grams.toFixed(3)}</TableCell>
+                                <TableCell>{item.purity}</TableCell>
+                                <TableCell className="text-right">{formatIndianCurrency(item.appraised_value)}</TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                            <TableRow className="bg-muted/50">
+                              <TableCell colSpan={3} className="font-semibold">Total Appraised Value</TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {formatIndianCurrency(goldItems.reduce((sum, item) => sum + item.appraised_value, 0))}
+                              </TableCell>
+                              <TableCell></TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Section 4: Loan Calculation - Dual View */}
+                {loanCalculation && (
                   <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Package className="h-5 w-5 text-amber-600" />
-                      <h3 className="font-semibold">Step 3: Appraise Gold Items</h3>
-                    </div>
+                    <h3 className="font-semibold flex items-center gap-2 text-sm">
+                      <Calculator className="h-4 w-4 text-amber-600" />
+                      Loan Calculation
+                    </h3>
 
                     <div className="space-y-2">
-                      <Label>Market Rate (₹/gram for 24k)</Label>
+                      <Label>Tenure (days) *</Label>
                       <Input
                         type="number"
-                        value={marketRate}
-                        onChange={(e) => setMarketRate(e.target.value)}
-                        placeholder="Today's gold rate"
+                        value={tenureDays}
+                        onChange={(e) => setTenureDays(e.target.value)}
+                        placeholder={`${loanCalculation.scheme.min_tenure_days} - ${loanCalculation.scheme.max_tenure_days} days`}
+                        min={loanCalculation.scheme.min_tenure_days}
+                        max={loanCalculation.scheme.max_tenure_days}
+                        className="w-48"
                       />
                     </div>
 
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Add Gold Item</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Item Type *</Label>
-                            <Select value={currentItem.item_type} onValueChange={(v) => setCurrentItem({...currentItem, item_type: v})}>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {ITEM_TYPES.map(type => (
-                                  <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Gross Weight (g) *</Label>
-                            <Input
-                              type="number"
-                              step="0.001"
-                              value={currentItem.gross_weight_grams || ''}
-                              onChange={(e) => setCurrentItem({...currentItem, gross_weight_grams: parseFloat(e.target.value) || 0})}
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">Stone Weight (g)</Label>
-                            <Input
-                              type="number"
-                              step="0.001"
-                              value={currentItem.stone_weight_grams || ''}
-                              onChange={(e) => setCurrentItem({...currentItem, stone_weight_grams: parseFloat(e.target.value) || 0})}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">Purity</Label>
-                            <Select value={currentItem.purity} onValueChange={(v) => setCurrentItem({...currentItem, purity: v})}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.entries(PURITY_MAP).map(([k, v]) => (
-                                  <SelectItem key={k} value={k}>{k} ({v}%)</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1 col-span-2">
-                            <Label className="text-xs">Description</Label>
-                            <Input
-                              value={currentItem.description || ''}
-                              onChange={(e) => setCurrentItem({...currentItem, description: e.target.value})}
-                              placeholder="e.g., Gold chain with pendant"
-                            />
-                          </div>
-                        </div>
-                        <Button type="button" onClick={addGoldItem} variant="outline" size="sm">
-                          <Plus className="h-4 w-4 mr-1" /> Add Item
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    {goldItems.length > 0 && (
-                      <Card>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Customer Receipt View */}
+                      <Card className="border-green-500/30 bg-green-50/50 dark:bg-green-950/20">
                         <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Added Items ({goldItems.length})</CardTitle>
+                          <CardTitle className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
+                            <IndianRupee className="h-4 w-4" />
+                            Customer Receipt
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">What customer sees</p>
                         </CardHeader>
-                        <CardContent>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Net Wt (g)</TableHead>
-                                <TableHead>Purity</TableHead>
-                                <TableHead>Value</TableHead>
-                                <TableHead></TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {goldItems.map((item, index) => (
-                                <TableRow key={index}>
-                                  <TableCell className="capitalize">{item.item_type}</TableCell>
-                                  <TableCell>{item.net_weight_grams.toFixed(3)}</TableCell>
-                                  <TableCell>{item.purity}</TableCell>
-                                  <TableCell>₹{item.appraised_value.toLocaleString()}</TableCell>
-                                  <TableCell>
-                                    <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
-                                      <Trash2 className="h-4 w-4 text-destructive" />
-                                    </Button>
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                              <TableRow>
-                                <TableCell colSpan={3} className="font-semibold">Total Appraised Value</TableCell>
-                                <TableCell className="font-semibold">₹{totalAppraisedValue.toLocaleString()}</TableCell>
-                                <TableCell></TableCell>
-                              </TableRow>
-                            </TableBody>
-                          </Table>
+                        <CardContent className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Principal Amount</span>
+                            <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Interest Rate</span>
+                            <span>{loanCalculation.scheme.shown_rate}% p.a.</span>
+                          </div>
+                          <div className="flex justify-between text-red-600">
+                            <span>Advance Interest ({loanCalculation.scheme.advance_interest_months} mo)</span>
+                            <span>-{formatIndianCurrency(loanCalculation.advanceCalc.shownInterest)}</span>
+                          </div>
+                          {loanCalculation.processingFee > 0 && (
+                            <div className="flex justify-between text-red-600">
+                              <span>Processing Fee</span>
+                              <span>-{formatIndianCurrency(loanCalculation.processingFee)}</span>
+                            </div>
+                          )}
+                          <Separator />
+                          <div className="flex justify-between font-bold text-lg text-green-700 dark:text-green-400">
+                            <span>Net Cash to Customer</span>
+                            <span>{formatIndianCurrency(loanCalculation.netCashToCustomer)}</span>
+                          </div>
                         </CardContent>
                       </Card>
+
+                      {/* Internal Accounting View */}
+                      <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                            <Calculator className="h-4 w-4" />
+                            Internal Accounting
+                          </CardTitle>
+                          <p className="text-xs text-muted-foreground">Books entry (hidden from customer)</p>
+                        </CardHeader>
+                        <CardContent className="space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Original Principal</span>
+                            <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
+                          </div>
+                          <div className="flex justify-between text-muted-foreground">
+                            <span>Effective Rate</span>
+                            <span>{loanCalculation.scheme.effective_rate}% p.a.</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Advance Interest (Actual)</span>
+                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualInterest)}</span>
+                          </div>
+                          <div className="flex justify-between text-amber-600">
+                            <span>Differential Added to Principal</span>
+                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-lg text-amber-700 dark:text-amber-400">
+                            <span>Actual Principal (Books)</span>
+                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualPrincipal)}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {tenureDays && (
+                      <div className="text-sm text-muted-foreground">
+                        <span className="font-medium">Maturity Date:</span> {format(addDays(new Date(), parseInt(tenureDays)), 'dd MMM yyyy')}
+                        <span className="mx-4">|</span>
+                        <span className="font-medium">Next Interest Due:</span> {format(addMonths(new Date(), loanCalculation.scheme.advance_interest_months || 3), 'dd MMM yyyy')}
+                      </div>
                     )}
-
-                    <div className="flex justify-between">
-                      <Button variant="outline" onClick={() => setWizardStep(2)}>Back</Button>
-                      <Button onClick={() => setWizardStep(4)} disabled={goldItems.length === 0}>
-                        Next <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </div>
                   </div>
                 )}
 
-                {/* Step 4: Review & Create */}
-                {wizardStep === 4 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-4">
-                      <Calculator className="h-5 w-5 text-amber-600" />
-                      <h3 className="font-semibold">Step 4: Review & Create Loan</h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Customer</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="font-medium">{selectedCustomer?.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{selectedCustomer?.customer_code} • {selectedCustomer?.phone}</p>
-                        </CardContent>
-                      </Card>
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-sm">Scheme</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <p className="font-medium">{selectedScheme?.scheme_name}</p>
-                          <p className="text-sm text-muted-foreground">{selectedScheme?.interest_rate}%/mo • LTV {selectedScheme?.ltv_percentage}%</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    <Card>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm">Loan Calculation</CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        <div className="space-y-2">
-                          <Label>Tenure (days) *</Label>
-                          <Input
-                            type="number"
-                            value={tenureDays}
-                            onChange={(e) => setTenureDays(e.target.value)}
-                            placeholder={`${selectedScheme?.min_tenure_days} - ${selectedScheme?.max_tenure_days} days`}
-                            min={selectedScheme?.min_tenure_days}
-                            max={selectedScheme?.max_tenure_days}
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 pt-2">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Total Appraised Value</p>
-                            <p className="text-lg font-semibold">₹{totalAppraisedValue.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Loan Amount (LTV {selectedScheme?.ltv_percentage}%)</p>
-                            <p className="text-lg font-semibold text-amber-600">₹{loanAmount.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Processing Fee</p>
-                            <p className="text-lg font-semibold">₹{processingFee.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Net Disbursed</p>
-                            <p className="text-lg font-semibold text-green-600">₹{netDisbursed.toLocaleString()}</p>
-                          </div>
-                        </div>
-                        {tenureDays && (
-                          <div className="pt-2 border-t">
-                            <p className="text-sm text-muted-foreground">Maturity Date</p>
-                            <p className="font-medium">{format(addDays(new Date(), parseInt(tenureDays)), 'dd MMM yyyy')}</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-
-                    <div className="flex justify-between">
-                      <Button variant="outline" onClick={() => setWizardStep(3)}>Back</Button>
-                      <Button 
-                        onClick={handleCreateLoan} 
-                        disabled={submitting || !tenureDays}
-                        className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                      >
-                        {submitting ? 'Creating...' : 'Create Loan'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
+                {/* Create Button */}
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button variant="outline" onClick={() => { setIsFormOpen(false); resetForm(); }}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCreateLoan} 
+                    disabled={submitting || !selectedCustomerId || !selectedSchemeId || !selectedBranchId || goldItems.length === 0 || !tenureDays}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                  >
+                    {submitting ? 'Creating...' : 'Create Loan'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </CollapsibleContent>
+        </Collapsible>
 
         {/* Filters */}
         <Card>
@@ -768,7 +801,7 @@ export default function Loans() {
                   : 'Create your first gold loan to get started.'}
               </p>
               {!searchQuery && statusFilter === 'all' && canManageLoans && (
-                <Button onClick={() => setDialogOpen(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                <Button onClick={() => setIsFormOpen(true)} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
                   <Plus className="h-4 w-4 mr-2" />
                   Create First Loan
                 </Button>
@@ -781,126 +814,177 @@ export default function Loans() {
               <CardTitle>Loan List ({filteredLoans.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Loan #</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Principal</TableHead>
-                    <TableHead>Interest</TableHead>
-                    <TableHead>Maturity</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLoans.map((loan) => (
-                    <TableRow key={loan.id}>
-                      <TableCell className="font-medium">{loan.loan_number}</TableCell>
-                      <TableCell>
-                        <div>
-                          <p>{loan.customer.full_name}</p>
-                          <p className="text-sm text-muted-foreground">{loan.customer.customer_code}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>₹{loan.principal_amount.toLocaleString()}</TableCell>
-                      <TableCell>{loan.interest_rate}%/mo</TableCell>
-                      <TableCell>{format(new Date(loan.maturity_date), 'dd MMM yyyy')}</TableCell>
-                      <TableCell>{getBranchName(loan.branch_id)}</TableCell>
-                      <TableCell>
-                        <Badge className={`${getStatusColor(loan.status)} text-white`}>
-                          {loan.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)}>
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Loan #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead className="text-right">Principal</TableHead>
+                      <TableHead className="text-right">Actual Principal</TableHead>
+                      <TableHead>Maturity</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLoans.map((loan) => (
+                      <TableRow key={loan.id}>
+                        <TableCell className="font-medium">{loan.loan_number}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{loan.customer.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{loan.customer.customer_code}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p>{formatIndianCurrency(loan.principal_amount)}</p>
+                          <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate || loan.interest_rate}% p.a.</p>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="text-amber-600 font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
+                        </TableCell>
+                        <TableCell>{format(new Date(loan.maturity_date), 'dd MMM yyyy')}</TableCell>
+                        <TableCell>{getBranchName(loan.branch_id)}</TableCell>
+                        <TableCell>
+                          <Badge className={`${getStatusColor(loan.status)} text-white`}>
+                            {loan.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)}>
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </CardContent>
           </Card>
         )}
 
         {/* View Loan Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Loan Details - {viewingLoan?.loan_number}</DialogTitle>
             </DialogHeader>
+            
             {viewingLoan && (
-              <Tabs defaultValue="details">
-                <TabsList>
-                  <TabsTrigger value="details">Details</TabsTrigger>
-                  <TabsTrigger value="gold">Gold Items ({viewingGoldItems.length})</TabsTrigger>
+              <Tabs defaultValue="customer" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="customer">Customer View</TabsTrigger>
+                  <TabsTrigger value="internal">Internal View</TabsTrigger>
                 </TabsList>
-                <TabsContent value="details" className="space-y-4">
+                
+                <TabsContent value="customer" className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-muted-foreground">Customer</Label>
-                      <p className="font-medium">{viewingLoan.customer.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{viewingLoan.customer.customer_code}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Scheme</Label>
-                      <p className="font-medium">{viewingLoan.scheme.scheme_name}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Principal Amount</Label>
-                      <p className="font-medium">₹{viewingLoan.principal_amount.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Net Disbursed</Label>
-                      <p className="font-medium">₹{viewingLoan.net_disbursed.toLocaleString()}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Interest Rate</Label>
-                      <p className="font-medium">{viewingLoan.interest_rate}% per month</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Tenure</Label>
-                      <p className="font-medium">{viewingLoan.tenure_days} days</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Loan Date</Label>
-                      <p className="font-medium">{format(new Date(viewingLoan.loan_date), 'dd MMM yyyy')}</p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground">Maturity Date</Label>
-                      <p className="font-medium">{format(new Date(viewingLoan.maturity_date), 'dd MMM yyyy')}</p>
-                    </div>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Customer</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium">{viewingLoan.customer.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{viewingLoan.customer.customer_code} • {viewingLoan.customer.phone}</p>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm">Scheme</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="font-medium">{viewingLoan.scheme.scheme_name}</p>
+                        <p className="text-sm text-muted-foreground">@{viewingLoan.scheme.shown_rate || viewingLoan.interest_rate}% p.a.</p>
+                      </CardContent>
+                    </Card>
                   </div>
+
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Loan Summary (Customer Receipt)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Principal Amount</span>
+                        <span className="font-medium">{formatIndianCurrency(viewingLoan.principal_amount)}</span>
+                      </div>
+                      <div className="flex justify-between text-red-600">
+                        <span>Advance Interest Deducted</span>
+                        <span>-{formatIndianCurrency(viewingLoan.advance_interest_shown || 0)}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-bold">
+                        <span>Net Cash Paid</span>
+                        <span className="text-green-600">{formatIndianCurrency(viewingLoan.net_disbursed)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </TabsContent>
-                <TabsContent value="gold">
+
+                <TabsContent value="internal" className="space-y-4">
+                  <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm text-amber-700 dark:text-amber-400">Internal Accounting</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Original Principal</span>
+                        <span>{formatIndianCurrency(viewingLoan.principal_amount)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Advance Interest (Shown @18%)</span>
+                        <span>{formatIndianCurrency(viewingLoan.advance_interest_shown || 0)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Advance Interest (Actual)</span>
+                        <span>{formatIndianCurrency(viewingLoan.advance_interest_actual || 0)}</span>
+                      </div>
+                      <div className="flex justify-between text-amber-600">
+                        <span>Differential Added to Principal</span>
+                        <span>+{formatIndianCurrency(viewingLoan.differential_capitalized || 0)}</span>
+                      </div>
+                      <Separator />
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Actual Principal (Books)</span>
+                        <span className="text-amber-600">{formatIndianCurrency(viewingLoan.actual_principal || viewingLoan.principal_amount)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+            )}
+
+            {viewingGoldItems.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Gold Items ({viewingGoldItems.length})</CardTitle>
+                </CardHeader>
+                <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item</TableHead>
+                        <TableHead>Type</TableHead>
                         <TableHead>Net Weight</TableHead>
                         <TableHead>Purity</TableHead>
-                        <TableHead>Value</TableHead>
+                        <TableHead className="text-right">Value</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingGoldItems.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="capitalize">
-                            {item.item_type}
-                            {item.description && <span className="text-muted-foreground"> - {item.description}</span>}
-                          </TableCell>
+                      {viewingGoldItems.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="capitalize">{item.item_type}</TableCell>
                           <TableCell>{item.net_weight_grams.toFixed(3)}g</TableCell>
-                          <TableCell>{item.purity} ({item.purity_percentage}%)</TableCell>
-                          <TableCell>₹{item.appraised_value.toLocaleString()}</TableCell>
+                          <TableCell>{item.purity}</TableCell>
+                          <TableCell className="text-right">{formatIndianCurrency(item.appraised_value)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
-                </TabsContent>
-              </Tabs>
+                </CardContent>
+              </Card>
             )}
           </DialogContent>
         </Dialog>
