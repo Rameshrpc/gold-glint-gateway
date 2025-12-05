@@ -14,6 +14,16 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -29,7 +39,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Building, Loader2, Filter } from 'lucide-react';
+import { Plus, Building, Loader2, Filter, Edit, Trash2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -56,13 +66,33 @@ interface Client {
   company_name: string;
 }
 
+interface UserProfile {
+  user_id: string;
+  full_name: string;
+  email: string | null;
+  branch_id: string | null;
+}
+
 export default function Branches() {
-  const { client, isPlatformAdmin } = useAuth();
+  const { client, isPlatformAdmin, hasRole } = useAuth();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Edit/Delete state
+  const [editingBranch, setEditingBranch] = useState<Branch | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [branchToDelete, setBranchToDelete] = useState<Branch | null>(null);
+
+  // Manager assignment state
+  const [managerDialogOpen, setManagerDialogOpen] = useState(false);
+  const [selectedBranchForManager, setSelectedBranchForManager] = useState<Branch | null>(null);
+  const [availableManagers, setAvailableManagers] = useState<UserProfile[]>([]);
+  const [currentManager, setCurrentManager] = useState<UserProfile | null>(null);
+  const [selectedManagerId, setSelectedManagerId] = useState<string>('');
+  const [loadingManagers, setLoadingManagers] = useState(false);
 
   // Filter state for platform admins
   const [filterClientId, setFilterClientId] = useState<string>('all');
@@ -77,6 +107,7 @@ export default function Branches() {
   const [email, setEmail] = useState('');
 
   const isAdmin = isPlatformAdmin();
+  const canManageBranches = isAdmin || hasRole('tenant_admin');
 
   // Fetch clients for platform admins
   const fetchClients = async () => {
@@ -133,6 +164,18 @@ export default function Branches() {
     fetchBranches();
   }, [client, filterClientId, isAdmin]);
 
+  const openEditDialog = (branch: Branch) => {
+    setEditingBranch(branch);
+    setSelectedClientId(branch.client_id);
+    setBranchCode(branch.branch_code);
+    setBranchName(branch.branch_name);
+    setBranchType(branch.branch_type);
+    setAddress(branch.address || '');
+    setPhone(branch.phone || '');
+    setEmail(branch.email || '');
+    setDialogOpen(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -145,34 +188,160 @@ export default function Branches() {
     }
 
     setSaving(true);
-    const { error } = await supabase
-      .from('branches')
-      .insert([{
-        client_id: targetClientId,
-        branch_code: branchCode.toUpperCase(),
-        branch_name: branchName,
-        branch_type: branchType as 'main_branch' | 'company_owned' | 'franchise' | 'tenant',
-        address: address || null,
-        phone: phone || null,
-        email: email || null,
-      }]);
 
-    if (error) {
-      if (error.code === '23505') {
-        toast.error('Branch code already exists');
+    if (editingBranch) {
+      // Update existing branch
+      const { error } = await supabase
+        .from('branches')
+        .update({
+          branch_code: branchCode.toUpperCase(),
+          branch_name: branchName,
+          branch_type: branchType as 'main_branch' | 'company_owned' | 'franchise' | 'tenant',
+          address: address || null,
+          phone: phone || null,
+          email: email || null,
+        })
+        .eq('id', editingBranch.id);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Branch code already exists');
+        } else {
+          toast.error('Failed to update branch');
+        }
       } else {
-        toast.error('Failed to create branch');
+        toast.success('Branch updated successfully');
+        setDialogOpen(false);
+        resetForm();
+        fetchBranches();
       }
     } else {
-      toast.success('Branch created successfully');
-      setDialogOpen(false);
-      resetForm();
-      fetchBranches();
+      // Create new branch
+      const { error } = await supabase
+        .from('branches')
+        .insert([{
+          client_id: targetClientId,
+          branch_code: branchCode.toUpperCase(),
+          branch_name: branchName,
+          branch_type: branchType as 'main_branch' | 'company_owned' | 'franchise' | 'tenant',
+          address: address || null,
+          phone: phone || null,
+          email: email || null,
+        }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.error('Branch code already exists');
+        } else {
+          toast.error('Failed to create branch');
+        }
+      } else {
+        toast.success('Branch created successfully');
+        setDialogOpen(false);
+        resetForm();
+        fetchBranches();
+      }
     }
     setSaving(false);
   };
 
+  const handleDeleteBranch = async () => {
+    if (!branchToDelete) return;
+
+    const { error } = await supabase
+      .from('branches')
+      .update({ is_active: false })
+      .eq('id', branchToDelete.id);
+
+    if (error) {
+      toast.error('Failed to deactivate branch');
+    } else {
+      toast.success('Branch deactivated successfully');
+      fetchBranches();
+    }
+    setDeleteDialogOpen(false);
+    setBranchToDelete(null);
+  };
+
+  const openDeleteDialog = (branch: Branch) => {
+    setBranchToDelete(branch);
+    setDeleteDialogOpen(true);
+  };
+
+  // Branch Manager Assignment
+  const fetchBranchManagerData = async (branch: Branch) => {
+    setLoadingManagers(true);
+    setSelectedBranchForManager(branch);
+    setManagerDialogOpen(true);
+
+    // Fetch current manager (user assigned to this branch with branch_manager role)
+    const { data: currentManagerData } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, email, branch_id')
+      .eq('branch_id', branch.id)
+      .maybeSingle();
+
+    setCurrentManager(currentManagerData as UserProfile | null);
+
+    // Fetch all users with branch_manager role in the same client
+    const { data: managerProfiles } = await supabase
+      .from('profiles')
+      .select('user_id, full_name, email, branch_id')
+      .eq('client_id', branch.client_id);
+
+    if (managerProfiles) {
+      // Filter to get users who have branch_manager role
+      const { data: managerRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'branch_manager');
+
+      const managerUserIds = new Set(managerRoles?.map(r => r.user_id) || []);
+      const filteredManagers = managerProfiles.filter(p => managerUserIds.has(p.user_id));
+      setAvailableManagers(filteredManagers as UserProfile[]);
+    }
+
+    setSelectedManagerId(currentManagerData?.user_id || '');
+    setLoadingManagers(false);
+  };
+
+  const handleAssignManager = async () => {
+    if (!selectedBranchForManager) return;
+
+    setSaving(true);
+
+    // First, unassign current manager if any
+    if (currentManager) {
+      await supabase
+        .from('profiles')
+        .update({ branch_id: null })
+        .eq('user_id', currentManager.user_id);
+    }
+
+    // Assign new manager if selected
+    if (selectedManagerId) {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ branch_id: selectedBranchForManager.id })
+        .eq('user_id', selectedManagerId);
+
+      if (error) {
+        toast.error('Failed to assign manager');
+      } else {
+        toast.success('Branch manager assigned successfully');
+      }
+    } else {
+      toast.success('Manager unassigned from branch');
+    }
+
+    setManagerDialogOpen(false);
+    setSelectedBranchForManager(null);
+    setSelectedManagerId('');
+    setSaving(false);
+  };
+
   const resetForm = () => {
+    setEditingBranch(null);
     setSelectedClientId('');
     setBranchCode('');
     setBranchName('');
@@ -202,125 +371,129 @@ export default function Branches() {
               {isAdmin ? 'Manage branches across all clients' : 'Manage your branch network'}
             </p>
           </div>
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Branch
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Branch</DialogTitle>
-                <DialogDescription>
-                  {isAdmin 
-                    ? 'Create a new branch for any client' 
-                    : 'Create a new branch for your organization'}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Client selection for platform admins */}
-                {isAdmin && (
-                  <div className="space-y-2">
-                    <Label htmlFor="client-select">Client *</Label>
-                    <Select value={selectedClientId} onValueChange={setSelectedClientId} required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clients.map((c) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.company_name} ({c.client_code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+          {canManageBranches && (
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Branch
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingBranch ? 'Edit Branch' : 'Add New Branch'}</DialogTitle>
+                  <DialogDescription>
+                    {editingBranch 
+                      ? 'Update branch details'
+                      : isAdmin 
+                        ? 'Create a new branch for any client' 
+                        : 'Create a new branch for your organization'}
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {/* Client selection for platform admins (only on create) */}
+                  {isAdmin && !editingBranch && (
+                    <div className="space-y-2">
+                      <Label htmlFor="client-select">Client *</Label>
+                      <Select value={selectedClientId} onValueChange={setSelectedClientId} required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select client" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clients.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.company_name} ({c.client_code})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="branch-code">Branch Code</Label>
+                      <Input
+                        id="branch-code"
+                        placeholder="e.g., BR001"
+                        value={branchCode}
+                        onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
+                        className="uppercase"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="branch-type">Branch Type</Label>
+                      <Select value={branchType} onValueChange={setBranchType}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="main_branch">Main Branch</SelectItem>
+                          <SelectItem value="company_owned">Company Owned</SelectItem>
+                          <SelectItem value="franchise">Franchise</SelectItem>
+                          <SelectItem value="tenant">Tenant</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label htmlFor="branch-code">Branch Code</Label>
+                    <Label htmlFor="branch-name">Branch Name</Label>
                     <Input
-                      id="branch-code"
-                      placeholder="e.g., BR001"
-                      value={branchCode}
-                      onChange={(e) => setBranchCode(e.target.value.toUpperCase())}
-                      className="uppercase"
+                      id="branch-name"
+                      placeholder="e.g., Main Street Branch"
+                      value={branchName}
+                      onChange={(e) => setBranchName(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="branch-type">Branch Type</Label>
-                    <Select value={branchType} onValueChange={setBranchType}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="main_branch">Main Branch</SelectItem>
-                        <SelectItem value="company_owned">Company Owned</SelectItem>
-                        <SelectItem value="franchise">Franchise</SelectItem>
-                        <SelectItem value="tenant">Tenant</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="branch-name">Branch Name</Label>
-                  <Input
-                    id="branch-name"
-                    placeholder="e.g., Main Street Branch"
-                    value={branchName}
-                    onChange={(e) => setBranchName(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Input
-                    id="address"
-                    placeholder="Full address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone</Label>
+                    <Label htmlFor="address">Address</Label>
                     <Input
-                      id="phone"
-                      placeholder="+91 XXXXX XXXXX"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
+                      id="address"
+                      placeholder="Full address"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="branch@company.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
+                        placeholder="+91 XXXXX XXXXX"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="branch@company.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={saving || (isAdmin && !selectedClientId)}
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                  >
-                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    Create Branch
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={saving || (isAdmin && !editingBranch && !selectedClientId)}
+                      className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                    >
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                      {editingBranch ? 'Update Branch' : 'Create Branch'}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
 
         {/* Client filter for platform admins */}
@@ -359,13 +532,15 @@ export default function Branches() {
                   ? 'Create branches for your clients to start managing locations.'
                   : 'Create your first branch to start managing locations.'}
               </p>
-              <Button 
-                onClick={() => setDialogOpen(true)}
-                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Branch
-              </Button>
+              {canManageBranches && (
+                <Button 
+                  onClick={() => setDialogOpen(true)}
+                  className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Branch
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -380,6 +555,7 @@ export default function Branches() {
                     <TableHead>Type</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Status</TableHead>
+                    {canManageBranches && <TableHead className="text-right">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -406,6 +582,37 @@ export default function Branches() {
                           {branch.is_active ? 'Active' : 'Inactive'}
                         </Badge>
                       </TableCell>
+                      {canManageBranches && (
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => fetchBranchManagerData(branch)}
+                              title="Assign Manager"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditDialog(branch)}
+                              title="Edit Branch"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openDeleteDialog(branch)}
+                              title="Deactivate Branch"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -413,6 +620,91 @@ export default function Branches() {
             </CardContent>
           </Card>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Deactivate Branch?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will deactivate "{branchToDelete?.branch_name}". The branch will no longer be available for operations but data will be preserved.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteBranch}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Deactivate
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Manager Assignment Dialog */}
+        <Dialog open={managerDialogOpen} onOpenChange={setManagerDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assign Branch Manager</DialogTitle>
+              <DialogDescription>
+                Select a branch manager for {selectedBranchForManager?.branch_name}
+              </DialogDescription>
+            </DialogHeader>
+            {loadingManagers ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-amber-600" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {currentManager && (
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-sm text-muted-foreground">Current Manager</p>
+                    <p className="font-medium">{currentManager.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{currentManager.email}</p>
+                  </div>
+                )}
+                
+                {availableManagers.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">
+                    No users with branch_manager role found. Create users with the branch manager role first.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <Label>Select Manager</Label>
+                    <Select value={selectedManagerId} onValueChange={setSelectedManagerId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Unassign Manager</SelectItem>
+                        {availableManagers.map((manager) => (
+                          <SelectItem key={manager.user_id} value={manager.user_id}>
+                            {manager.full_name} {manager.branch_id ? '(Currently assigned)' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setManagerDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAssignManager}
+                    disabled={saving}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                  >
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                    {selectedManagerId ? 'Assign Manager' : 'Unassign'}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
