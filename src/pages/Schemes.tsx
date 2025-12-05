@@ -29,6 +29,7 @@ interface Scheme {
   minimum_days: number;
   advance_interest_months: number;
   rate_per_gram: number | null;
+  rate_18kt: number | null;
   ltv_percentage: number;
   processing_fee_percentage: number | null;
   penalty_rate: number | null;
@@ -56,6 +57,7 @@ export default function Schemes() {
   const [minimumDays, setMinimumDays] = useState('30');
   const [advanceInterestMonths, setAdvanceInterestMonths] = useState('3');
   const [ratePerGram, setRatePerGram] = useState('');
+  const [rate18kt, setRate18kt] = useState('');
   const [minAmount, setMinAmount] = useState('1000');
   const [maxAmount, setMaxAmount] = useState('10000000');
   const [minTenureDays, setMinTenureDays] = useState('30');
@@ -101,6 +103,7 @@ export default function Schemes() {
     setMinimumDays('30');
     setAdvanceInterestMonths('3');
     setRatePerGram('');
+    setRate18kt('');
     setMinAmount('1000');
     setMaxAmount('10000000');
     setMinTenureDays('30');
@@ -128,6 +131,7 @@ export default function Schemes() {
     setMinimumDays(scheme.minimum_days?.toString() || '30');
     setAdvanceInterestMonths(scheme.advance_interest_months?.toString() || '3');
     setRatePerGram(scheme.rate_per_gram?.toString() || '');
+    setRate18kt(scheme.rate_18kt?.toString() || '');
     setMinAmount(scheme.min_amount.toString());
     setMaxAmount(scheme.max_amount.toString());
     setMinTenureDays(scheme.min_tenure_days.toString());
@@ -156,6 +160,7 @@ export default function Schemes() {
         minimum_days: parseInt(minimumDays) || 30,
         advance_interest_months: parseInt(advanceInterestMonths) || 3,
         rate_per_gram: parseFloat(ratePerGram) || null,
+        rate_18kt: parseFloat(rate18kt) || null,
         min_amount: parseFloat(minAmount),
         max_amount: parseFloat(maxAmount),
         min_tenure_days: parseInt(minTenureDays),
@@ -336,7 +341,7 @@ export default function Schemes() {
                         <p className="text-xs text-muted-foreground">Capitalized silently</p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-4 mt-4">
+                    <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
                         <Label htmlFor="minimumDays">Minimum Days (for rebate) *</Label>
                         <Input
@@ -359,15 +364,30 @@ export default function Schemes() {
                           required
                         />
                       </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="ratePerGram">Rate per Gram (₹)</Label>
+                        <Label htmlFor="rate18kt" className="text-amber-700 dark:text-amber-300 font-semibold">18KT Rate (₹/gram) *</Label>
+                        <Input
+                          id="rate18kt"
+                          type="number"
+                          value={rate18kt}
+                          onChange={(e) => setRate18kt(e.target.value)}
+                          placeholder="e.g., 4800"
+                          className="border-amber-500/50"
+                        />
+                        <p className="text-xs text-muted-foreground">Gold rate for appraisal</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ratePerGram">Rate per Gram 24KT (₹)</Label>
                         <Input
                           id="ratePerGram"
                           type="number"
                           value={ratePerGram}
                           onChange={(e) => setRatePerGram(e.target.value)}
-                          placeholder="e.g., 4800"
+                          placeholder="e.g., 6400"
                         />
+                        <p className="text-xs text-muted-foreground">Optional reference rate</p>
                       </div>
                     </div>
                   </div>

@@ -417,6 +417,7 @@ export type Database = {
           advance_interest_actual: number | null
           advance_interest_shown: number | null
           appraised_by: string | null
+          appraiser_sheet_url: string | null
           approved_by: string | null
           branch_id: string
           client_id: string
@@ -428,6 +429,7 @@ export type Database = {
           differential_capitalized: number | null
           id: string
           interest_rate: number
+          jewel_photo_url: string | null
           last_interest_paid_date: string | null
           loan_date: string
           loan_number: string
@@ -449,6 +451,7 @@ export type Database = {
           advance_interest_actual?: number | null
           advance_interest_shown?: number | null
           appraised_by?: string | null
+          appraiser_sheet_url?: string | null
           approved_by?: string | null
           branch_id: string
           client_id: string
@@ -460,6 +463,7 @@ export type Database = {
           differential_capitalized?: number | null
           id?: string
           interest_rate: number
+          jewel_photo_url?: string | null
           last_interest_paid_date?: string | null
           loan_date?: string
           loan_number: string
@@ -481,6 +485,7 @@ export type Database = {
           advance_interest_actual?: number | null
           advance_interest_shown?: number | null
           appraised_by?: string | null
+          appraiser_sheet_url?: string | null
           approved_by?: string | null
           branch_id?: string
           client_id?: string
@@ -492,6 +497,7 @@ export type Database = {
           differential_capitalized?: number | null
           id?: string
           interest_rate?: number
+          jewel_photo_url?: string | null
           last_interest_paid_date?: string | null
           loan_date?: string
           loan_number?: string
@@ -720,6 +726,7 @@ export type Database = {
           minimum_days: number
           penalty_rate: number | null
           processing_fee_percentage: number | null
+          rate_18kt: number | null
           rate_per_gram: number | null
           scheme_code: string
           scheme_name: string
@@ -744,6 +751,7 @@ export type Database = {
           minimum_days?: number
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
+          rate_18kt?: number | null
           rate_per_gram?: number | null
           scheme_code: string
           scheme_name: string
@@ -768,6 +776,7 @@ export type Database = {
           minimum_days?: number
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
+          rate_18kt?: number | null
           rate_per_gram?: number | null
           scheme_code?: string
           scheme_name?: string
