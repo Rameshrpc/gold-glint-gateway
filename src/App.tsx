@@ -16,6 +16,7 @@ import Clients from "./pages/Clients";
 import Users from "./pages/Users";
 import Schemes from "./pages/Schemes";
 import Loans from "./pages/Loans";
+import Interest from "./pages/Interest";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -73,7 +74,7 @@ const App = () => (
             } />
             <Route path="/interest" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Interest Servicing" description="Track and collect interest payments" />
+                <Interest />
               </ProtectedRoute>
             } />
             <Route path="/redemption" element={

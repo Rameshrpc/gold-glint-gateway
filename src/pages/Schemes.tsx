@@ -20,10 +20,15 @@ interface Scheme {
   scheme_name: string;
   description: string | null;
   interest_rate: number;
+  shown_rate: number;
+  effective_rate: number;
   min_amount: number;
   max_amount: number;
   min_tenure_days: number;
   max_tenure_days: number;
+  minimum_days: number;
+  advance_interest_months: number;
+  rate_per_gram: number | null;
   ltv_percentage: number;
   processing_fee_percentage: number | null;
   penalty_rate: number | null;
@@ -46,6 +51,11 @@ export default function Schemes() {
   const [schemeName, setSchemeName] = useState('');
   const [description, setDescription] = useState('');
   const [interestRate, setInterestRate] = useState('');
+  const [shownRate, setShownRate] = useState('18');
+  const [effectiveRate, setEffectiveRate] = useState('24');
+  const [minimumDays, setMinimumDays] = useState('30');
+  const [advanceInterestMonths, setAdvanceInterestMonths] = useState('3');
+  const [ratePerGram, setRatePerGram] = useState('');
   const [minAmount, setMinAmount] = useState('1000');
   const [maxAmount, setMaxAmount] = useState('10000000');
   const [minTenureDays, setMinTenureDays] = useState('30');
@@ -86,6 +96,11 @@ export default function Schemes() {
     setSchemeName('');
     setDescription('');
     setInterestRate('');
+    setShownRate('18');
+    setEffectiveRate('24');
+    setMinimumDays('30');
+    setAdvanceInterestMonths('3');
+    setRatePerGram('');
     setMinAmount('1000');
     setMaxAmount('10000000');
     setMinTenureDays('30');
@@ -108,6 +123,11 @@ export default function Schemes() {
     setSchemeName(scheme.scheme_name);
     setDescription(scheme.description || '');
     setInterestRate(scheme.interest_rate.toString());
+    setShownRate(scheme.shown_rate?.toString() || '18');
+    setEffectiveRate(scheme.effective_rate?.toString() || '24');
+    setMinimumDays(scheme.minimum_days?.toString() || '30');
+    setAdvanceInterestMonths(scheme.advance_interest_months?.toString() || '3');
+    setRatePerGram(scheme.rate_per_gram?.toString() || '');
     setMinAmount(scheme.min_amount.toString());
     setMaxAmount(scheme.max_amount.toString());
     setMinTenureDays(scheme.min_tenure_days.toString());
@@ -131,6 +151,11 @@ export default function Schemes() {
         scheme_name: schemeName.trim(),
         description: description.trim() || null,
         interest_rate: parseFloat(interestRate),
+        shown_rate: parseFloat(shownRate) || 18,
+        effective_rate: parseFloat(effectiveRate) || 24,
+        minimum_days: parseInt(minimumDays) || 30,
+        advance_interest_months: parseInt(advanceInterestMonths) || 3,
+        rate_per_gram: parseFloat(ratePerGram) || null,
         min_amount: parseFloat(minAmount),
         max_amount: parseFloat(maxAmount),
         min_tenure_days: parseInt(minTenureDays),
@@ -268,6 +293,83 @@ export default function Schemes() {
                       placeholder="Enter scheme description"
                       rows={2}
                     />
+                  </div>
+
+                  {/* Dual Rate Configuration */}
+                  <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
+                      <Percent className="h-4 w-4" />
+                      Dual Rate Configuration (NBFC Logic)
+                    </h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shownRate">Shown Rate (% p.a.) *</Label>
+                        <Input
+                          id="shownRate"
+                          type="number"
+                          step="0.01"
+                          value={shownRate}
+                          onChange={(e) => setShownRate(e.target.value)}
+                          placeholder="18"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">Customer sees this rate</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="effectiveRate">Effective Rate (% p.a.) *</Label>
+                        <Input
+                          id="effectiveRate"
+                          type="number"
+                          step="0.01"
+                          value={effectiveRate}
+                          onChange={(e) => setEffectiveRate(e.target.value)}
+                          placeholder="24"
+                          required
+                        />
+                        <p className="text-xs text-muted-foreground">Actual internal rate</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Differential Rate</Label>
+                        <div className="h-10 flex items-center px-3 bg-muted rounded-md font-semibold text-amber-600">
+                          {((parseFloat(effectiveRate) || 0) - (parseFloat(shownRate) || 0)).toFixed(2)}% p.a.
+                        </div>
+                        <p className="text-xs text-muted-foreground">Capitalized silently</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="minimumDays">Minimum Days (for rebate) *</Label>
+                        <Input
+                          id="minimumDays"
+                          type="number"
+                          value={minimumDays}
+                          onChange={(e) => setMinimumDays(e.target.value)}
+                          placeholder="30"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="advanceInterestMonths">Advance Interest (months) *</Label>
+                        <Input
+                          id="advanceInterestMonths"
+                          type="number"
+                          value={advanceInterestMonths}
+                          onChange={(e) => setAdvanceInterestMonths(e.target.value)}
+                          placeholder="3"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ratePerGram">Rate per Gram (₹)</Label>
+                        <Input
+                          id="ratePerGram"
+                          type="number"
+                          value={ratePerGram}
+                          onChange={(e) => setRatePerGram(e.target.value)}
+                          placeholder="e.g., 4800"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">

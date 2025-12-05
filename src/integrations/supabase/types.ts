@@ -310,8 +310,112 @@ export type Database = {
           },
         ]
       }
+      interest_payments: {
+        Row: {
+          actual_interest: number
+          amount_paid: number
+          branch_id: string
+          client_id: string
+          collected_by: string | null
+          created_at: string
+          days_covered: number
+          differential_capitalized: number | null
+          id: string
+          loan_id: string
+          overdue_days: number | null
+          payment_date: string
+          payment_mode: string
+          penalty_amount: number | null
+          period_from: string
+          period_to: string
+          principal_reduction: number | null
+          receipt_number: string
+          remarks: string | null
+          shown_interest: number
+          updated_at: string
+        }
+        Insert: {
+          actual_interest: number
+          amount_paid: number
+          branch_id: string
+          client_id: string
+          collected_by?: string | null
+          created_at?: string
+          days_covered: number
+          differential_capitalized?: number | null
+          id?: string
+          loan_id: string
+          overdue_days?: number | null
+          payment_date?: string
+          payment_mode?: string
+          penalty_amount?: number | null
+          period_from: string
+          period_to: string
+          principal_reduction?: number | null
+          receipt_number: string
+          remarks?: string | null
+          shown_interest: number
+          updated_at?: string
+        }
+        Update: {
+          actual_interest?: number
+          amount_paid?: number
+          branch_id?: string
+          client_id?: string
+          collected_by?: string | null
+          created_at?: string
+          days_covered?: number
+          differential_capitalized?: number | null
+          id?: string
+          loan_id?: string
+          overdue_days?: number | null
+          payment_date?: string
+          payment_mode?: string
+          penalty_amount?: number | null
+          period_from?: string
+          period_to?: string
+          principal_reduction?: number | null
+          receipt_number?: string
+          remarks?: string | null
+          shown_interest?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "interest_payments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interest_payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interest_payments_collected_by_fkey"
+            columns: ["collected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interest_payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loans: {
         Row: {
+          actual_principal: number | null
+          advance_interest_actual: number | null
+          advance_interest_shown: number | null
           appraised_by: string | null
           approved_by: string | null
           branch_id: string
@@ -321,21 +425,29 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           customer_id: string
+          differential_capitalized: number | null
           id: string
           interest_rate: number
+          last_interest_paid_date: string | null
           loan_date: string
           loan_number: string
           maturity_date: string
           net_disbursed: number
+          next_interest_due_date: string | null
           principal_amount: number
           processing_fee: number | null
           remarks: string | null
           scheme_id: string
+          shown_principal: number | null
           status: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
+          total_interest_paid: number | null
           updated_at: string | null
         }
         Insert: {
+          actual_principal?: number | null
+          advance_interest_actual?: number | null
+          advance_interest_shown?: number | null
           appraised_by?: string | null
           approved_by?: string | null
           branch_id: string
@@ -345,21 +457,29 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           customer_id: string
+          differential_capitalized?: number | null
           id?: string
           interest_rate: number
+          last_interest_paid_date?: string | null
           loan_date?: string
           loan_number: string
           maturity_date: string
           net_disbursed: number
+          next_interest_due_date?: string | null
           principal_amount: number
           processing_fee?: number | null
           remarks?: string | null
           scheme_id: string
+          shown_principal?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
+          total_interest_paid?: number | null
           updated_at?: string | null
         }
         Update: {
+          actual_principal?: number | null
+          advance_interest_actual?: number | null
+          advance_interest_shown?: number | null
           appraised_by?: string | null
           approved_by?: string | null
           branch_id?: string
@@ -369,18 +489,23 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           customer_id?: string
+          differential_capitalized?: number | null
           id?: string
           interest_rate?: number
+          last_interest_paid_date?: string | null
           loan_date?: string
           loan_number?: string
           maturity_date?: string
           net_disbursed?: number
+          next_interest_due_date?: string | null
           principal_amount?: number
           processing_fee?: number | null
           remarks?: string | null
           scheme_id?: string
+          shown_principal?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days?: number
+          total_interest_paid?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -494,9 +619,11 @@ export type Database = {
       }
       schemes: {
         Row: {
+          advance_interest_months: number
           client_id: string
           created_at: string | null
           description: string | null
+          effective_rate: number | null
           grace_period_days: number | null
           id: string
           interest_rate: number
@@ -506,16 +633,21 @@ export type Database = {
           max_tenure_days: number
           min_amount: number
           min_tenure_days: number
+          minimum_days: number
           penalty_rate: number | null
           processing_fee_percentage: number | null
+          rate_per_gram: number | null
           scheme_code: string
           scheme_name: string
+          shown_rate: number
           updated_at: string | null
         }
         Insert: {
+          advance_interest_months?: number
           client_id: string
           created_at?: string | null
           description?: string | null
+          effective_rate?: number | null
           grace_period_days?: number | null
           id?: string
           interest_rate: number
@@ -525,16 +657,21 @@ export type Database = {
           max_tenure_days?: number
           min_amount?: number
           min_tenure_days?: number
+          minimum_days?: number
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
+          rate_per_gram?: number | null
           scheme_code: string
           scheme_name: string
+          shown_rate?: number
           updated_at?: string | null
         }
         Update: {
+          advance_interest_months?: number
           client_id?: string
           created_at?: string | null
           description?: string | null
+          effective_rate?: number | null
           grace_period_days?: number | null
           id?: string
           interest_rate?: number
@@ -544,10 +681,13 @@ export type Database = {
           max_tenure_days?: number
           min_amount?: number
           min_tenure_days?: number
+          minimum_days?: number
           penalty_rate?: number | null
           processing_fee_percentage?: number | null
+          rate_per_gram?: number | null
           scheme_code?: string
           scheme_name?: string
+          shown_rate?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -588,6 +728,10 @@ export type Database = {
     Functions: {
       generate_customer_code: {
         Args: { p_branch_code: string; p_client_id: string }
+        Returns: string
+      }
+      generate_receipt_number: {
+        Args: { p_client_id: string }
         Returns: string
       }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
@@ -660,6 +804,14 @@ export type Database = {
         | "grandmother"
         | "uncle"
         | "aunt"
+        | "other"
+      payment_mode:
+        | "cash"
+        | "upi"
+        | "neft"
+        | "rtgs"
+        | "cheque"
+        | "card"
         | "other"
     }
     CompositeTypes: {
@@ -835,6 +987,7 @@ export const Constants = {
         "aunt",
         "other",
       ],
+      payment_mode: ["cash", "upi", "neft", "rtgs", "cheque", "card", "other"],
     },
   },
 } as const
