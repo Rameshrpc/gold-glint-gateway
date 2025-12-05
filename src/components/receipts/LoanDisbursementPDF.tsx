@@ -131,6 +131,34 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#166534',
   },
+  rebateSection: {
+    marginTop: 15,
+    backgroundColor: '#FEF9C3',
+    border: '1 solid #FCD34D',
+    padding: 10,
+  },
+  rebateTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#92400E',
+  },
+  rebateTable: {
+    marginTop: 5,
+  },
+  rebateHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#FDE68A',
+    padding: 5,
+    fontWeight: 'bold',
+  },
+  rebateRow: {
+    flexDirection: 'row',
+    padding: 4,
+    borderBottom: '1 solid #FDE68A',
+  },
+  rebateCol1: { width: '60%' },
+  rebateCol2: { width: '40%', textAlign: 'right' },
   signatureSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -168,6 +196,11 @@ interface GoldItem {
   appraised_value: number;
 }
 
+interface RebateSlot {
+  dayRange: string;
+  rebateAmount: number;
+}
+
 interface LoanDisbursementPDFProps {
   company: {
     name: string;
@@ -199,9 +232,12 @@ interface LoanDisbursementPDFProps {
     processingFee: number;
     netDisbursed: number;
   };
+  rebateSchedule?: {
+    slots: RebateSlot[];
+  };
 }
 
-export function LoanDisbursementPDF({ company, loan, customer, scheme, goldItems, calculation }: LoanDisbursementPDFProps) {
+export function LoanDisbursementPDF({ company, loan, customer, scheme, goldItems, calculation, rebateSchedule }: LoanDisbursementPDFProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -333,11 +369,35 @@ export function LoanDisbursementPDF({ company, loan, customer, scheme, goldItems
           </View>
         </View>
 
+        {/* Early Release Rebate Schedule */}
+        {rebateSchedule && rebateSchedule.slots.length > 0 && (
+          <View style={styles.rebateSection}>
+            <Text style={styles.rebateTitle}>EARLY RELEASE BENEFIT SCHEDULE</Text>
+            <View style={styles.rebateTable}>
+              <View style={styles.rebateHeader}>
+                <Text style={styles.rebateCol1}>Release Period</Text>
+                <Text style={styles.rebateCol2}>Rebate Amount</Text>
+              </View>
+              {rebateSchedule.slots.map((slot, index) => (
+                <View key={index} style={styles.rebateRow}>
+                  <Text style={styles.rebateCol1}>Within {slot.dayRange}</Text>
+                  <Text style={styles.rebateCol2}>{formatCurrency(slot.rebateAmount)}</Text>
+                </View>
+              ))}
+              <View style={styles.rebateRow}>
+                <Text style={styles.rebateCol1}>After 75 days</Text>
+                <Text style={styles.rebateCol2}>No rebate</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Declaration */}
         <View style={styles.declaration}>
           <Text>
             I, {customer.name}, hereby confirm that I have received the gold loan as per the above details. 
             I have pledged the gold ornaments mentioned above and agree to repay the loan as per the terms and conditions.
+            I understand the early release benefit schedule mentioned above.
           </Text>
         </View>
 

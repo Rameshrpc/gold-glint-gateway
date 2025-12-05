@@ -17,7 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
-import { calculateAdvanceInterest, formatIndianCurrency, type AdvanceInterestCalculation } from '@/lib/interestCalculations';
+import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule } from '@/lib/interestCalculations';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
@@ -285,7 +285,10 @@ export default function Loans() {
     const loanAmount = Math.round(Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount));
     const processingFee = Math.round(loanAmount * ((scheme.processing_fee_percentage || 0) / 100));
     
-    // Calculate dual-rate advance interest
+    // Use selected tenure or default to max tenure
+    const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
+    
+    // Calculate dual-rate advance interest with tenure for differential
     const advanceCalc = calculateAdvanceInterest(loanAmount, {
       id: scheme.id,
       scheme_name: scheme.scheme_name,
@@ -293,10 +296,13 @@ export default function Loans() {
       effective_rate: scheme.effective_rate || 24,
       minimum_days: scheme.minimum_days || 30,
       advance_interest_months: scheme.advance_interest_months || 3,
-    });
+    }, selectedTenure);
 
     // Net cash to customer = loan amount - shown interest - processing fee
     const netCashToCustomer = loanAmount - advanceCalc.shownInterest - processingFee;
+    
+    // Calculate rebate schedule for display
+    const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
 
     return {
       totalAppraisedValue,
@@ -304,9 +310,10 @@ export default function Loans() {
       processingFee,
       advanceCalc,
       netCashToCustomer,
+      rebateSchedule,
       scheme,
     };
-  }, [goldItems, selectedSchemeId, schemes]);
+  }, [goldItems, selectedSchemeId, schemes, tenureDays]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -697,18 +704,21 @@ export default function Loans() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Customer Receipt View */}
+                      {/* Loan Calculation - Professional View */}
                       <Card className="border-green-500/30 bg-green-50/50 dark:bg-green-950/20">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm text-green-700 dark:text-green-400 flex items-center gap-2">
                             <IndianRupee className="h-4 w-4" />
-                            Customer Receipt
+                            Loan Calculation
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground">What customer sees</p>
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span>Principal Amount</span>
+                            <span>Total Appraised Value</span>
+                            <span className="font-medium">{formatIndianCurrency(loanCalculation.totalAppraisedValue)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Loan Amount (@ {loanCalculation.scheme.ltv_percentage}% LTV)</span>
                             <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
                           </div>
                           <div className="flex justify-between text-muted-foreground">
@@ -716,12 +726,12 @@ export default function Loans() {
                             <span>{loanCalculation.scheme.shown_rate}% p.a.</span>
                           </div>
                           <div className="flex justify-between text-red-600">
-                            <span>Advance Interest ({loanCalculation.scheme.advance_interest_months} mo)</span>
+                            <span>Less: Advance Interest ({loanCalculation.scheme.advance_interest_months} months)</span>
                             <span>-{formatIndianCurrency(loanCalculation.advanceCalc.shownInterest)}</span>
                           </div>
                           {loanCalculation.processingFee > 0 && (
                             <div className="flex justify-between text-red-600">
-                              <span>Processing Fee</span>
+                              <span>Less: Processing Fee</span>
                               <span>-{formatIndianCurrency(loanCalculation.processingFee)}</span>
                             </div>
                           )}
@@ -733,36 +743,27 @@ export default function Loans() {
                         </CardContent>
                       </Card>
 
-                      {/* Internal Accounting View */}
+                      {/* Early Release Rebate Schedule */}
                       <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                             <Calculator className="h-4 w-4" />
-                            Internal Accounting
+                            Early Release Benefit
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground">Books entry (hidden from customer)</p>
+                          <p className="text-xs text-muted-foreground">Rebate on early loan closure</p>
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Original Principal</span>
-                            <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Effective Rate</span>
-                            <span>{loanCalculation.scheme.effective_rate}% p.a.</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Advance Interest (Actual)</span>
-                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualInterest)}</span>
-                          </div>
-                          <div className="flex justify-between text-amber-600">
-                            <span>Differential Added to Principal</span>
-                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
-                          </div>
-                          <Separator />
-                          <div className="flex justify-between font-bold text-lg text-amber-700 dark:text-amber-400">
-                            <span>Actual Principal (Books)</span>
-                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualPrincipal)}</span>
+                          <div className="space-y-2">
+                            {loanCalculation.rebateSchedule.slots.map((slot, index) => (
+                              <div key={index} className="flex justify-between items-center py-1 border-b border-amber-200/50 dark:border-amber-800/50 last:border-0">
+                                <span className="text-muted-foreground">Within {slot.dayRange}</span>
+                                <span className="font-medium text-green-600">{formatIndianCurrency(slot.rebateAmount)}</span>
+                              </div>
+                            ))}
+                            <div className="flex justify-between items-center py-1 pt-2">
+                              <span className="text-muted-foreground">After 75 days</span>
+                              <span className="font-medium text-muted-foreground">No rebate</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>

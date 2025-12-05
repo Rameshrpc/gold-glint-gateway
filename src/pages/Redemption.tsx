@@ -23,6 +23,7 @@ import { format, differenceInDays, parseISO } from 'date-fns';
 import {
   calculateRedemptionAmount,
   formatIndianCurrency,
+  calculateRebateAtRedemption,
 } from '@/lib/interestCalculations';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { RedemptionReceiptPDF } from '@/components/receipts/RedemptionReceiptPDF';
@@ -34,6 +35,7 @@ interface LoanWithDetails {
   principal_amount: number;
   shown_principal: number;
   actual_principal: number;
+  differential_capitalized: number | null;
   interest_rate: number;
   tenure_days: number;
   maturity_date: string;
@@ -224,12 +226,17 @@ export default function Redemption() {
 
     const lastPaidDate = selectedLoan.last_interest_paid_date || selectedLoan.loan_date;
     const daysSincePayment = differenceInDays(new Date(), parseISO(lastPaidDate));
+    const daysSinceLoan = differenceInDays(new Date(), parseISO(selectedLoan.loan_date));
+    
+    // Use new slab-based rebate calculation with differential_capitalized
+    const differentialCapitalized = selectedLoan.differential_capitalized || 0;
 
     return calculateRedemptionAmount(
       selectedLoan.actual_principal || selectedLoan.principal_amount,
       scheme,
       daysSincePayment,
-      selectedLoan.tenure_days
+      selectedLoan.tenure_days,
+      differentialCapitalized
     );
   }, [selectedLoan]);
 
@@ -554,8 +561,13 @@ export default function Redemption() {
                     )}
                     {redemptionCalc.breakdown.rebate > 0 && (
                       <div className="flex justify-between items-center text-green-600">
-                        <span>Less: Rebate ({redemptionCalc.rebate.unusedDays} unused days)</span>
+                        <span>Less: Early Release Benefit</span>
                         <span className="font-medium">- {formatIndianCurrency(redemptionCalc.breakdown.rebate)}</span>
+                      </div>
+                    )}
+                    {redemptionCalc.rebate.eligible && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {redemptionCalc.rebate.reason}
                       </div>
                     )}
                     <Separator />
