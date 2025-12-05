@@ -14,6 +14,8 @@ import Customers from "./pages/Customers";
 import Branches from "./pages/Branches";
 import Clients from "./pages/Clients";
 import Users from "./pages/Users";
+import Schemes from "./pages/Schemes";
+import Loans from "./pages/Loans";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -61,7 +63,12 @@ const App = () => (
             {/* Placeholder Routes - Phase 2+ */}
             <Route path="/loans" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Loans" description="Manage loan pledges and disbursements" />
+                <Loans />
+              </ProtectedRoute>
+            } />
+            <Route path="/schemes" element={
+              <ProtectedRoute>
+                <Schemes />
               </ProtectedRoute>
             } />
             <Route path="/interest" element={
@@ -82,11 +89,6 @@ const App = () => (
             <Route path="/auction" element={
               <ProtectedRoute>
                 <PlaceholderPage title="Auction" description="Manage overdue loans and auctions" />
-              </ProtectedRoute>
-            } />
-            <Route path="/schemes" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="Schemes" description="Configure loan schemes and rates" />
               </ProtectedRoute>
             } />
             <Route path="/reports" element={
