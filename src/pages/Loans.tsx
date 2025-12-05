@@ -21,6 +21,8 @@ import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
+import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
+import { LoanDisbursementPDF } from '@/components/receipts/LoanDisbursementPDF';
 
 interface Customer {
   id: string;
@@ -140,6 +142,25 @@ export default function Loans() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingLoan, setViewingLoan] = useState<Loan | null>(null);
   const [viewingGoldItems, setViewingGoldItems] = useState<GoldItem[]>([]);
+  
+  // PDF receipt dialog
+  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
+  const [createdLoanData, setCreatedLoanData] = useState<{
+    loanNumber: string;
+    loanDate: string;
+    maturityDate: string;
+    tenureDays: number;
+    customer: Customer;
+    scheme: Scheme;
+    goldItems: GoldItem[];
+    calculation: {
+      totalAppraisedValue: number;
+      principalAmount: number;
+      advanceInterest: number;
+      processingFee: number;
+      netDisbursed: number;
+    };
+  } | null>(null);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -427,6 +448,31 @@ export default function Loans() {
         .insert(goldItemsData);
 
       if (itemsError) throw itemsError;
+
+      // Get selected customer and scheme for PDF
+      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
+      const selectedScheme = schemes.find(s => s.id === selectedSchemeId);
+      
+      if (selectedCustomer && selectedScheme) {
+        // Store data for PDF receipt
+        setCreatedLoanData({
+          loanNumber: loanResult.loan_number,
+          loanDate: format(loanDate, 'yyyy-MM-dd'),
+          maturityDate: format(maturityDate, 'yyyy-MM-dd'),
+          tenureDays: parseInt(tenureDays),
+          customer: selectedCustomer,
+          scheme: selectedScheme,
+          goldItems: [...goldItems],
+          calculation: {
+            totalAppraisedValue: loanCalculation.totalAppraisedValue,
+            principalAmount: loanCalculation.loanAmount,
+            advanceInterest: loanCalculation.advanceCalc.shownInterest,
+            processingFee: loanCalculation.processingFee,
+            netDisbursed: loanCalculation.netCashToCustomer,
+          }
+        });
+        setShowReceiptDialog(true);
+      }
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);
       setIsFormOpen(false);
@@ -1141,6 +1187,42 @@ export default function Loans() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Loan Disbursement Receipt PDF Dialog */}
+        {createdLoanData && (
+          <PDFViewerDialog
+            open={showReceiptDialog}
+            onOpenChange={setShowReceiptDialog}
+            title="Loan Disbursement Receipt"
+            fileName={`loan-disbursement-${createdLoanData.loanNumber}`}
+            document={
+              <LoanDisbursementPDF
+                company={{
+                  name: client?.company_name || 'Gold Finance',
+                }}
+                loan={{
+                  number: createdLoanData.loanNumber,
+                  date: createdLoanData.loanDate,
+                  maturityDate: createdLoanData.maturityDate,
+                  tenureDays: createdLoanData.tenureDays,
+                }}
+                customer={{
+                  name: createdLoanData.customer.full_name,
+                  code: createdLoanData.customer.customer_code,
+                  phone: createdLoanData.customer.phone,
+                }}
+                scheme={{
+                  name: createdLoanData.scheme.scheme_name,
+                  rate: createdLoanData.scheme.shown_rate || createdLoanData.scheme.interest_rate,
+                  ltvPercentage: createdLoanData.scheme.ltv_percentage,
+                }}
+                goldItems={createdLoanData.goldItems}
+                calculation={createdLoanData.calculation}
+                rebateSchedule={calculateRebateSchedule(createdLoanData.calculation.advanceInterest)}
+              />
+            }
+          />
+        )}
       </div>
     </DashboardLayout>
   );
