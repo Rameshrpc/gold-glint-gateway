@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Users, Search, Edit, Eye, Phone, Mail } from 'lucide-react';
+import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+
+type NomineeRelation = 'father' | 'mother' | 'spouse' | 'son' | 'daughter' | 
+                       'brother' | 'sister' | 'grandfather' | 'grandmother' | 
+                       'uncle' | 'aunt' | 'other';
 
 interface Customer {
   id: string;
@@ -27,8 +31,12 @@ interface Customer {
   city: string | null;
   state: string | null;
   pincode: string | null;
-  id_type: 'aadhaar' | 'pan' | 'voter_id' | 'passport' | 'driving_license' | null;
-  id_number: string | null;
+  photo_url: string | null;
+  aadhaar_front_url: string | null;
+  aadhaar_back_url: string | null;
+  pan_card_url: string | null;
+  nominee_name: string | null;
+  nominee_relation: NomineeRelation | null;
   occupation: string | null;
   monthly_income: number | null;
   is_active: boolean;
@@ -36,6 +44,21 @@ interface Customer {
   client_id: string;
   created_at: string;
 }
+
+const NOMINEE_RELATIONS: { value: NomineeRelation; label: string }[] = [
+  { value: 'father', label: 'Father' },
+  { value: 'mother', label: 'Mother' },
+  { value: 'spouse', label: 'Spouse' },
+  { value: 'son', label: 'Son' },
+  { value: 'daughter', label: 'Daughter' },
+  { value: 'brother', label: 'Brother' },
+  { value: 'sister', label: 'Sister' },
+  { value: 'grandfather', label: 'Grandfather' },
+  { value: 'grandmother', label: 'Grandmother' },
+  { value: 'uncle', label: 'Uncle' },
+  { value: 'aunt', label: 'Aunt' },
+  { value: 'other', label: 'Other' },
+];
 
 export default function Customers() {
   const { client, currentBranch, branches, isPlatformAdmin, hasRole } = useAuth();
@@ -48,7 +71,6 @@ export default function Customers() {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Form state
-  const [customerCode, setCustomerCode] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [alternatePhone, setAlternatePhone] = useState('');
@@ -59,12 +81,28 @@ export default function Customers() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pincode, setPincode] = useState('');
-  const [idType, setIdType] = useState<string>('');
-  const [idNumber, setIdNumber] = useState('');
   const [occupation, setOccupation] = useState('');
   const [monthlyIncome, setMonthlyIncome] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [nomineeName, setNomineeName] = useState('');
+  const [nomineeRelation, setNomineeRelation] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
+
+  // File upload state
+  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  const [profilePhotoPreview, setProfilePhotoPreview] = useState<string | null>(null);
+  const [aadhaarFrontFile, setAadhaarFrontFile] = useState<File | null>(null);
+  const [aadhaarFrontPreview, setAadhaarFrontPreview] = useState<string | null>(null);
+  const [aadhaarBackFile, setAadhaarBackFile] = useState<File | null>(null);
+  const [aadhaarBackPreview, setAadhaarBackPreview] = useState<string | null>(null);
+  const [panCardFile, setPanCardFile] = useState<File | null>(null);
+  const [panCardPreview, setPanCardPreview] = useState<string | null>(null);
+
+  // File input refs
+  const profilePhotoRef = useRef<HTMLInputElement>(null);
+  const aadhaarFrontRef = useRef<HTMLInputElement>(null);
+  const aadhaarBackRef = useRef<HTMLInputElement>(null);
+  const panCardRef = useRef<HTMLInputElement>(null);
 
   const canManageCustomers = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer') || hasRole('appraiser');
 
@@ -83,7 +121,7 @@ export default function Customers() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setCustomers(data || []);
+      setCustomers((data as Customer[]) || []);
     } catch (error: any) {
       toast.error('Failed to fetch customers');
     } finally {
@@ -92,7 +130,6 @@ export default function Customers() {
   };
 
   const resetForm = () => {
-    setCustomerCode('');
     setFullName('');
     setPhone('');
     setAlternatePhone('');
@@ -103,12 +140,21 @@ export default function Customers() {
     setCity('');
     setState('');
     setPincode('');
-    setIdType('');
-    setIdNumber('');
     setOccupation('');
     setMonthlyIncome('');
     setSelectedBranchId(currentBranch?.id || '');
+    setNomineeName('');
+    setNomineeRelation('');
     setEditingCustomer(null);
+    // Reset file states
+    setProfilePhotoFile(null);
+    setProfilePhotoPreview(null);
+    setAadhaarFrontFile(null);
+    setAadhaarFrontPreview(null);
+    setAadhaarBackFile(null);
+    setAadhaarBackPreview(null);
+    setPanCardFile(null);
+    setPanCardPreview(null);
   };
 
   const openAddDialog = () => {
@@ -118,7 +164,6 @@ export default function Customers() {
 
   const openEditDialog = (customer: Customer) => {
     setEditingCustomer(customer);
-    setCustomerCode(customer.customer_code);
     setFullName(customer.full_name);
     setPhone(customer.phone);
     setAlternatePhone(customer.alternate_phone || '');
@@ -129,12 +174,73 @@ export default function Customers() {
     setCity(customer.city || '');
     setState(customer.state || '');
     setPincode(customer.pincode || '');
-    setIdType(customer.id_type || '');
-    setIdNumber(customer.id_number || '');
     setOccupation(customer.occupation || '');
     setMonthlyIncome(customer.monthly_income?.toString() || '');
     setSelectedBranchId(customer.branch_id);
+    setNomineeName(customer.nominee_name || '');
+    setNomineeRelation(customer.nominee_relation || '');
+    // Set existing image previews
+    setProfilePhotoPreview(customer.photo_url);
+    setAadhaarFrontPreview(customer.aadhaar_front_url);
+    setAadhaarBackPreview(customer.aadhaar_back_url);
+    setPanCardPreview(customer.pan_card_url);
+    // Clear file selections
+    setProfilePhotoFile(null);
+    setAadhaarFrontFile(null);
+    setAadhaarBackFile(null);
+    setPanCardFile(null);
     setDialogOpen(true);
+  };
+
+  const handleFileChange = (
+    file: File | null,
+    setFile: (f: File | null) => void,
+    setPreview: (p: string | null) => void
+  ) => {
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size must be less than 5MB');
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/jpg'].includes(file.type)) {
+        toast.error('Only JPEG and PNG images are allowed');
+        return;
+      }
+      setFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadDocument = async (file: File, documentType: string, customerId: string): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${client!.id}/${customerId}/${documentType}_${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('customer-documents')
+      .upload(fileName, file);
+      
+    if (uploadError) throw uploadError;
+    
+    const { data } = supabase.storage
+      .from('customer-documents')
+      .getPublicUrl(fileName);
+      
+    return data.publicUrl;
+  };
+
+  const generateCustomerCode = async (): Promise<string> => {
+    const branch = branches.find(b => b.id === selectedBranchId);
+    const branchCode = branch?.branch_code || 'CUST';
+    
+    const { data, error } = await supabase.rpc('generate_customer_code', {
+      p_client_id: client!.id,
+      p_branch_code: branchCode
+    });
+    
+    if (error) throw error;
+    return data;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,12 +250,39 @@ export default function Customers() {
       return;
     }
 
+    // Validate mandatory documents for new customers
+    if (!editingCustomer) {
+      if (!profilePhotoFile) {
+        toast.error('Profile photo is required');
+        return;
+      }
+      if (!aadhaarFrontFile) {
+        toast.error('Aadhaar front image is required');
+        return;
+      }
+      if (!aadhaarBackFile) {
+        toast.error('Aadhaar back image is required');
+        return;
+      }
+      if (!panCardFile) {
+        toast.error('PAN card image is required');
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
-      const customerData = {
+      let customerCode = editingCustomer?.customer_code;
+      
+      // Generate customer code for new customers
+      if (!editingCustomer) {
+        customerCode = await generateCustomerCode();
+      }
+
+      const customerData: any = {
         client_id: client.id,
         branch_id: selectedBranchId,
-        customer_code: customerCode.trim(),
+        customer_code: customerCode,
         full_name: fullName.trim(),
         phone: phone.trim(),
         alternate_phone: alternatePhone.trim() || null,
@@ -160,11 +293,13 @@ export default function Customers() {
         city: city.trim() || null,
         state: state.trim() || null,
         pincode: pincode.trim() || null,
-        id_type: idType as any || null,
-        id_number: idNumber.trim() || null,
         occupation: occupation.trim() || null,
         monthly_income: monthlyIncome ? parseFloat(monthlyIncome) : null,
+        nominee_name: nomineeName.trim() || null,
+        nominee_relation: nomineeRelation as NomineeRelation || null,
       };
+
+      let customerId: string;
 
       if (editingCustomer) {
         const { error } = await supabase
@@ -172,21 +307,49 @@ export default function Customers() {
           .update(customerData)
           .eq('id', editingCustomer.id);
         if (error) throw error;
-        toast.success('Customer updated successfully');
+        customerId = editingCustomer.id;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('customers')
-          .insert(customerData);
+          .insert(customerData)
+          .select('id')
+          .single();
         if (error) throw error;
-        toast.success('Customer created successfully');
+        customerId = data.id;
       }
 
+      // Upload documents
+      const documentUpdates: any = {};
+
+      if (profilePhotoFile) {
+        documentUpdates.photo_url = await uploadDocument(profilePhotoFile, 'profile', customerId);
+      }
+      if (aadhaarFrontFile) {
+        documentUpdates.aadhaar_front_url = await uploadDocument(aadhaarFrontFile, 'aadhaar_front', customerId);
+      }
+      if (aadhaarBackFile) {
+        documentUpdates.aadhaar_back_url = await uploadDocument(aadhaarBackFile, 'aadhaar_back', customerId);
+      }
+      if (panCardFile) {
+        documentUpdates.pan_card_url = await uploadDocument(panCardFile, 'pan_card', customerId);
+      }
+
+      // Update customer with document URLs if any were uploaded
+      if (Object.keys(documentUpdates).length > 0) {
+        const { error: updateError } = await supabase
+          .from('customers')
+          .update(documentUpdates)
+          .eq('id', customerId);
+        if (updateError) throw updateError;
+      }
+
+      toast.success(editingCustomer ? 'Customer updated successfully' : 'Customer created successfully');
       setDialogOpen(false);
       resetForm();
       fetchCustomers();
     } catch (error: any) {
       if (error.code === '23505') {
-        toast.error('Customer code already exists. Please use a different code.');
+        toast.error('Customer code already exists. Please try again.');
       } else {
         toast.error(error.message || 'Operation failed');
       }
@@ -206,6 +369,94 @@ export default function Customers() {
     return branch?.branch_name || 'Unknown';
   };
 
+  const clearFilePreview = (
+    setFile: (f: File | null) => void,
+    setPreview: (p: string | null) => void
+  ) => {
+    setFile(null);
+    setPreview(null);
+  };
+
+  const ImageUploadField = ({
+    label,
+    required,
+    fileRef,
+    file,
+    setFile,
+    preview,
+    setPreview,
+    existingUrl
+  }: {
+    label: string;
+    required?: boolean;
+    fileRef: React.RefObject<HTMLInputElement>;
+    file: File | null;
+    setFile: (f: File | null) => void;
+    preview: string | null;
+    setPreview: (p: string | null) => void;
+    existingUrl?: string | null;
+  }) => (
+    <div className="space-y-2">
+      <Label>{label} {required && <span className="text-destructive">*</span>}</Label>
+      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+        {preview || existingUrl ? (
+          <div className="relative">
+            <img
+              src={preview || existingUrl || ''}
+              alt={label}
+              className="max-h-32 mx-auto rounded-lg object-cover"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute top-0 right-0 h-6 w-6"
+              onClick={() => clearFilePreview(setFile, setPreview)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex justify-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Upload
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (fileRef.current) {
+                    fileRef.current.capture = 'environment';
+                    fileRef.current.click();
+                  }
+                }}
+              >
+                <Camera className="h-4 w-4 mr-1" />
+                Camera
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">JPEG/PNG, max 5MB</p>
+          </div>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/jpg"
+          className="hidden"
+          onChange={(e) => handleFileChange(e.target.files?.[0] || null, setFile, setPreview)}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -222,199 +473,269 @@ export default function Customers() {
                   Add Customer
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>{editingCustomer ? 'Edit Customer' : 'Add New Customer'}</DialogTitle>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Profile Photo & Branch Selection */}
+                  <div className="flex gap-6 items-start">
+                    <div className="flex-shrink-0">
+                      <ImageUploadField
+                        label="Profile Photo"
+                        required={!editingCustomer}
+                        fileRef={profilePhotoRef}
+                        file={profilePhotoFile}
+                        setFile={setProfilePhotoFile}
+                        preview={profilePhotoPreview}
+                        setPreview={setProfilePhotoPreview}
+                        existingUrl={editingCustomer?.photo_url}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-4">
+                      {editingCustomer && (
+                        <div className="space-y-2">
+                          <Label>Customer Code</Label>
+                          <Input value={editingCustomer.customer_code} disabled className="bg-muted" />
+                        </div>
+                      )}
+                      {!editingCustomer && (
+                        <div className="p-3 bg-muted rounded-lg">
+                          <p className="text-sm text-muted-foreground">
+                            <FileCheck className="h-4 w-4 inline mr-1" />
+                            Customer code will be auto-generated on save
+                          </p>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label htmlFor="branch">Branch *</Label>
+                        <Select value={selectedBranchId} onValueChange={setSelectedBranchId} required>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select branch" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {branches.filter(b => b.is_active).map((branch) => (
+                              <SelectItem key={branch.id} value={branch.id}>
+                                {branch.branch_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Personal Details */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Personal Details</h3>
                     <div className="space-y-2">
-                      <Label htmlFor="customerCode">Customer Code *</Label>
+                      <Label htmlFor="fullName">Full Name *</Label>
                       <Input
-                        id="customerCode"
-                        value={customerCode}
-                        onChange={(e) => setCustomerCode(e.target.value.toUpperCase())}
-                        placeholder="e.g., CUST001"
+                        id="fullName"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Enter full name"
                         required
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="branch">Branch *</Label>
-                      <Select value={selectedBranchId} onValueChange={setSelectedBranchId} required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select branch" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {branches.filter(b => b.is_active).map((branch) => (
-                            <SelectItem key={branch.id} value={branch.id}>
-                              {branch.branch_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name *</Label>
-                    <Input
-                      id="fullName"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Enter full name"
-                      required
-                    />
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone *</Label>
+                        <Input
+                          id="phone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Enter phone number"
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="alternatePhone">Alternate Phone</Label>
+                        <Input
+                          id="alternatePhone"
+                          value={alternatePhone}
+                          onChange={(e) => setAlternatePhone(e.target.value)}
+                          placeholder="Enter alternate phone"
+                        />
+                      </div>
+                    </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone *</Label>
-                      <Input
-                        id="phone"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="Enter phone number"
-                        required
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Enter email"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                        <Input
+                          id="dateOfBirth"
+                          type="date"
+                          value={dateOfBirth}
+                          onChange={(e) => setDateOfBirth(e.target.value)}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="alternatePhone">Alternate Phone</Label>
-                      <Input
-                        id="alternatePhone"
-                        value={alternatePhone}
-                        onChange={(e) => setAlternatePhone(e.target.value)}
-                        placeholder="Enter alternate phone"
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter email"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select value={gender} onValueChange={setGender}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="occupation">Occupation</Label>
+                        <Input
+                          id="occupation"
+                          value={occupation}
+                          onChange={(e) => setOccupation(e.target.value)}
+                          placeholder="Enter occupation"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                      <Input
-                        id="dateOfBirth"
-                        type="date"
-                        value={dateOfBirth}
-                        onChange={(e) => setDateOfBirth(e.target.value)}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select value={gender} onValueChange={setGender}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="occupation">Occupation</Label>
+                      <Label htmlFor="monthlyIncome">Monthly Income (₹)</Label>
                       <Input
-                        id="occupation"
-                        value={occupation}
-                        onChange={(e) => setOccupation(e.target.value)}
-                        placeholder="Enter occupation"
+                        id="monthlyIncome"
+                        type="number"
+                        value={monthlyIncome}
+                        onChange={(e) => setMonthlyIncome(e.target.value)}
+                        placeholder="Enter monthly income"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Textarea
-                      id="address"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Enter full address"
-                      rows={2}
-                    />
-                  </div>
+                  {/* Address */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Address</h3>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Street Address</Label>
+                      <Textarea
+                        id="address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        placeholder="Enter full address"
+                        rows={2}
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
-                      <Input
-                        id="city"
-                        value={city}
-                        onChange={(e) => setCity(e.target.value)}
-                        placeholder="City"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="State"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="pincode">Pincode</Label>
-                      <Input
-                        id="pincode"
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value)}
-                        placeholder="Pincode"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="idType">ID Proof Type</Label>
-                      <Select value={idType} onValueChange={setIdType}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ID type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="aadhaar">Aadhaar</SelectItem>
-                          <SelectItem value="pan">PAN</SelectItem>
-                          <SelectItem value="voter_id">Voter ID</SelectItem>
-                          <SelectItem value="passport">Passport</SelectItem>
-                          <SelectItem value="driving_license">Driving License</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="idNumber">ID Number</Label>
-                      <Input
-                        id="idNumber"
-                        value={idNumber}
-                        onChange={(e) => setIdNumber(e.target.value.toUpperCase())}
-                        placeholder="Enter ID number"
-                      />
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="City"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="State"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="pincode">Pincode</Label>
+                        <Input
+                          id="pincode"
+                          value={pincode}
+                          onChange={(e) => setPincode(e.target.value)}
+                          placeholder="Pincode"
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="monthlyIncome">Monthly Income (₹)</Label>
-                    <Input
-                      id="monthlyIncome"
-                      type="number"
-                      value={monthlyIncome}
-                      onChange={(e) => setMonthlyIncome(e.target.value)}
-                      placeholder="Enter monthly income"
-                    />
+                  {/* KYC Documents */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                      KYC Documents {!editingCustomer && <span className="text-destructive">(All Mandatory)</span>}
+                    </h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <ImageUploadField
+                        label="Aadhaar Front"
+                        required={!editingCustomer}
+                        fileRef={aadhaarFrontRef}
+                        file={aadhaarFrontFile}
+                        setFile={setAadhaarFrontFile}
+                        preview={aadhaarFrontPreview}
+                        setPreview={setAadhaarFrontPreview}
+                        existingUrl={editingCustomer?.aadhaar_front_url}
+                      />
+                      <ImageUploadField
+                        label="Aadhaar Back"
+                        required={!editingCustomer}
+                        fileRef={aadhaarBackRef}
+                        file={aadhaarBackFile}
+                        setFile={setAadhaarBackFile}
+                        preview={aadhaarBackPreview}
+                        setPreview={setAadhaarBackPreview}
+                        existingUrl={editingCustomer?.aadhaar_back_url}
+                      />
+                      <ImageUploadField
+                        label="PAN Card"
+                        required={!editingCustomer}
+                        fileRef={panCardRef}
+                        file={panCardFile}
+                        setFile={setPanCardFile}
+                        preview={panCardPreview}
+                        setPreview={setPanCardPreview}
+                        existingUrl={editingCustomer?.pan_card_url}
+                      />
+                    </div>
                   </div>
 
-                  <div className="flex justify-end gap-2 pt-4">
+                  {/* Nominee Details */}
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Nominee Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="nomineeRelation">Nominee Relation</Label>
+                        <Select value={nomineeRelation} onValueChange={setNomineeRelation}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select relation" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {NOMINEE_RELATIONS.map((rel) => (
+                              <SelectItem key={rel.value} value={rel.value}>
+                                {rel.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="nomineeName">Nominee Name</Label>
+                        <Input
+                          id="nomineeName"
+                          value={nomineeName}
+                          onChange={(e) => setNomineeName(e.target.value)}
+                          placeholder="Enter nominee name"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
                     <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                       Cancel
                     </Button>
@@ -481,11 +802,13 @@ export default function Customers() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Photo</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Branch</TableHead>
-                    <TableHead>ID Proof</TableHead>
+                    <TableHead>Documents</TableHead>
+                    <TableHead>Nominee</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -493,6 +816,19 @@ export default function Customers() {
                 <TableBody>
                   {filteredCustomers.map((customer) => (
                     <TableRow key={customer.id}>
+                      <TableCell>
+                        {customer.photo_url ? (
+                          <img
+                            src={customer.photo_url}
+                            alt={customer.full_name}
+                            className="h-10 w-10 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                            <User className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-medium">{customer.customer_code}</TableCell>
                       <TableCell>{customer.full_name}</TableCell>
                       <TableCell>
@@ -509,12 +845,25 @@ export default function Customers() {
                       </TableCell>
                       <TableCell>{getBranchName(customer.branch_id)}</TableCell>
                       <TableCell>
-                        {customer.id_type && customer.id_number ? (
+                        <div className="flex gap-1">
+                          <Badge variant={customer.aadhaar_front_url && customer.aadhaar_back_url ? 'default' : 'secondary'} className="text-xs">
+                            Aadhaar
+                          </Badge>
+                          <Badge variant={customer.pan_card_url ? 'default' : 'secondary'} className="text-xs">
+                            PAN
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {customer.nominee_name ? (
                           <span className="text-sm">
-                            {customer.id_type.toUpperCase()}: {customer.id_number}
+                            {customer.nominee_relation && (
+                              <span className="capitalize">{customer.nominee_relation}: </span>
+                            )}
+                            {customer.nominee_name}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-sm">Not provided</span>
+                          <span className="text-muted-foreground text-sm">-</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -555,38 +904,63 @@ export default function Customers() {
 
         {/* View Customer Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Customer Details</DialogTitle>
             </DialogHeader>
             {viewingCustomer && (
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Profile Section */}
+                <div className="flex gap-4 items-start">
+                  {viewingCustomer.photo_url ? (
+                    <img
+                      src={viewingCustomer.photo_url}
+                      alt={viewingCustomer.full_name}
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
+                      <User className="h-12 w-12 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-lg font-semibold">{viewingCustomer.full_name}</p>
+                    <p className="text-sm text-muted-foreground">{viewingCustomer.customer_code}</p>
+                    <Badge variant={viewingCustomer.is_active ? 'default' : 'secondary'} className="mt-2">
+                      {viewingCustomer.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">Customer Code</Label>
-                    <p className="font-medium">{viewingCustomer.customer_code}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Full Name</Label>
-                    <p className="font-medium">{viewingCustomer.full_name}</p>
-                  </div>
                   <div>
                     <Label className="text-muted-foreground">Phone</Label>
                     <p className="font-medium">{viewingCustomer.phone}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground">Alternate Phone</Label>
+                    <p className="font-medium">{viewingCustomer.alternate_phone || '-'}</p>
                   </div>
                   <div>
                     <Label className="text-muted-foreground">Email</Label>
                     <p className="font-medium">{viewingCustomer.email || '-'}</p>
                   </div>
                   <div>
+                    <Label className="text-muted-foreground">Date of Birth</Label>
+                    <p className="font-medium">{viewingCustomer.date_of_birth || '-'}</p>
+                  </div>
+                  <div>
                     <Label className="text-muted-foreground">Gender</Label>
                     <p className="font-medium capitalize">{viewingCustomer.gender || '-'}</p>
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Date of Birth</Label>
-                    <p className="font-medium">{viewingCustomer.date_of_birth || '-'}</p>
+                    <Label className="text-muted-foreground">Branch</Label>
+                    <p className="font-medium">{getBranchName(viewingCustomer.branch_id)}</p>
                   </div>
                 </div>
+
+                {/* Address */}
                 <div>
                   <Label className="text-muted-foreground">Address</Label>
                   <p className="font-medium">
@@ -594,15 +968,9 @@ export default function Customers() {
                       .filter(Boolean).join(', ') || '-'}
                   </p>
                 </div>
+
+                {/* Financial Info */}
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground">ID Type</Label>
-                    <p className="font-medium uppercase">{viewingCustomer.id_type || '-'}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">ID Number</Label>
-                    <p className="font-medium">{viewingCustomer.id_number || '-'}</p>
-                  </div>
                   <div>
                     <Label className="text-muted-foreground">Occupation</Label>
                     <p className="font-medium">{viewingCustomer.occupation || '-'}</p>
@@ -612,6 +980,73 @@ export default function Customers() {
                     <p className="font-medium">
                       {viewingCustomer.monthly_income ? `₹${viewingCustomer.monthly_income.toLocaleString()}` : '-'}
                     </p>
+                  </div>
+                </div>
+
+                {/* Nominee Details */}
+                <div>
+                  <Label className="text-muted-foreground">Nominee</Label>
+                  <p className="font-medium">
+                    {viewingCustomer.nominee_name ? (
+                      <>
+                        {viewingCustomer.nominee_relation && (
+                          <span className="capitalize">{viewingCustomer.nominee_relation}: </span>
+                        )}
+                        {viewingCustomer.nominee_name}
+                      </>
+                    ) : '-'}
+                  </p>
+                </div>
+
+                {/* KYC Documents */}
+                <div className="space-y-3">
+                  <Label className="text-muted-foreground">KYC Documents</Label>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Aadhaar Front</p>
+                      {viewingCustomer.aadhaar_front_url ? (
+                        <img
+                          src={viewingCustomer.aadhaar_front_url}
+                          alt="Aadhaar Front"
+                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                          onClick={() => window.open(viewingCustomer.aadhaar_front_url!, '_blank')}
+                        />
+                      ) : (
+                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground">Not uploaded</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Aadhaar Back</p>
+                      {viewingCustomer.aadhaar_back_url ? (
+                        <img
+                          src={viewingCustomer.aadhaar_back_url}
+                          alt="Aadhaar Back"
+                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                          onClick={() => window.open(viewingCustomer.aadhaar_back_url!, '_blank')}
+                        />
+                      ) : (
+                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground">Not uploaded</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">PAN Card</p>
+                      {viewingCustomer.pan_card_url ? (
+                        <img
+                          src={viewingCustomer.pan_card_url}
+                          alt="PAN Card"
+                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                          onClick={() => window.open(viewingCustomer.pan_card_url!, '_blank')}
+                        />
+                      ) : (
+                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-xs text-muted-foreground">Not uploaded</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
