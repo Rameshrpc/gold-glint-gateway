@@ -45,6 +45,7 @@ interface Scheme {
   max_tenure_days: number;
   processing_fee_percentage: number | null;
   rate_18kt: number | null;
+  rate_22kt: number | null;
 }
 
 interface GoldItem {
@@ -193,7 +194,7 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, rate_18kt')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, rate_18kt, rate_22kt')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('scheme_name');
@@ -217,14 +218,25 @@ export default function Loans() {
     });
   };
 
-  // Get rate from selected scheme (18kt converted to 24kt equivalent)
-  const getRate24kt = () => {
-    const scheme = schemes.find(s => s.id === selectedSchemeId);
-    if (scheme?.rate_18kt) {
-      // 18kt is 75% pure, so rate_24kt = rate_18kt / 0.75
-      return scheme.rate_18kt / 0.75;
+  // Get rate based on item purity - direct rate lookup
+  const getRateForPurity = (purity: string, scheme: Scheme) => {
+    switch (purity) {
+      case '22k':
+        return scheme.rate_22kt || 0;
+      case '18k':
+        return scheme.rate_18kt || 0;
+      case '24k':
+        // 24KT = 22KT rate × (24/22) - proportional to 22KT
+        return (scheme.rate_22kt || 0) * (24 / 22);
+      case '20k':
+        // 20KT = 22KT rate × (20/22)
+        return (scheme.rate_22kt || 0) * (20 / 22);
+      case '14k':
+        // 14KT = 22KT rate × (14/22)
+        return (scheme.rate_22kt || 0) * (14 / 22);
+      default:
+        return 0;
     }
-    return 6000; // fallback
   };
 
   const addGoldItem = () => {
@@ -239,25 +251,28 @@ export default function Loans() {
     }
 
     const scheme = schemes.find(s => s.id === selectedSchemeId);
-    if (!scheme?.rate_18kt) {
-      toast.error('Selected scheme does not have 18KT rate configured');
+    if (!scheme?.rate_22kt) {
+      toast.error('Selected scheme does not have 22KT rate configured');
       return;
     }
 
     const netWeight = currentItem.gross_weight_grams! - (currentItem.stone_weight_grams || 0);
-    const purityPercent = PURITY_MAP[currentItem.purity || '22k'];
-    const rate24kt = getRate24kt();
-    const appraisedValue = netWeight * (purityPercent / 100) * rate24kt;
+    const purity = currentItem.purity || '22k';
+    const purityPercent = PURITY_MAP[purity];
+    const rateForPurity = getRateForPurity(purity, scheme);
+    
+    // Direct calculation: Net Weight × Rate for that purity
+    const appraisedValue = netWeight * rateForPurity;
 
     const newItem: GoldItem = {
       item_type: currentItem.item_type,
       description: currentItem.description || '',
       gross_weight_grams: currentItem.gross_weight_grams!,
       net_weight_grams: netWeight,
-      purity: currentItem.purity || '22k',
+      purity: purity,
       purity_percentage: purityPercent,
       stone_weight_grams: currentItem.stone_weight_grams || 0,
-      market_rate_per_gram: rate24kt,
+      market_rate_per_gram: rateForPurity,
       appraised_value: appraisedValue,
     };
 
@@ -545,14 +560,18 @@ export default function Loans() {
                             </div>
                             <Badge variant="secondary" className="text-xs">LTV {scheme.ltv_percentage}%</Badge>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                          <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                             <div>
-                              <p className="text-muted-foreground">Shown Rate</p>
+                              <p className="text-muted-foreground">Rate</p>
                               <p className="font-medium text-green-600">{scheme.shown_rate}% p.a.</p>
                             </div>
                             <div>
-                              <p className="text-muted-foreground">18KT Rate</p>
-                              <p className="font-medium text-amber-600">{scheme.rate_18kt ? `₹${scheme.rate_18kt}/g` : 'Not set'}</p>
+                              <p className="text-muted-foreground">22KT</p>
+                              <p className="font-medium text-amber-600">{scheme.rate_22kt ? `₹${scheme.rate_22kt}/g` : '-'}</p>
+                            </div>
+                            <div>
+                              <p className="text-muted-foreground">18KT</p>
+                              <p className="font-medium text-amber-500">{scheme.rate_18kt ? `₹${scheme.rate_18kt}/g` : '-'}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -570,9 +589,9 @@ export default function Loans() {
                       <Package className="h-4 w-4 text-amber-600" />
                       Gold Item Appraisal
                     </h3>
-                    {selectedSchemeId && schemes.find(s => s.id === selectedSchemeId)?.rate_18kt && (
+                    {selectedSchemeId && schemes.find(s => s.id === selectedSchemeId)?.rate_22kt && (
                       <Badge variant="outline" className="text-amber-600">
-                        Using 18KT Rate: ₹{schemes.find(s => s.id === selectedSchemeId)?.rate_18kt}/g
+                        22KT: ₹{schemes.find(s => s.id === selectedSchemeId)?.rate_22kt}/g | 18KT: ₹{schemes.find(s => s.id === selectedSchemeId)?.rate_18kt}/g
                       </Badge>
                     )}
                   </div>
