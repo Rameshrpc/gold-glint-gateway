@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,23 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
-  IndianRupee, Calendar, Clock, AlertTriangle, CheckCircle, 
-  Search, Receipt, Calculator, FileText, Printer, Download,
-  TrendingUp, Users, DollarSign, ArrowRight
+  IndianRupee, Calendar, Clock, AlertTriangle, 
+  Search, Receipt, Calculator, FileText, Printer,
+  TrendingUp
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { format, differenceInDays, addDays, isAfter, isBefore, parseISO } from 'date-fns';
+import { format, differenceInDays, addDays, isAfter, parseISO } from 'date-fns';
 import {
   calculateDualRateInterest,
   processInterestPayment,
-  getDaysBetween,
   formatIndianCurrency,
   type DualRateInterest,
   type PaymentAllocation,
@@ -97,7 +96,7 @@ const PAYMENT_MODES = [
 ];
 
 export default function Interest() {
-  const { client, currentBranch, profile, isPlatformAdmin, hasRole } = useAuth();
+  const { client, profile, isPlatformAdmin, hasRole } = useAuth();
   const [loans, setLoans] = useState<LoanWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -123,6 +122,7 @@ export default function Interest() {
   const [receiptData, setReceiptData] = useState<{
     loan: LoanWithDetails;
     payment: InterestPayment;
+    allocation: PaymentAllocation;
   } | null>(null);
 
   const canCollect = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
@@ -216,7 +216,6 @@ export default function Interest() {
   const filteredLoans = useMemo(() => {
     let filtered = loansWithStatus;
     
-    // Apply tab filter
     if (filterTab === 'due') {
       filtered = filtered.filter(l => l.interestStatus === 'due' || l.interestStatus === 'overdue');
     } else if (filterTab === 'overdue') {
@@ -225,7 +224,6 @@ export default function Interest() {
       filtered = filtered.filter(l => l.interestStatus === 'upcoming');
     }
     
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(l => 
@@ -311,10 +309,10 @@ export default function Interest() {
         payment_mode: paymentMode,
         receipt_number: receiptNumber,
         amount_paid: amount,
-        shown_interest: paymentAllocation.shownInterest,
-        actual_interest: paymentAllocation.actualInterest,
-        differential_capitalized: paymentAllocation.differentialCapitalized,
-        principal_reduction: paymentAllocation.principalReduction,
+        shown_interest: paymentAllocation.interestPaid,
+        actual_interest: interestCalc.actualInterest,
+        differential_capitalized: 0, // No longer capitalizing, it's paid as part payment
+        principal_reduction: paymentAllocation.totalPrincipalReduction,
         days_covered: interestCalc.days,
         period_from: lastPaidDate,
         period_to: today,
@@ -340,7 +338,6 @@ export default function Interest() {
           last_interest_paid_date: today,
           next_interest_due_date: format(addDays(new Date(), 30), 'yyyy-MM-dd'),
           total_interest_paid: (selectedLoan.total_interest_paid || 0) + amount,
-          differential_capitalized: (selectedLoan.differential_capitalized || 0) + paymentAllocation.differentialCapitalized,
         })
         .eq('id', selectedLoan.id);
 
@@ -352,6 +349,7 @@ export default function Interest() {
       setReceiptData({
         loan: selectedLoan,
         payment: paymentResult,
+        allocation: paymentAllocation,
       });
       setCollectionDialogOpen(false);
       setReceiptDialogOpen(true);
@@ -530,6 +528,7 @@ export default function Interest() {
                       <TableHead>Customer</TableHead>
                       <TableHead className="text-right">Principal</TableHead>
                       <TableHead className="text-right">Interest Due</TableHead>
+                      <TableHead className="text-right">Part Payment</TableHead>
                       <TableHead>Due Date</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
@@ -555,8 +554,12 @@ export default function Interest() {
                           <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate}% p.a.</p>
                         </TableCell>
                         <TableCell className="text-right">
-                          <p className="font-bold text-amber-600">{formatIndianCurrency(loan.interestDue.totalDue)}</p>
+                          <p className="font-bold text-green-600">{formatIndianCurrency(loan.interestDue.shownInterest)}</p>
                           <p className="text-xs text-muted-foreground">{loan.daysSincePayment} days</p>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="font-bold text-amber-600">{formatIndianCurrency(loan.interestDue.differential)}</p>
+                          <p className="text-xs text-muted-foreground">Principal reduction</p>
                         </TableCell>
                         <TableCell>
                           <p className="text-sm">{loan.dueDate}</p>
@@ -629,7 +632,7 @@ export default function Interest() {
                 {/* Interest Calculation */}
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Interest Calculation</CardTitle>
+                    <CardTitle className="text-sm">Amount Due Breakdown</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between">
@@ -638,7 +641,11 @@ export default function Interest() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Interest @ {selectedLoan.scheme.shown_rate}% p.a.</span>
-                      <span className="font-medium">{formatIndianCurrency(interestCalc.shownInterest)}</span>
+                      <span className="font-medium text-green-600">{formatIndianCurrency(interestCalc.shownInterest)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Part Payment (Principal Reduction)</span>
+                      <span className="font-medium text-amber-600">{formatIndianCurrency(interestCalc.differential)}</span>
                     </div>
                     {interestCalc.penalty > 0 && (
                       <div className="flex justify-between text-red-600">
@@ -649,7 +656,7 @@ export default function Interest() {
                     <Separator />
                     <div className="flex justify-between text-lg font-bold">
                       <span>Total Due</span>
-                      <span className="text-amber-600">{formatIndianCurrency(interestCalc.totalDue)}</span>
+                      <span className="text-primary">{formatIndianCurrency(interestCalc.totalDue)}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -689,20 +696,24 @@ export default function Interest() {
                       <CardTitle className="text-sm text-green-700 dark:text-green-400">Payment Allocation (Receipt)</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>Interest @ {selectedLoan.scheme.shown_rate}%</span>
-                        <span>{formatIndianCurrency(paymentAllocation.shownInterest)}</span>
-                      </div>
                       {paymentAllocation.penalty > 0 && (
-                        <div className="flex justify-between">
+                        <div className="flex justify-between text-red-600">
                           <span>Penalty</span>
                           <span>{formatIndianCurrency(paymentAllocation.penalty)}</span>
                         </div>
                       )}
-                      {paymentAllocation.principalReduction > 0 && (
-                        <div className="flex justify-between text-green-600">
-                          <span>Principal Reduction</span>
-                          <span>{formatIndianCurrency(paymentAllocation.principalReduction)}</span>
+                      <div className="flex justify-between">
+                        <span>Interest @ {selectedLoan.scheme.shown_rate}%</span>
+                        <span>{formatIndianCurrency(paymentAllocation.interestPaid)}</span>
+                      </div>
+                      <div className="flex justify-between text-amber-600">
+                        <span>Part Payment (Principal Reduction)</span>
+                        <span>{formatIndianCurrency(paymentAllocation.partPayment)}</span>
+                      </div>
+                      {paymentAllocation.excessPaid > 0 && (
+                        <div className="flex justify-between text-blue-600">
+                          <span>Additional Principal Reduction</span>
+                          <span>{formatIndianCurrency(paymentAllocation.excessPaid)}</span>
                         </div>
                       )}
                       <Separator />
@@ -711,7 +722,7 @@ export default function Interest() {
                         <span>{formatIndianCurrency(parseFloat(paymentAmount) || 0)}</span>
                       </div>
                       <div className="flex justify-between text-muted-foreground">
-                        <span>New Outstanding</span>
+                        <span>New Outstanding Principal</span>
                         <span>{formatIndianCurrency(paymentAllocation.newActualPrincipal)}</span>
                       </div>
                     </CardContent>
@@ -772,8 +783,8 @@ export default function Interest() {
                       <TableHead>Date</TableHead>
                       <TableHead>Mode</TableHead>
                       <TableHead className="text-right">Interest</TableHead>
+                      <TableHead className="text-right">Part Payment</TableHead>
                       <TableHead className="text-right">Penalty</TableHead>
-                      <TableHead className="text-right">Principal</TableHead>
                       <TableHead className="text-right">Total</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -784,8 +795,8 @@ export default function Interest() {
                         <TableCell>{format(parseISO(payment.payment_date), 'dd MMM yyyy')}</TableCell>
                         <TableCell className="capitalize">{payment.payment_mode}</TableCell>
                         <TableCell className="text-right">{formatIndianCurrency(payment.shown_interest)}</TableCell>
+                        <TableCell className="text-right text-amber-600">{formatIndianCurrency(payment.principal_reduction)}</TableCell>
                         <TableCell className="text-right">{formatIndianCurrency(payment.penalty_amount)}</TableCell>
-                        <TableCell className="text-right">{formatIndianCurrency(payment.principal_reduction)}</TableCell>
                         <TableCell className="text-right font-medium">{formatIndianCurrency(payment.amount_paid)}</TableCell>
                       </TableRow>
                     ))}
@@ -839,42 +850,44 @@ export default function Interest() {
                     <span>Interest Period</span>
                     <span>{receiptData.payment.days_covered} days</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Interest @ 18% p.a.</span>
-                    <span>{formatIndianCurrency(receiptData.payment.shown_interest)}</span>
-                  </div>
-                  {receiptData.payment.penalty_amount > 0 && (
+                  {receiptData.allocation.penalty > 0 && (
                     <div className="flex justify-between text-red-600">
                       <span>Penalty</span>
-                      <span>{formatIndianCurrency(receiptData.payment.penalty_amount)}</span>
+                      <span>{formatIndianCurrency(receiptData.allocation.penalty)}</span>
                     </div>
                   )}
-                  {receiptData.payment.principal_reduction > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Principal Reduction</span>
-                      <span>{formatIndianCurrency(receiptData.payment.principal_reduction)}</span>
+                  <div className="flex justify-between">
+                    <span>Interest @ {receiptData.loan.scheme.shown_rate}% p.a.</span>
+                    <span>{formatIndianCurrency(receiptData.allocation.interestPaid)}</span>
+                  </div>
+                  <div className="flex justify-between text-amber-600">
+                    <span>Part Payment (Principal Reduction)</span>
+                    <span>{formatIndianCurrency(receiptData.allocation.partPayment)}</span>
+                  </div>
+                  {receiptData.allocation.excessPaid > 0 && (
+                    <div className="flex justify-between text-blue-600">
+                      <span>Additional Principal Reduction</span>
+                      <span>{formatIndianCurrency(receiptData.allocation.excessPaid)}</span>
                     </div>
                   )}
+                  <Separator />
+                  <div className="flex justify-between font-bold text-lg">
+                    <span>Total Paid</span>
+                    <span className="text-green-600">{formatIndianCurrency(receiptData.payment.amount_paid)}</span>
+                  </div>
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>New Outstanding</span>
+                    <span>{formatIndianCurrency(receiptData.allocation.newActualPrincipal)}</span>
+                  </div>
                 </div>
 
-                <Separator />
-
-                <div className="flex justify-between text-lg font-bold">
-                  <span>Total Paid</span>
-                  <span className="text-green-600">{formatIndianCurrency(receiptData.payment.amount_paid)}</span>
-                </div>
-
-                <div className="text-center text-xs text-muted-foreground pt-4 border-t">
-                  <p>Thank you for your payment</p>
-                </div>
-
-                <div className="flex gap-2 print:hidden">
-                  <Button variant="outline" className="flex-1" onClick={printReceipt}>
+                <div className="flex justify-end gap-2 pt-4 print:hidden">
+                  <Button variant="outline" onClick={() => setReceiptDialogOpen(false)}>
+                    Close
+                  </Button>
+                  <Button onClick={printReceipt}>
                     <Printer className="h-4 w-4 mr-2" />
                     Print
-                  </Button>
-                  <Button className="flex-1" onClick={() => setReceiptDialogOpen(false)}>
-                    Done
                   </Button>
                 </div>
               </div>
