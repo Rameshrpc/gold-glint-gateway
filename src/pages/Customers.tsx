@@ -1041,6 +1041,7 @@ export default function Customers() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Photo</TableHead>
+                    <TableHead>ID</TableHead>
                     <TableHead>Code</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Contact</TableHead>
@@ -1066,6 +1067,9 @@ export default function Customers() {
                             <User className="h-5 w-5 text-muted-foreground" />
                           </div>
                         )}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {customer.id.slice(0, 8)}...
                       </TableCell>
                       <TableCell className="font-medium">{customer.customer_code}</TableCell>
                       <TableCell>{customer.full_name}</TableCell>
