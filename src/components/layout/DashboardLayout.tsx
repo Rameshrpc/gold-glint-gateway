@@ -57,6 +57,9 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { title: 'Clients', icon: Building2, href: '/clients', roles: ['super_admin', 'moderator'] },
+  { title: 'Users', icon: User, href: '/users', roles: ['super_admin', 'moderator', 'tenant_admin'] },
+  { title: 'Branches', icon: Building, href: '/branches', roles: ['super_admin', 'moderator', 'tenant_admin'] },
   { title: 'Customers', icon: Users, href: '/customers' },
   { title: 'Loans', icon: FileText, href: '/loans' },
   { title: 'Interest', icon: CreditCard, href: '/interest' },
@@ -64,8 +67,6 @@ const menuItems: MenuItem[] = [
   { title: 'Agents', icon: UserCog, href: '/agents' },
   { title: 'Auction', icon: Gavel, href: '/auction' },
   { title: 'Schemes', icon: Package, href: '/schemes', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'] },
-  { title: 'Branches', icon: Building, href: '/branches', roles: ['super_admin', 'moderator', 'tenant_admin'] },
-  { title: 'Users', icon: User, href: '/users', roles: ['super_admin', 'moderator', 'tenant_admin'] },
   { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'] },
   { title: 'Notifications', icon: Bell, href: '/notifications' },
   { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'] },
