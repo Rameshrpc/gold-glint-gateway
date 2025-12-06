@@ -854,6 +854,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
       platform_initialized: { Args: never; Returns: boolean }
       user_has_branch_access: {
