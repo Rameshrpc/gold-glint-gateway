@@ -18,6 +18,7 @@ import Schemes from "./pages/Schemes";
 import Loans from "./pages/Loans";
 import Interest from "./pages/Interest";
 import Redemption from "./pages/Redemption";
+import Settings from "./pages/Settings";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -105,7 +106,7 @@ const App = () => (
             } />
             <Route path="/settings" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Settings" description="Configure system settings" />
+                <Settings />
               </ProtectedRoute>
             } />
             

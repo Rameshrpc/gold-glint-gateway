@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
@@ -53,29 +54,31 @@ interface MenuItem {
   icon: typeof LayoutDashboard;
   href: string;
   roles?: AppRole[];
+  moduleKey?: string;
 }
 
 const menuItems: MenuItem[] = [
-  { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
+  { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', moduleKey: 'dashboard' },
   { title: 'Clients', icon: Building2, href: '/clients', roles: ['super_admin', 'moderator'] },
   { title: 'Users', icon: User, href: '/users', roles: ['super_admin', 'moderator', 'tenant_admin'] },
   { title: 'Branches', icon: Building, href: '/branches', roles: ['super_admin', 'moderator', 'tenant_admin'] },
-  { title: 'Customers', icon: Users, href: '/customers' },
-  { title: 'Loans', icon: FileText, href: '/loans' },
-  { title: 'Interest', icon: CreditCard, href: '/interest' },
-  { title: 'Redemption', icon: Wallet, href: '/redemption' },
-  { title: 'Agents', icon: UserCog, href: '/agents' },
+  { title: 'Customers', icon: Users, href: '/customers', moduleKey: 'customers' },
+  { title: 'Loans', icon: FileText, href: '/loans', moduleKey: 'loans' },
+  { title: 'Interest', icon: CreditCard, href: '/interest', moduleKey: 'interest' },
+  { title: 'Redemption', icon: Wallet, href: '/redemption', moduleKey: 'redemption' },
+  { title: 'Agents', icon: UserCog, href: '/agents', moduleKey: 'agents' },
   { title: 'Auction', icon: Gavel, href: '/auction' },
   { title: 'Schemes', icon: Package, href: '/schemes', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'] },
-  { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'] },
-  { title: 'Notifications', icon: Bell, href: '/notifications' },
-  { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'] },
+  { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
+  { title: 'Notifications', icon: Bell, href: '/notifications', moduleKey: 'notifications' },
+  { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'], moduleKey: 'settings' },
 ];
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, roles, client, branches, currentBranch, setCurrentBranch, signOut, hasRole, isPlatformAdmin } = useAuth();
+  const { hasModuleAccess } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSignOut = async () => {
@@ -84,6 +87,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const filteredMenuItems = menuItems.filter(item => {
+    // Check module access first (if moduleKey is defined)
+    if (item.moduleKey && !hasModuleAccess(item.moduleKey)) {
+      return false;
+    }
+
+    // Then check role-based access
     if (!item.roles) return true;
     if (isPlatformAdmin()) return true;
     return item.roles.some(role => hasRole(role));
