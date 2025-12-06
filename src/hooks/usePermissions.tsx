@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { MODULE_KEYS } from '@/lib/modules';
+import { toast } from 'sonner';
 
 interface UserPermission {
   module_key: string;
@@ -15,7 +16,7 @@ interface ClientModule {
 }
 
 export function usePermissions() {
-  const { user, client } = useAuth();
+  const { user, client, hasRole, isPlatformAdmin } = useAuth();
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [clientModules, setClientModules] = useState<ClientModule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,6 +115,21 @@ export function usePermissions() {
     return !!perm;
   }, [userPermissions]);
 
+  // GLOBAL RULE: Only tenant_admin and super_admin can edit or delete records
+  // This is ENFORCED and cannot be overridden by user permissions
+  const canEditDelete = useMemo((): boolean => {
+    return hasRole('tenant_admin') || hasRole('super_admin') || isPlatformAdmin();
+  }, [hasRole, isPlatformAdmin]);
+
+  // Helper to show toast when edit/delete is blocked
+  const attemptEditDelete = useCallback((action: 'edit' | 'delete' = 'edit'): boolean => {
+    if (canEditDelete) return true;
+    
+    const actionText = action === 'delete' ? 'delete' : 'edit';
+    toast.error(`Only tenant admin can ${actionText} transactions`);
+    return false;
+  }, [canEditDelete]);
+
   const refreshPermissions = useCallback(async () => {
     await Promise.all([
       fetchUserPermissions(),
@@ -126,6 +142,8 @@ export function usePermissions() {
     clientModules,
     hasModuleAccess,
     canApproveHighValue,
+    canEditDelete,
+    attemptEditDelete,
     loading,
     refreshPermissions,
   };

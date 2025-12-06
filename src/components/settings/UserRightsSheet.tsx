@@ -6,10 +6,11 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { MODULES, MODULE_KEYS } from '@/lib/modules';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock } from 'lucide-react';
 
 interface UserWithProfile {
   id: string;
@@ -174,8 +175,21 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
           </div>
         ) : (
           <div className="mt-6 space-y-6">
+            {/* Global Rule - Locked Section */}
+            <Alert className="border-amber-500/50 bg-amber-500/10">
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
+              <AlertTitle className="text-amber-600">Global Rule (Locked)</AlertTitle>
+              <AlertDescription className="text-sm text-muted-foreground mt-1">
+                Only <span className="font-semibold">tenant_admin</span> can EDIT or DELETE any transaction.
+                All other roles can only VIEW + ADD in their permitted modules.
+              </AlertDescription>
+            </Alert>
+
             <div>
               <h3 className="text-sm font-semibold mb-4">Module Access</h3>
+              <p className="text-xs text-muted-foreground mb-3">
+                Control which modules this user can access. Users can VIEW + ADD NEW in enabled modules.
+              </p>
               <div className="space-y-3">
                 {MODULES.map(module => (
                   <div
@@ -184,9 +198,14 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
                   >
                     <div className="flex items-center gap-3">
                       <module.icon className="h-4 w-4 text-muted-foreground" />
-                      <Label htmlFor={module.key} className="font-normal cursor-pointer">
-                        {module.label}
-                      </Label>
+                      <div>
+                        <Label htmlFor={module.key} className="font-normal cursor-pointer">
+                          {module.label}
+                        </Label>
+                        {permissions[module.key] && (
+                          <span className="text-[10px] text-muted-foreground ml-2">View + Add</span>
+                        )}
+                      </div>
                     </div>
                     <Switch
                       id={module.key}
@@ -202,13 +221,15 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
 
             <div>
               <h3 className="text-sm font-semibold mb-4">Special Permissions</h3>
+              
+              {/* High Value Approval - Toggleable */}
               <div className="flex items-center justify-between py-2">
                 <div>
                   <Label htmlFor="high-value" className="font-normal cursor-pointer">
                     Can approve loans {">"} ₹5 lakh
                   </Label>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Normally only tenant_admin has this
+                    Grant high-value loan approval rights
                   </p>
                 </div>
                 <Switch
@@ -216,6 +237,47 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
                   checked={canApproveHighValue}
                   onCheckedChange={setCanApproveHighValue}
                 />
+              </div>
+
+              <Separator className="my-3" />
+
+              {/* Locked Permissions - Cannot be changed */}
+              <div className="space-y-3 opacity-60">
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                    <div>
+                      <Label className="font-normal text-muted-foreground">
+                        Can edit/delete old loans
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Locked to tenant_admin only
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Locked
+                  </Badge>
+                </div>
+
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-3 w-3 text-muted-foreground" />
+                    <div>
+                      <Label className="font-normal text-muted-foreground">
+                        Can edit/delete receipts
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Locked to tenant_admin only
+                      </p>
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="text-xs">
+                    <Lock className="h-3 w-3 mr-1" />
+                    Locked
+                  </Badge>
+                </div>
               </div>
             </div>
 
