@@ -12,9 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
 import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule } from '@/lib/interestCalculations';
@@ -106,6 +107,7 @@ const ITEM_TYPES = ['necklace', 'chain', 'bangle', 'ring', 'earring', 'pendant',
 
 export default function Loans() {
   const { client, currentBranch, branches, profile, isPlatformAdmin, hasRole } = useAuth();
+  const { canEditDelete, attemptEditDelete } = usePermissions();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -1052,9 +1054,37 @@ export default function Loans() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)} title="View loan details">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                if (!attemptEditDelete('edit')) return;
+                                toast.info('Edit loan functionality coming soon');
+                              }}
+                              disabled={!canEditDelete}
+                              title={canEditDelete ? "Edit loan" : "Only tenant admin can edit transactions"}
+                              className={!canEditDelete ? "opacity-50 cursor-not-allowed" : ""}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                if (!attemptEditDelete('delete')) return;
+                                toast.info('Delete loan functionality coming soon');
+                              }}
+                              disabled={!canEditDelete}
+                              title={canEditDelete ? "Delete loan" : "Only tenant admin can delete transactions"}
+                              className={`text-destructive hover:text-destructive ${!canEditDelete ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

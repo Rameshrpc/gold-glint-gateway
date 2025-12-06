@@ -7,10 +7,21 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { MODULES, MODULE_KEYS } from '@/lib/modules';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, ShieldAlert, Lock } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, UserCog } from 'lucide-react';
+
+const AVAILABLE_ROLES = [
+  { value: 'tenant_admin', label: 'Admin' },
+  { value: 'branch_manager', label: 'Branch Manager' },
+  { value: 'loan_officer', label: 'Loan Officer' },
+  { value: 'appraiser', label: 'Appraiser' },
+  { value: 'collection_agent', label: 'Collection Agent' },
+  { value: 'auditor', label: 'Auditor' },
+];
 
 interface UserWithProfile {
   id: string;
@@ -34,10 +45,14 @@ interface PermissionState {
 }
 
 export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRightsSheetProps) {
+  const { isPlatformAdmin, hasRole } = useAuth();
   const [permissions, setPermissions] = useState<PermissionState>({});
   const [canApproveHighValue, setCanApproveHighValue] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const canAssignRoles = isPlatformAdmin() || hasRole('super_admin') || hasRole('tenant_admin');
 
   useEffect(() => {
     if (user && open) {
@@ -48,6 +63,10 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
   const loadUserPermissions = async () => {
     if (!user) return;
     setLoading(true);
+
+    // Set current role
+    const currentRole = user.roles?.[0]?.role || '';
+    setSelectedRole(currentRole);
 
     const { data, error } = await supabase
       .from('user_permissions')
@@ -91,6 +110,23 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
     setSaving(true);
 
     try {
+      // Update role if changed (and user has permission to assign roles)
+      const currentRole = user.roles?.[0]?.role || '';
+      if (canAssignRoles && selectedRole && selectedRole !== currentRole) {
+        // Delete existing roles for this user
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', user.user_id);
+
+        // Insert new role
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert([{ user_id: user.user_id, role: selectedRole as any }]);
+
+        if (roleError) throw roleError;
+      }
+
       // Delete existing permissions for this user
       await supabase
         .from('user_permissions')
@@ -175,6 +211,34 @@ export function UserRightsSheet({ open, onOpenChange, user, onSave }: UserRights
           </div>
         ) : (
           <div className="mt-6 space-y-6">
+            {/* Role Assignment - Only for admins */}
+            {canAssignRoles && (
+              <>
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <UserCog className="h-4 w-4 text-muted-foreground" />
+                    <h3 className="text-sm font-semibold">Assign Role</h3>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Change the user's role. This affects their base permissions.
+                  </p>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AVAILABLE_ROLES.map(role => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Separator />
+              </>
+            )}
+
             {/* Global Rule - Locked Section */}
             <Alert className="border-amber-500/50 bg-amber-500/10">
               <ShieldAlert className="h-4 w-4 text-amber-500" />

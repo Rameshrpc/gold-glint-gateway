@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Search, Users, Building2, ChevronRight, Loader2 } from 'lucide-react';
 import { UserRightsSheet } from '@/components/settings/UserRightsSheet';
 import { ClientRightsSheet } from '@/components/settings/ClientRightsSheet';
+import { PermissionMatrix } from '@/components/settings/PermissionMatrix';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -296,6 +297,9 @@ export default function Settings() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Permission Matrix Reference */}
+            <PermissionMatrix />
           </TabsContent>
 
           {canManageClientRights && (
