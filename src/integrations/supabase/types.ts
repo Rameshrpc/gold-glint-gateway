@@ -74,6 +74,41 @@ export type Database = {
           },
         ]
       }
+      client_modules: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          module_key: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_modules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           address: string | null
@@ -84,7 +119,10 @@ export type Database = {
           id: string
           is_active: boolean | null
           logo_url: string | null
+          max_branches: number | null
+          max_users: number | null
           phone: string | null
+          plan_name: string | null
           updated_at: string | null
         }
         Insert: {
@@ -96,7 +134,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
+          max_branches?: number | null
+          max_users?: number | null
           phone?: string | null
+          plan_name?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -108,7 +149,10 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
+          max_branches?: number | null
+          max_users?: number | null
           phone?: string | null
+          plan_name?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -795,6 +839,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_permissions: {
+        Row: {
+          can_approve_high_value: boolean | null
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          module_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          can_approve_high_value?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          can_approve_high_value?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          module_key?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
