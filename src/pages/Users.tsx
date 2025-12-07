@@ -210,44 +210,24 @@ export default function Users() {
     setSubmitting(true);
 
     try {
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`,
+      // Use edge function to create user without session change
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email,
+          password,
+          userData: {
+            client_id: selectedClientId,
+            branch_id: selectedBranchId || null,
+            full_name: fullName,
+            phone: phone || null,
+            is_active: isActive,
+          },
+          roles: selectedRoles,
         },
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
-
-      // Create profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: authData.user.id,
-          client_id: selectedClientId,
-          branch_id: selectedBranchId || null,
-          full_name: fullName,
-          email: email,
-          phone: phone || null,
-          is_active: isActive,
-        });
-
-      if (profileError) throw profileError;
-
-      // Assign roles
-      const roleInserts = selectedRoles.map(role => ({
-        user_id: authData.user!.id,
-        role,
-      }));
-
-      const { error: rolesError } = await supabase
-        .from('user_roles')
-        .insert(roleInserts);
-
-      if (rolesError) throw rolesError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast.success('User created successfully');
       setDialogOpen(false);
