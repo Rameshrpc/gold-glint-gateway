@@ -170,7 +170,13 @@ export default function Redemption() {
   };
 
   const handleSearch = async () => {
-    if (!searchQuery.trim() || !client) return;
+    if (!client) return;
+    
+    const query = searchQuery.trim();
+    if (query.length < 4) {
+      toast.error('Please enter at least 4 characters to search');
+      return;
+    }
     
     setSearching(true);
     try {
@@ -183,7 +189,7 @@ export default function Redemption() {
         `)
         .eq('client_id', client.id)
         .eq('status', 'active')
-        .or(`loan_number.ilike.%${searchQuery}%,customer.full_name.ilike.%${searchQuery}%,customer.phone.ilike.%${searchQuery}%`)
+        .or(`loan_number.ilike.%${query}%,customer.full_name.ilike.%${query}%,customer.phone.ilike.%${query}%`)
         .limit(10);
 
       if (error) throw error;
