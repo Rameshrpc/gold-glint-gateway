@@ -10,6 +10,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Auth from "./pages/Auth";
 import Setup from "./pages/Setup";
 import Dashboard from "./pages/Dashboard";
+import Profile from "./pages/Profile";
 import Customers from "./pages/Customers";
 import Branches from "./pages/Branches";
 import Clients from "./pages/Clients";
@@ -42,6 +43,11 @@ const App = () => (
                 <Dashboard />
               </ProtectedRoute>
             } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            } />
             <Route path="/customers" element={
               <ProtectedRoute>
                 <Customers />
@@ -63,7 +69,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Placeholder Routes - Phase 2+ */}
+            {/* Loans & Operations */}
             <Route path="/loans" element={
               <ProtectedRoute>
                 <Loans />
@@ -84,9 +90,24 @@ const App = () => (
                 <Redemption />
               </ProtectedRoute>
             } />
+            <Route path="/reloan" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="Reloan" description="Process loan renewals and top-ups" />
+              </ProtectedRoute>
+            } />
             <Route path="/agents" element={
               <ProtectedRoute>
                 <PlaceholderPage title="Agents" description="Manage referral agents and commissions" />
+              </ProtectedRoute>
+            } />
+            <Route path="/items" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="Items" description="Manage item types and categories" />
+              </ProtectedRoute>
+            } />
+            <Route path="/item-groups" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="Item Groups" description="Organize items into groups" />
               </ProtectedRoute>
             } />
             <Route path="/auction" element={
@@ -94,9 +115,16 @@ const App = () => (
                 <PlaceholderPage title="Auction" description="Manage overdue loans and auctions" />
               </ProtectedRoute>
             } />
+            
+            {/* Reports & Communications */}
             <Route path="/reports" element={
               <ProtectedRoute>
                 <PlaceholderPage title="Reports" description="View business reports and analytics" />
+              </ProtectedRoute>
+            } />
+            <Route path="/accounts" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="Accounts" description="Manage financial accounts and ledgers" />
               </ProtectedRoute>
             } />
             <Route path="/notifications" element={
@@ -104,9 +132,26 @@ const App = () => (
                 <PlaceholderPage title="Notifications" description="Manage alerts and reminders" />
               </ProtectedRoute>
             } />
+            <Route path="/whatsapp" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="WhatsApp" description="Send WhatsApp messages to customers" />
+              </ProtectedRoute>
+            } />
+            <Route path="/sms" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="SMS" description="Send SMS notifications to customers" />
+              </ProtectedRoute>
+            } />
+            
+            {/* Configuration */}
             <Route path="/settings" element={
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            } />
+            <Route path="/print-setup" element={
+              <ProtectedRoute>
+                <PlaceholderPage title="Print Setup" description="Configure print templates and settings" />
               </ProtectedRoute>
             } />
             
