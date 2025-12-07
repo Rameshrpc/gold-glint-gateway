@@ -1,6 +1,8 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { 
   Users, 
   FileText, 
@@ -10,13 +12,25 @@ import {
   AlertTriangle,
   Building,
   MapPin,
+  CreditCard,
+  Wallet,
+  RefreshCw,
+  Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
-  const { profile, client, currentBranch, branches, roles } = useAuth();
+  const navigate = useNavigate();
+  const { profile, client, currentBranch, branches, roles, hasRole } = useAuth();
 
   const hasMultipleBranches = branches && branches.length > 1;
+
+  const quickActions = [
+    { title: 'New Loan', icon: Plus, href: '/loans?action=new', color: 'bg-green-600 hover:bg-green-700' },
+    { title: 'Interest', icon: CreditCard, href: '/interest', color: 'bg-blue-600 hover:bg-blue-700' },
+    { title: 'Redemption', icon: Wallet, href: '/redemption', color: 'bg-purple-600 hover:bg-purple-700' },
+    { title: 'Reloan', icon: RefreshCw, href: '/reloan', color: 'bg-amber-600 hover:bg-amber-700' },
+  ];
 
   const stats = [
     {
@@ -75,6 +89,27 @@ export default function Dashboard() {
             {client?.company_name}{currentBranch ? ` • ${currentBranch.branch_name}` : ''}
           </p>
         </div>
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {quickActions.map((action) => (
+                <Button
+                  key={action.title}
+                  onClick={() => navigate(action.href)}
+                  className={`${action.color} text-white h-auto py-3 flex flex-col items-center gap-2`}
+                >
+                  <action.icon className="h-5 w-5" />
+                  <span className="text-sm font-medium">{action.title}</span>
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Multi-Branch Overview Card */}
         {hasMultipleBranches && (
