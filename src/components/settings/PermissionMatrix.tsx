@@ -6,7 +6,7 @@ import { Check, X } from 'lucide-react';
 const PERMISSION_MATRIX = [
   { role: 'Super Admin', roleKey: 'super_admin', view: true, add: true, edit: true, delete: true, highValue: true },
   { role: 'Tenant Admin', roleKey: 'tenant_admin', view: true, add: true, edit: true, delete: true, highValue: true },
-  { role: 'Branch Manager', roleKey: 'branch_manager', view: true, add: true, edit: false, delete: false, highValue: 'grantable' },
+  { role: 'Branch Manager', roleKey: 'branch_manager', view: true, add: true, edit: true, delete: false, highValue: 'grantable' },
   { role: 'Loan Officer', roleKey: 'loan_officer', view: true, add: true, edit: false, delete: false, highValue: false },
   { role: 'Appraiser', roleKey: 'appraiser', view: true, add: true, edit: false, delete: false, highValue: false },
   { role: 'Collection Agent', roleKey: 'collection_agent', view: true, add: true, edit: false, delete: false, highValue: false },

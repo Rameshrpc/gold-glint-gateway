@@ -116,20 +116,39 @@ export function usePermissions() {
     return !!perm;
   }, [userPermissions]);
 
-  // GLOBAL RULE: Only tenant_admin and super_admin can edit or delete records
-  // This is ENFORCED and cannot be overridden by user permissions
-  const canEditDelete = useMemo((): boolean => {
+  // EDIT permission: tenant_admin, super_admin, platform admin, AND branch_manager
+  const canEdit = useMemo((): boolean => {
+    return hasRole('tenant_admin') || hasRole('super_admin') || 
+           hasRole('branch_manager') || isPlatformAdmin();
+  }, [hasRole, isPlatformAdmin]);
+
+  // DELETE permission: ONLY tenant_admin, super_admin, platform admin (NO branch_manager)
+  const canDelete = useMemo((): boolean => {
     return hasRole('tenant_admin') || hasRole('super_admin') || isPlatformAdmin();
   }, [hasRole, isPlatformAdmin]);
 
-  // Helper to show toast when edit/delete is blocked
-  const attemptEditDelete = useCallback((action: 'edit' | 'delete' = 'edit'): boolean => {
-    if (canEditDelete) return true;
-    
-    const actionText = action === 'delete' ? 'delete' : 'edit';
-    toast.error(`Only tenant admin can ${actionText} transactions`);
+  // Legacy combined permission (for backwards compatibility)
+  const canEditDelete = canDelete;
+
+  // Helper to show toast when edit is blocked
+  const attemptEdit = useCallback((): boolean => {
+    if (canEdit) return true;
+    toast.error('Only tenant admin or branch manager can edit transactions');
     return false;
-  }, [canEditDelete]);
+  }, [canEdit]);
+
+  // Helper to show toast when delete is blocked
+  const attemptDelete = useCallback((): boolean => {
+    if (canDelete) return true;
+    toast.error('Only tenant admin can delete transactions');
+    return false;
+  }, [canDelete]);
+
+  // Legacy helper (for backwards compatibility)
+  const attemptEditDelete = useCallback((action: 'edit' | 'delete' = 'edit'): boolean => {
+    if (action === 'delete') return attemptDelete();
+    return attemptEdit();
+  }, [attemptEdit, attemptDelete]);
 
   const refreshPermissions = useCallback(async () => {
     await Promise.all([
@@ -143,8 +162,12 @@ export function usePermissions() {
     clientModules,
     hasModuleAccess,
     canApproveHighValue,
-    canEditDelete,
-    attemptEditDelete,
+    canEdit,
+    canDelete,
+    canEditDelete, // Legacy
+    attemptEdit,
+    attemptDelete,
+    attemptEditDelete, // Legacy
     loading,
     refreshPermissions,
   };

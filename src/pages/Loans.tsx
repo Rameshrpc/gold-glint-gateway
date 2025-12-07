@@ -107,7 +107,7 @@ const ITEM_TYPES = ['necklace', 'chain', 'bangle', 'ring', 'earring', 'pendant',
 
 export default function Loans() {
   const { client, currentBranch, branches, profile, isPlatformAdmin, hasRole } = useAuth();
-  const { canEditDelete, attemptEditDelete } = usePermissions();
+  const { canEdit, canDelete, attemptEdit, attemptDelete } = usePermissions();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -1062,12 +1062,12 @@ export default function Loans() {
                               variant="ghost" 
                               size="sm" 
                               onClick={() => {
-                                if (!attemptEditDelete('edit')) return;
+                                if (!attemptEdit()) return;
                                 toast.info('Edit loan functionality coming soon');
                               }}
-                              disabled={!canEditDelete}
-                              title={canEditDelete ? "Edit loan" : "Only tenant admin can edit transactions"}
-                              className={!canEditDelete ? "opacity-50 cursor-not-allowed" : ""}
+                              disabled={!canEdit}
+                              title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
+                              className={!canEdit ? "opacity-50 cursor-not-allowed" : ""}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
@@ -1075,12 +1075,12 @@ export default function Loans() {
                               variant="ghost" 
                               size="sm" 
                               onClick={() => {
-                                if (!attemptEditDelete('delete')) return;
+                                if (!attemptDelete()) return;
                                 toast.info('Delete loan functionality coming soon');
                               }}
-                              disabled={!canEditDelete}
-                              title={canEditDelete ? "Delete loan" : "Only tenant admin can delete transactions"}
-                              className={`text-destructive hover:text-destructive ${!canEditDelete ? "opacity-50 cursor-not-allowed" : ""}`}
+                              disabled={!canDelete}
+                              title={canDelete ? "Delete loan" : "Only tenant admin can delete"}
+                              className={`text-destructive hover:text-destructive ${!canDelete ? "opacity-50 cursor-not-allowed" : ""}`}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
