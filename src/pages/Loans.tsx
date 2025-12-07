@@ -106,6 +106,7 @@ interface Loan {
   maturity_date: string;
   net_disbursed: number;
   status: 'active' | 'closed' | 'overdue' | 'auctioned';
+  is_reloan: boolean | null;
   customer: Customer;
   scheme: {
     id: string;
@@ -1526,7 +1527,12 @@ export default function Loans() {
                   <TableBody>
                     {filteredLoans.map((loan) => (
                       <TableRow key={loan.id}>
-                        <TableCell className="font-medium">{loan.loan_number}</TableCell>
+                        <TableCell className="font-medium">
+                          {loan.loan_number}
+                          {loan.is_reloan && (
+                            <Badge variant="secondary" className="ml-2 text-xs">Reloan</Badge>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div>
                             <p>{loan.customer.full_name}</p>
