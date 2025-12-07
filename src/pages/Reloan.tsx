@@ -549,6 +549,7 @@ export default function Reloan() {
       if (newLoanError) throw newLoanError;
 
       // 4. Copy gold items to new loan (with updated values)
+      type GoldPurity = '24k' | '22k' | '20k' | '18k' | '14k';
       const newGoldItemsData = goldItems.map(item => ({
         loan_id: newLoanResult.id,
         item_type: item.item_type,
@@ -557,7 +558,7 @@ export default function Reloan() {
         description: item.description,
         gross_weight_grams: item.gross_weight_grams,
         net_weight_grams: item.net_weight_grams,
-        purity: item.purity,
+        purity: item.purity as GoldPurity,
         purity_percentage: item.purity_percentage,
         stone_weight_grams: item.stone_weight_grams,
         market_rate_per_gram: item.market_rate_per_gram,
@@ -1193,9 +1194,8 @@ export default function Reloan() {
             onOpenChange={setPdfDialogOpen}
             title="Reloan Receipt"
             fileName={`reloan-${reloanForPdf.newLoan.number}.pdf`}
-          >
-            <ReloanReceiptPDF {...reloanForPdf} />
-          </PDFViewerDialog>
+            document={<ReloanReceiptPDF {...reloanForPdf} />}
+          />
         )}
       </div>
     </DashboardLayout>
