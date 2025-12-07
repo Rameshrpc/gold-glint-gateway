@@ -77,6 +77,150 @@ export type Database = {
           },
         ]
       }
+      auctions: {
+        Row: {
+          auction_date: string
+          auction_lot_number: string
+          branch_id: string
+          buyer_address: string | null
+          buyer_contact: string | null
+          buyer_name: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          customer_notified: boolean | null
+          customer_notified_date: string | null
+          gold_verified: boolean | null
+          id: string
+          loan_id: string
+          outstanding_interest: number
+          outstanding_penalty: number
+          outstanding_principal: number
+          payment_mode: string | null
+          payment_reference: string | null
+          processed_by: string | null
+          remarks: string | null
+          reserve_price: number
+          shortfall_amount: number | null
+          sold_price: number | null
+          status: string | null
+          surplus_amount: number | null
+          surplus_returned: boolean | null
+          surplus_returned_date: string | null
+          surplus_returned_to: string | null
+          total_appraised_value: number
+          total_gold_weight_grams: number
+          total_outstanding: number
+          updated_at: string | null
+        }
+        Insert: {
+          auction_date: string
+          auction_lot_number: string
+          branch_id: string
+          buyer_address?: string | null
+          buyer_contact?: string | null
+          buyer_name?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_notified?: boolean | null
+          customer_notified_date?: string | null
+          gold_verified?: boolean | null
+          id?: string
+          loan_id: string
+          outstanding_interest?: number
+          outstanding_penalty?: number
+          outstanding_principal: number
+          payment_mode?: string | null
+          payment_reference?: string | null
+          processed_by?: string | null
+          remarks?: string | null
+          reserve_price: number
+          shortfall_amount?: number | null
+          sold_price?: number | null
+          status?: string | null
+          surplus_amount?: number | null
+          surplus_returned?: boolean | null
+          surplus_returned_date?: string | null
+          surplus_returned_to?: string | null
+          total_appraised_value: number
+          total_gold_weight_grams: number
+          total_outstanding: number
+          updated_at?: string | null
+        }
+        Update: {
+          auction_date?: string
+          auction_lot_number?: string
+          branch_id?: string
+          buyer_address?: string | null
+          buyer_contact?: string | null
+          buyer_name?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          customer_notified?: boolean | null
+          customer_notified_date?: string | null
+          gold_verified?: boolean | null
+          id?: string
+          loan_id?: string
+          outstanding_interest?: number
+          outstanding_penalty?: number
+          outstanding_principal?: number
+          payment_mode?: string | null
+          payment_reference?: string | null
+          processed_by?: string | null
+          remarks?: string | null
+          reserve_price?: number
+          shortfall_amount?: number | null
+          sold_price?: number | null
+          status?: string | null
+          surplus_amount?: number | null
+          surplus_returned?: boolean | null
+          surplus_returned_date?: string | null
+          surplus_returned_to?: string | null
+          total_appraised_value?: number
+          total_gold_weight_grams?: number
+          total_outstanding?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auctions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -1158,6 +1302,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_auction_lot_number: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
       generate_customer_code: {
         Args: { p_branch_code: string; p_client_id: string }
         Returns: string

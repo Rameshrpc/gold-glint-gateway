@@ -24,6 +24,7 @@ import Agents from "./pages/Agents";
 import Items from "./pages/Items";
 import ItemGroups from "./pages/ItemGroups";
 import Reloan from "./pages/Reloan";
+import Auction from "./pages/Auction";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -116,7 +117,7 @@ const App = () => (
             } />
             <Route path="/auction" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Auction" description="Manage overdue loans and auctions" />
+                <Auction />
               </ProtectedRoute>
             } />
             
