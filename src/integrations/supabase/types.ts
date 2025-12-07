@@ -633,6 +633,41 @@ export type Database = {
           },
         ]
       }
+      loan_disbursements: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          loan_id: string
+          payment_mode: string
+          reference_number: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          loan_id: string
+          payment_mode: string
+          reference_number?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          loan_id?: string
+          payment_mode?: string
+          reference_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_disbursements_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loans: {
         Row: {
           actual_principal: number | null
