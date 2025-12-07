@@ -669,67 +669,82 @@ export default function Customers() {
     preview: string | null;
     setPreview: (p: string | null) => void;
     existingUrl?: string | null;
-  }) => (
-    <div className="space-y-2">
-      <Label>{label} {required && <span className="text-destructive">*</span>}</Label>
-      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
-        {preview || existingUrl ? (
-          <div className="relative">
-            <img
-              src={preview || existingUrl || ''}
-              alt={label}
-              className="max-h-32 mx-auto rounded-lg object-cover"
-            />
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              className="absolute top-0 right-0 h-6 w-6"
-              onClick={() => clearFilePreview(setFile, setPreview)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            <div className="flex justify-center gap-2">
+  }) => {
+    const cameraInputRef = useRef<HTMLInputElement>(null);
+    
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      handleFileChange(e.target.files?.[0] || null, setFile, setPreview);
+      // Reset input so same file can be selected again
+      e.target.value = '';
+    };
+    
+    return (
+      <div className="space-y-2">
+        <Label>{label} {required && <span className="text-destructive">*</span>}</Label>
+        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4 text-center">
+          {preview || existingUrl ? (
+            <div className="relative">
+              <img
+                src={preview || existingUrl || ''}
+                alt={label}
+                className="max-h-32 mx-auto rounded-lg object-cover"
+              />
               <Button
                 type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileRef.current?.click()}
+                variant="destructive"
+                size="icon"
+                className="absolute top-0 right-0 h-6 w-6"
+                onClick={() => clearFilePreview(setFile, setPreview)}
               >
-                <Upload className="h-4 w-4 mr-1" />
-                Upload
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  if (fileRef.current) {
-                    fileRef.current.capture = 'environment';
-                    fileRef.current.click();
-                  }
-                }}
-              >
-                <Camera className="h-4 w-4 mr-1" />
-                Camera
+                <X className="h-4 w-4" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">JPEG/PNG, max 5MB</p>
-          </div>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/jpg"
-          className="hidden"
-          onChange={(e) => handleFileChange(e.target.files?.[0] || null, setFile, setPreview)}
-        />
+          ) : (
+            <div className="space-y-2">
+              <div className="flex justify-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera className="h-4 w-4 mr-1" />
+                  Camera
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">JPEG/PNG, max 5MB</p>
+            </div>
+          )}
+          {/* File picker input */}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            className="hidden"
+            onChange={handleInputChange}
+          />
+          {/* Camera capture input - uses native camera on mobile */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/jpg"
+            capture="environment"
+            className="hidden"
+            onChange={handleInputChange}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <DashboardLayout>
