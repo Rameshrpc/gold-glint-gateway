@@ -58,6 +58,7 @@ interface Agent {
   full_name: string;
   phone: string | null;
   commission_percentage: number;
+  total_commission_earned: number | null;
 }
 
 interface ItemGroup {
@@ -274,7 +275,7 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('agents')
-      .select('id, agent_code, full_name, phone, commission_percentage')
+      .select('id, agent_code, full_name, phone, commission_percentage, total_commission_earned')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('full_name');
@@ -545,6 +546,20 @@ export default function Loans() {
         .insert(goldItemsData);
 
       if (itemsError) throw itemsError;
+
+      // Calculate and update agent commission if agent is selected
+      if (selectedAgentId) {
+        const selectedAgent = agents.find(a => a.id === selectedAgentId);
+        if (selectedAgent && selectedAgent.commission_percentage) {
+          const commissionAmount = (loanCalculation.loanAmount * selectedAgent.commission_percentage) / 100;
+          const newTotalCommission = (selectedAgent.total_commission_earned || 0) + commissionAmount;
+          
+          await supabase
+            .from('agents')
+            .update({ total_commission_earned: newTotalCommission })
+            .eq('id', selectedAgentId);
+        }
+      }
 
       // Get selected customer and scheme for PDF
       const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
