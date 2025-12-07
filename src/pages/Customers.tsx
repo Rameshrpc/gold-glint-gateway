@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User, Trash2, Download, Database, Loader2 } from 'lucide-react';
+import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, X, FileCheck, User, Trash2, Download, Database, Loader2 } from 'lucide-react';
+import CameraCapture from '@/components/CameraCapture';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -138,11 +139,6 @@ export default function Customers() {
   // Customer photo signed URLs cache for table display
   const [photoSignedUrls, setPhotoSignedUrls] = useState<Record<string, string>>({});
 
-  // File input refs
-  const profilePhotoRef = useRef<HTMLInputElement>(null);
-  const aadhaarFrontRef = useRef<HTMLInputElement>(null);
-  const aadhaarBackRef = useRef<HTMLInputElement>(null);
-  const panCardRef = useRef<HTMLInputElement>(null);
 
   const canManageCustomers = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer') || hasRole('appraiser');
 
@@ -651,33 +647,65 @@ export default function Customers() {
     setPreview(null);
   };
 
+  // Camera modal state
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [activeCameraField, setActiveCameraField] = useState<'profile' | 'aadhaarFront' | 'aadhaarBack' | 'panCard' | null>(null);
+
+  const openCameraFor = (field: 'profile' | 'aadhaarFront' | 'aadhaarBack' | 'panCard') => {
+    setActiveCameraField(field);
+    setCameraOpen(true);
+  };
+
+  const handleCameraCapture = (file: File, preview: string) => {
+    switch (activeCameraField) {
+      case 'profile':
+        setProfilePhotoFile(file);
+        setProfilePhotoPreview(preview);
+        break;
+      case 'aadhaarFront':
+        setAadhaarFrontFile(file);
+        setAadhaarFrontPreview(preview);
+        break;
+      case 'aadhaarBack':
+        setAadhaarBackFile(file);
+        setAadhaarBackPreview(preview);
+        break;
+      case 'panCard':
+        setPanCardFile(file);
+        setPanCardPreview(preview);
+        break;
+    }
+    setCameraOpen(false);
+    setActiveCameraField(null);
+  };
+
+  const getCameraLabel = () => {
+    switch (activeCameraField) {
+      case 'profile': return 'Profile Photo';
+      case 'aadhaarFront': return 'Aadhaar Front';
+      case 'aadhaarBack': return 'Aadhaar Back';
+      case 'panCard': return 'PAN Card';
+      default: return 'Photo';
+    }
+  };
+
   const ImageUploadField = ({
     label,
     required,
-    fileRef,
-    file,
-    setFile,
+    cameraField,
     preview,
+    setFile,
     setPreview,
     existingUrl
   }: {
     label: string;
     required?: boolean;
-    fileRef: React.RefObject<HTMLInputElement>;
-    file: File | null;
-    setFile: (f: File | null) => void;
+    cameraField: 'profile' | 'aadhaarFront' | 'aadhaarBack' | 'panCard';
     preview: string | null;
+    setFile: (f: File | null) => void;
     setPreview: (p: string | null) => void;
     existingUrl?: string | null;
   }) => {
-    const cameraInputRef = useRef<HTMLInputElement>(null);
-    
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      handleFileChange(e.target.files?.[0] || null, setFile, setPreview);
-      // Reset input so same file can be selected again
-      e.target.value = '';
-    };
-    
     return (
       <div className="space-y-2">
         <Label>{label} {required && <span className="text-destructive">*</span>}</Label>
@@ -701,46 +729,18 @@ export default function Customers() {
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex justify-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fileRef.current?.click()}
-                >
-                  <Upload className="h-4 w-4 mr-1" />
-                  Upload
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => cameraInputRef.current?.click()}
-                >
-                  <Camera className="h-4 w-4 mr-1" />
-                  Camera
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">JPEG/PNG, max 5MB</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => openCameraFor(cameraField)}
+              >
+                <Camera className="h-4 w-4 mr-1" />
+                Capture
+              </Button>
+              <p className="text-xs text-muted-foreground">Camera capture with timestamp</p>
             </div>
           )}
-          {/* File picker input */}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/jpg"
-            className="hidden"
-            onChange={handleInputChange}
-          />
-          {/* Camera capture input - uses native camera on mobile */}
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/jpg"
-            capture="environment"
-            className="hidden"
-            onChange={handleInputChange}
-          />
         </div>
       </div>
     );
@@ -795,8 +795,7 @@ export default function Customers() {
                         <ImageUploadField
                           label="Profile Photo"
                           required={!editingCustomer}
-                          fileRef={profilePhotoRef}
-                          file={profilePhotoFile}
+                          cameraField="profile"
                           setFile={setProfilePhotoFile}
                           preview={profilePhotoPreview}
                           setPreview={setProfilePhotoPreview}
@@ -985,8 +984,7 @@ export default function Customers() {
                         <ImageUploadField
                           label="Aadhaar Front"
                           required={!editingCustomer}
-                          fileRef={aadhaarFrontRef}
-                          file={aadhaarFrontFile}
+                          cameraField="aadhaarFront"
                           setFile={setAadhaarFrontFile}
                           preview={aadhaarFrontPreview}
                           setPreview={setAadhaarFrontPreview}
@@ -995,8 +993,7 @@ export default function Customers() {
                         <ImageUploadField
                           label="Aadhaar Back"
                           required={!editingCustomer}
-                          fileRef={aadhaarBackRef}
-                          file={aadhaarBackFile}
+                          cameraField="aadhaarBack"
                           setFile={setAadhaarBackFile}
                           preview={aadhaarBackPreview}
                           setPreview={setAadhaarBackPreview}
@@ -1005,8 +1002,7 @@ export default function Customers() {
                         <ImageUploadField
                           label="PAN Card"
                           required={!editingCustomer}
-                          fileRef={panCardRef}
-                          file={panCardFile}
+                          cameraField="panCard"
                           setFile={setPanCardFile}
                           preview={panCardPreview}
                           setPreview={setPanCardPreview}
@@ -1435,6 +1431,17 @@ export default function Customers() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Camera Capture Dialog */}
+        <CameraCapture
+          open={cameraOpen}
+          onClose={() => {
+            setCameraOpen(false);
+            setActiveCameraField(null);
+          }}
+          onCapture={handleCameraCapture}
+          label={getCameraLabel()}
+        />
       </div>
     </DashboardLayout>
   );
