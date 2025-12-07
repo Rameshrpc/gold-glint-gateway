@@ -16,7 +16,8 @@ interface ClientModule {
 }
 
 export function usePermissions() {
-  const { user, client, hasRole, isPlatformAdmin } = useAuth();
+  const auth = useAuth();
+  const { user, client, hasRole, isPlatformAdmin } = auth;
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [clientModules, setClientModules] = useState<ClientModule[]>([]);
   const [loading, setLoading] = useState(true);
