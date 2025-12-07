@@ -48,6 +48,7 @@ interface Scheme {
   min_tenure_days: number;
   max_tenure_days: number;
   processing_fee_percentage: number | null;
+  document_charges: number | null;
   rate_18kt: number | null;
   rate_22kt: number | null;
 }
@@ -143,6 +144,7 @@ export default function Loans() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
   // New loan form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -160,7 +162,6 @@ export default function Loans() {
   
   // Payment details
   const [disbursementMode, setDisbursementMode] = useState('cash');
-  const [documentCharges, setDocumentCharges] = useState(0);
   const [paymentReference, setPaymentReference] = useState('');
   
   // Customer creation dialog
@@ -270,7 +271,7 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, rate_18kt, rate_22kt')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('scheme_name');
@@ -320,7 +321,6 @@ export default function Loans() {
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
     setDisbursementMode('cash');
-    setDocumentCharges(0);
     setPaymentReference('');
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
@@ -424,6 +424,8 @@ export default function Loans() {
     const maxLoanAmount = totalAppraisedValue * (scheme.ltv_percentage / 100);
     const loanAmount = Math.round(Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount));
     const processingFee = Math.round(loanAmount * ((scheme.processing_fee_percentage || 0) / 100));
+    // Auto-calculate document charges from scheme percentage
+    const documentCharges = Math.round(loanAmount * ((scheme.document_charges || 0) / 100));
     
     // Use selected tenure or default to max tenure
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
@@ -449,12 +451,13 @@ export default function Loans() {
       loanAmount,
       processingFee,
       documentCharges,
+      documentChargesPercentage: scheme.document_charges || 0,
       advanceCalc,
       netCashToCustomer,
       rebateSchedule,
       scheme,
     };
-  }, [goldItems, selectedSchemeId, schemes, tenureDays, documentCharges]);
+  }, [goldItems, selectedSchemeId, schemes, tenureDays]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -526,7 +529,7 @@ export default function Loans() {
         jewel_photo_url: jewelPhotoUrl,
         appraiser_sheet_url: appraiserSheetUrl,
         disbursement_mode: disbursementMode,
-        document_charges: documentCharges,
+        document_charges: loanCalculation.documentCharges,
         payment_reference: paymentReference || null,
       };
 
@@ -695,18 +698,15 @@ export default function Loans() {
                     <div className="space-y-2">
                       <Label>Customer *</Label>
                       <div className="flex gap-2">
-                        <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select customer" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {customers.map((customer) => (
-                              <SelectItem key={customer.id} value={customer.id}>
-                                {customer.customer_code} - {customer.full_name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="flex-1 relative">
+                          <Input
+                            placeholder="Search by name, code, or last 4 digits of phone..."
+                            value={customerSearchQuery}
+                            onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                            className="pr-8"
+                          />
+                          <Search className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        </div>
                         <Button 
                           type="button" 
                           variant="outline" 
@@ -716,6 +716,59 @@ export default function Loans() {
                           <UserPlus className="h-4 w-4" />
                         </Button>
                       </div>
+                      {customerSearchQuery && (
+                        <div className="border rounded-md max-h-48 overflow-y-auto bg-background shadow-lg">
+                          {customers
+                            .filter(c => {
+                              const query = customerSearchQuery.toLowerCase();
+                              return (
+                                c.full_name.toLowerCase().includes(query) ||
+                                c.customer_code.toLowerCase().includes(query) ||
+                                (c.phone && c.phone.slice(-4).includes(query))
+                              );
+                            })
+                            .slice(0, 10)
+                            .map((customer) => (
+                              <div
+                                key={customer.id}
+                                className={`px-3 py-2 cursor-pointer hover:bg-accent text-sm ${selectedCustomerId === customer.id ? 'bg-accent' : ''}`}
+                                onClick={() => {
+                                  setSelectedCustomerId(customer.id);
+                                  setCustomerSearchQuery('');
+                                }}
+                              >
+                                <span className="font-medium">{customer.customer_code}</span> - {customer.full_name}
+                                <span className="text-muted-foreground ml-2">(...{customer.phone?.slice(-4)})</span>
+                              </div>
+                            ))}
+                          {customers.filter(c => {
+                            const query = customerSearchQuery.toLowerCase();
+                            return (
+                              c.full_name.toLowerCase().includes(query) ||
+                              c.customer_code.toLowerCase().includes(query) ||
+                              (c.phone && c.phone.slice(-4).includes(query))
+                            );
+                          }).length === 0 && (
+                            <div className="px-3 py-2 text-sm text-muted-foreground">No customers found</div>
+                          )}
+                        </div>
+                      )}
+                      {selectedCustomerId && !customerSearchQuery && (
+                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                          <Badge variant="outline" className="font-normal">
+                            {customers.find(c => c.id === selectedCustomerId)?.customer_code} - {customers.find(c => c.id === selectedCustomerId)?.full_name}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-2"
+                            onClick={() => setSelectedCustomerId('')}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Branch *</Label>
@@ -1015,7 +1068,7 @@ export default function Loans() {
                           )}
                           {loanCalculation.documentCharges > 0 && (
                             <div className="flex justify-between text-red-600">
-                              <span>Less: Document Charges</span>
+                              <span>Less: Document Charges ({loanCalculation.documentChargesPercentage}%)</span>
                               <span>-{formatIndianCurrency(loanCalculation.documentCharges)}</span>
                             </div>
                           )}
@@ -1080,7 +1133,7 @@ export default function Loans() {
                     <Banknote className="h-4 w-4 text-amber-600" />
                     Payment Details
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Disbursement Mode *</Label>
                       <Select value={disbursementMode} onValueChange={setDisbursementMode}>
@@ -1096,16 +1149,6 @@ export default function Loans() {
                           <SelectItem value="card">Card</SelectItem>
                         </SelectContent>
                       </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Document Charges (₹)</Label>
-                      <Input
-                        type="number"
-                        value={documentCharges || ''}
-                        onChange={(e) => setDocumentCharges(parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                      />
                     </div>
 
                     {disbursementMode !== 'cash' && (
