@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Camera, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ImageCaptureProps {
   label: string;
@@ -18,9 +19,11 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
   const [capturing, setCapturing] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const isMobile = useIsMobile();
 
   // Fetch signed URL when value changes
   useEffect(() => {
@@ -71,6 +74,18 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
         return;
       }
       uploadImage(file);
+    }
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCameraClick = () => {
+    if (isMobile) {
+      // On mobile, use native camera input with capture attribute
+      cameraInputRef.current?.click();
+    } else {
+      // On desktop, use WebRTC
+      startCamera();
     }
   };
 
@@ -171,7 +186,7 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
               <ImageIcon className="h-6 w-6 text-muted-foreground" />
             </div>
             <div className="flex gap-2">
-              <Button type="button" size="sm" variant="outline" onClick={startCamera} disabled={uploading}>
+              <Button type="button" size="sm" variant="outline" onClick={handleCameraClick} disabled={uploading}>
                 <Camera className="h-4 w-4 mr-1" /> Camera
               </Button>
               <Button 
@@ -188,10 +203,20 @@ export default function ImageCapture({ label, value, onChange, folder, clientId 
         </Card>
       )}
       
+      {/* File picker input */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
+      {/* Camera capture input for mobile - uses native camera */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
         onChange={handleFileSelect}
         className="hidden"
       />
