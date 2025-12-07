@@ -52,9 +52,33 @@ interface Scheme {
   rate_22kt: number | null;
 }
 
+interface Agent {
+  id: string;
+  agent_code: string;
+  full_name: string;
+  phone: string | null;
+  commission_percentage: number;
+}
+
+interface ItemGroup {
+  id: string;
+  group_code: string;
+  group_name: string;
+}
+
+interface Item {
+  id: string;
+  item_group_id: string;
+  item_code: string;
+  item_name: string;
+  tamil_name: string | null;
+}
+
 interface GoldItem {
   id?: string;
   item_type: string;
+  item_id?: string;
+  item_group_id?: string;
   description: string;
   gross_weight_grams: number;
   net_weight_grams: number;
@@ -112,6 +136,9 @@ export default function Loans() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [itemGroups, setItemGroups] = useState<ItemGroup[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -121,6 +148,7 @@ export default function Loans() {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedSchemeId, setSelectedSchemeId] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
+  const [selectedAgentId, setSelectedAgentId] = useState('');
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   const [tenureDays, setTenureDays] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -133,8 +161,10 @@ export default function Loans() {
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   
   // Current gold item being added
-  const [currentItem, setCurrentItem] = useState<Partial<GoldItem>>({
+  const [currentItem, setCurrentItem] = useState<Partial<GoldItem & { selectedItemGroupId?: string }>>({
     item_type: '',
+    selectedItemGroupId: '',
+    item_id: '',
     description: '',
     gross_weight_grams: 0,
     stone_weight_grams: 0,
@@ -176,8 +206,19 @@ export default function Loans() {
       fetchLoans();
       fetchCustomers();
       fetchSchemes();
+      fetchAgents();
+      fetchItemGroups();
+      fetchItems();
     }
   }, [client]);
+
+  // Set default item group (Gold) when item groups load
+  useEffect(() => {
+    const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
+    if (goldGroup && !currentItem.selectedItemGroupId) {
+      setCurrentItem(prev => ({ ...prev, selectedItemGroupId: goldGroup.id }));
+    }
+  }, [itemGroups]);
 
   useEffect(() => {
     if (currentBranch?.id && !selectedBranchId) {
@@ -229,16 +270,53 @@ export default function Loans() {
     setSchemes(data || []);
   };
 
+  const fetchAgents = async () => {
+    if (!client) return;
+    const { data } = await supabase
+      .from('agents')
+      .select('id, agent_code, full_name, phone, commission_percentage')
+      .eq('client_id', client.id)
+      .eq('is_active', true)
+      .order('full_name');
+    setAgents(data || []);
+  };
+
+  const fetchItemGroups = async () => {
+    if (!client) return;
+    const { data } = await supabase
+      .from('item_groups')
+      .select('id, group_code, group_name')
+      .eq('client_id', client.id)
+      .eq('is_active', true)
+      .order('group_name');
+    setItemGroups(data || []);
+  };
+
+  const fetchItems = async () => {
+    if (!client) return;
+    const { data } = await supabase
+      .from('items')
+      .select('id, item_group_id, item_code, item_name, tamil_name')
+      .eq('client_id', client.id)
+      .eq('is_active', true)
+      .order('item_name');
+    setItems(data || []);
+  };
+
   const resetForm = () => {
     setSelectedCustomerId('');
     setSelectedSchemeId('');
     setSelectedBranchId(currentBranch?.id || '');
+    setSelectedAgentId('');
     setGoldItems([]);
     setTenureDays('');
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
+    const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
+      selectedItemGroupId: goldGroup?.id || '',
+      item_id: '',
       description: '',
       gross_weight_grams: 0,
       stone_weight_grams: 0,
@@ -566,13 +644,13 @@ export default function Loans() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Section 1: Customer & Branch */}
+                {/* Section 1: Customer, Branch & Agent */}
                 <div className="space-y-4">
                   <h3 className="font-semibold flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-amber-600" />
-                    Customer & Branch
+                    Customer, Branch & Agent
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label>Customer *</Label>
                       <div className="flex gap-2">
@@ -608,6 +686,21 @@ export default function Loans() {
                           {branches.filter(b => b.is_active).map((branch) => (
                             <SelectItem key={branch.id} value={branch.id}>
                               {branch.branch_name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Agent (Referral)</Label>
+                      <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select agent (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {agent.agent_code} - {agent.full_name} ({agent.commission_percentage}%)
                             </SelectItem>
                           ))}
                         </SelectContent>

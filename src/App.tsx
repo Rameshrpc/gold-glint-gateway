@@ -20,6 +20,9 @@ import Loans from "./pages/Loans";
 import Interest from "./pages/Interest";
 import Redemption from "./pages/Redemption";
 import Settings from "./pages/Settings";
+import Agents from "./pages/Agents";
+import Items from "./pages/Items";
+import ItemGroups from "./pages/ItemGroups";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -97,17 +100,17 @@ const App = () => (
             } />
             <Route path="/agents" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Agents" description="Manage referral agents and commissions" />
+                <Agents />
               </ProtectedRoute>
             } />
             <Route path="/items" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Items" description="Manage item types and categories" />
+                <Items />
               </ProtectedRoute>
             } />
             <Route path="/item-groups" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Item Groups" description="Organize items into groups" />
+                <ItemGroups />
               </ProtectedRoute>
             } />
             <Route path="/auction" element={
