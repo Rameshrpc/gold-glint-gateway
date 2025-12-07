@@ -4,52 +4,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { NavLink } from '@/components/NavLink';
-import {
-  Building2,
-  LayoutDashboard,
-  Users,
-  FileText,
-  CreditCard,
-  Wallet,
-  Package,
-  Settings,
-  Menu,
-  X,
-  ChevronDown,
-  LogOut,
-  User,
-  Building,
-  UserCog,
-  Gavel,
-  Bell,
-  BarChart3,
-} from 'lucide-react';
+import { Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, Settings, Menu, X, ChevronDown, LogOut, User, Building, UserCog, Gavel, Bell, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GlobalSearch from '@/components/GlobalSearch';
-
 interface DashboardLayoutProps {
   children: ReactNode;
 }
-
 type AppRole = 'super_admin' | 'moderator' | 'tenant_admin' | 'branch_manager' | 'loan_officer' | 'appraiser' | 'collection_agent' | 'auditor';
-
 interface MenuItem {
   title: string;
   icon: typeof LayoutDashboard;
@@ -57,36 +22,102 @@ interface MenuItem {
   roles?: AppRole[];
   moduleKey?: string;
 }
-
-const menuItems: MenuItem[] = [
-  { title: 'Dashboard', icon: LayoutDashboard, href: '/dashboard', moduleKey: 'dashboard' },
-  { title: 'Clients', icon: Building2, href: '/clients', roles: ['super_admin', 'moderator'] },
-  { title: 'Users', icon: User, href: '/users', roles: ['super_admin', 'moderator', 'tenant_admin'] },
-  { title: 'Branches', icon: Building, href: '/branches', roles: ['super_admin', 'moderator', 'tenant_admin'] },
-  { title: 'Customers', icon: Users, href: '/customers', moduleKey: 'customers' },
-  { title: 'Loans', icon: FileText, href: '/loans', moduleKey: 'loans' },
-  { title: 'Interest', icon: CreditCard, href: '/interest', moduleKey: 'interest' },
-  { title: 'Redemption', icon: Wallet, href: '/redemption', moduleKey: 'redemption' },
-  { title: 'Agents', icon: UserCog, href: '/agents', moduleKey: 'agents' },
-  { title: 'Auction', icon: Gavel, href: '/auction' },
-  { title: 'Schemes', icon: Package, href: '/schemes', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'] },
-  { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
-  { title: 'Notifications', icon: Bell, href: '/notifications', moduleKey: 'notifications' },
-  { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'], moduleKey: 'settings' },
-];
-
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+const menuItems: MenuItem[] = [{
+  title: 'Dashboard',
+  icon: LayoutDashboard,
+  href: '/dashboard',
+  moduleKey: 'dashboard'
+}, {
+  title: 'Clients',
+  icon: Building2,
+  href: '/clients',
+  roles: ['super_admin', 'moderator']
+}, {
+  title: 'Users',
+  icon: User,
+  href: '/users',
+  roles: ['super_admin', 'moderator', 'tenant_admin']
+}, {
+  title: 'Branches',
+  icon: Building,
+  href: '/branches',
+  roles: ['super_admin', 'moderator', 'tenant_admin']
+}, {
+  title: 'Customers',
+  icon: Users,
+  href: '/customers',
+  moduleKey: 'customers'
+}, {
+  title: 'Loans',
+  icon: FileText,
+  href: '/loans',
+  moduleKey: 'loans'
+}, {
+  title: 'Interest',
+  icon: CreditCard,
+  href: '/interest',
+  moduleKey: 'interest'
+}, {
+  title: 'Redemption',
+  icon: Wallet,
+  href: '/redemption',
+  moduleKey: 'redemption'
+}, {
+  title: 'Agents',
+  icon: UserCog,
+  href: '/agents',
+  moduleKey: 'agents'
+}, {
+  title: 'Auction',
+  icon: Gavel,
+  href: '/auction'
+}, {
+  title: 'Schemes',
+  icon: Package,
+  href: '/schemes',
+  roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager']
+}, {
+  title: 'Reports',
+  icon: BarChart3,
+  href: '/reports',
+  roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'],
+  moduleKey: 'reports'
+}, {
+  title: 'Notifications',
+  icon: Bell,
+  href: '/notifications',
+  moduleKey: 'notifications'
+}, {
+  title: 'Settings',
+  icon: Settings,
+  href: '/settings',
+  roles: ['super_admin', 'moderator', 'tenant_admin'],
+  moduleKey: 'settings'
+}];
+export default function DashboardLayout({
+  children
+}: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { profile, roles, client, branches, currentBranch, setCurrentBranch, signOut, hasRole, isPlatformAdmin } = useAuth();
-  const { hasModuleAccess } = usePermissions();
+  const {
+    profile,
+    roles,
+    client,
+    branches,
+    currentBranch,
+    setCurrentBranch,
+    signOut,
+    hasRole,
+    isPlatformAdmin
+  } = useAuth();
+  const {
+    hasModuleAccess
+  } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
-
   const filteredMenuItems = menuItems.filter(item => {
     // Check module access first (if moduleKey is defined)
     if (item.moduleKey && !hasModuleAccess(item.moduleKey)) {
@@ -98,16 +129,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (isPlatformAdmin()) return true;
     return item.roles.some(role => hasRole(role));
   });
-
   const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
-
   const getRoleBadge = () => {
     if (hasRole('super_admin')) return 'Super Admin';
     if (hasRole('moderator')) return 'Moderator';
@@ -119,16 +143,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (hasRole('auditor')) return 'Auditor';
     return 'User';
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 border-b bg-white flex items-center px-4">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSidebarOpen(true)}
-        >
+        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex-1 flex items-center justify-center">
@@ -138,18 +156,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       </header>
 
       {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="lg:hidden fixed inset-0 z-50 bg-black/50"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+      {sidebarOpen && <div className="lg:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed top-0 left-0 z-50 h-screen w-64 bg-gradient-to-b from-amber-900 via-amber-800 to-orange-900 text-white transition-transform lg:translate-x-0",
-        sidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
+      <aside className={cn("fixed top-0 left-0 z-50 h-screen w-64 bg-gradient-to-b from-amber-900 via-amber-800 to-orange-900 text-white transition-transform lg:translate-x-0", sidebarOpen ? "translate-x-0" : "-translate-x-full")}>
         {/* Sidebar Header */}
         <div className="flex items-center justify-between h-14 px-4 border-b border-amber-700/50">
           <div className="flex items-center gap-2">
@@ -158,60 +168,38 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             <span className="font-bold text-lg">Zenith One</span>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="lg:hidden text-white hover:bg-white/10"
-            onClick={() => setSidebarOpen(false)}
-          >
+          <Button variant="ghost" size="icon" className="lg:hidden text-white hover:bg-white/10" onClick={() => setSidebarOpen(false)}>
             <X className="h-5 w-5" />
           </Button>
         </div>
 
         {/* Branch Selector */}
-        {branches.length > 0 && (
-          <div className="px-3 py-3 border-b border-amber-700/50">
-            <Select
-              value={currentBranch?.id || ''}
-              onValueChange={(value) => {
-                const branch = branches.find(b => b.id === value);
-                setCurrentBranch(branch || null);
-              }}
-            >
+        {branches.length > 0 && <div className="px-3 py-3 border-b border-amber-700/50">
+            <Select value={currentBranch?.id || ''} onValueChange={value => {
+          const branch = branches.find(b => b.id === value);
+          setCurrentBranch(branch || null);
+        }}>
               <SelectTrigger className="bg-white/10 border-amber-700/50 text-white">
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
+                {branches.map(branch => <SelectItem key={branch.id} value={branch.id}>
                     {branch.branch_name}
-                  </SelectItem>
-                ))}
+                  </SelectItem>)}
               </SelectContent>
             </Select>
-          </div>
-        )}
+          </div>}
 
         {/* Global Search */}
-        <div className="px-3 py-3 border-b border-amber-700/50">
-          <GlobalSearch />
-        </div>
+        
 
         {/* Navigation */}
         <ScrollArea className="flex-1 h-[calc(100vh-14rem)]">
           <nav className="p-3 space-y-1">
-            {filteredMenuItems.map((item) => (
-              <NavLink
-                key={item.href}
-                to={item.href}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-100/80 hover:bg-white/10 hover:text-white transition-colors"
-                activeClassName="bg-white/20 text-white font-medium"
-                onClick={() => setSidebarOpen(false)}
-              >
+            {filteredMenuItems.map(item => <NavLink key={item.href} to={item.href} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-100/80 hover:bg-white/10 hover:text-white transition-colors" activeClassName="bg-white/20 text-white font-medium" onClick={() => setSidebarOpen(false)}>
                 <item.icon className="h-5 w-5" />
                 <span>{item.title}</span>
-              </NavLink>
-            ))}
+              </NavLink>)}
           </nav>
         </ScrollArea>
 
@@ -237,9 +225,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 <div>
                   <p className="font-medium">{profile?.full_name}</p>
                   <p className="text-xs text-muted-foreground">{profile?.email}</p>
-                  {client && (
-                    <p className="text-xs text-muted-foreground mt-1">{client.company_name}</p>
-                  )}
+                  {client && <p className="text-xs text-muted-foreground mt-1">{client.company_name}</p>}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -263,6 +249,5 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </div>
       </main>
-    </div>
-  );
+    </div>;
 }
