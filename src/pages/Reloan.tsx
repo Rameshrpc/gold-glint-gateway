@@ -914,12 +914,15 @@ export default function Reloan() {
 
                   <div className="space-y-2">
                     <Label>Agent (Optional)</Label>
-                    <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                    <Select 
+                      value={selectedAgentId || "none"} 
+                      onValueChange={(val) => setSelectedAgentId(val === "none" ? "" : val)}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="No agent" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Agent</SelectItem>
+                        <SelectItem value="none">No Agent</SelectItem>
                         {agents.map((agent) => (
                           <SelectItem key={agent.id} value={agent.id}>
                             {agent.full_name} ({agent.commission_percentage}%)
