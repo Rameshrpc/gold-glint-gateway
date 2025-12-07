@@ -346,8 +346,12 @@ export default function Loans() {
   };
 
   const addGoldItem = () => {
-    if (!currentItem.item_type || !currentItem.gross_weight_grams) {
-      toast.error('Please fill item type and weight');
+    // Get item details from selected item
+    const selectedItem = items.find(i => i.id === currentItem.item_id);
+    const itemName = selectedItem?.item_name || currentItem.item_type || '';
+    
+    if (!itemName || !currentItem.gross_weight_grams) {
+      toast.error('Please select an item and enter weight');
       return;
     }
 
@@ -371,7 +375,9 @@ export default function Loans() {
     const appraisedValue = netWeight * rateForPurity;
 
     const newItem: GoldItem = {
-      item_type: currentItem.item_type,
+      item_type: selectedItem ? `${selectedItem.item_code} - ${selectedItem.item_name}` : itemName,
+      item_id: currentItem.item_id,
+      item_group_id: currentItem.selectedItemGroupId,
       description: currentItem.description || '',
       gross_weight_grams: currentItem.gross_weight_grams!,
       net_weight_grams: netWeight,
@@ -383,8 +389,11 @@ export default function Loans() {
     };
 
     setGoldItems([...goldItems, newItem]);
+    const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
+      selectedItemGroupId: goldGroup?.id || currentItem.selectedItemGroupId,
+      item_id: '',
       description: '',
       gross_weight_grams: 0,
       stone_weight_grams: 0,
@@ -485,6 +494,7 @@ export default function Loans() {
         branch_id: selectedBranchId,
         customer_id: selectedCustomerId,
         scheme_id: selectedSchemeId,
+        agent_id: selectedAgentId || null,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),
         principal_amount: loanCalculation.loanAmount,
@@ -518,6 +528,8 @@ export default function Loans() {
       const goldItemsData = goldItems.map(item => ({
         loan_id: loanResult.id,
         item_type: item.item_type as GoldItemType,
+        item_id: item.item_id || null,
+        item_group_id: item.item_group_id || null,
         description: item.description,
         gross_weight_grams: item.gross_weight_grams,
         net_weight_grams: item.net_weight_grams,
@@ -795,22 +807,50 @@ export default function Loans() {
 
                   <Card>
                     <CardContent className="p-4 space-y-3">
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                         <div className="space-y-1">
-                          <Label className="text-xs">Item Type *</Label>
-                          <Select value={currentItem.item_type} onValueChange={(v) => setCurrentItem({...currentItem, item_type: v})}>
+                          <Label className="text-xs">Item Group *</Label>
+                          <Select 
+                            value={currentItem.selectedItemGroupId} 
+                            onValueChange={(v) => setCurrentItem({...currentItem, selectedItemGroupId: v, item_id: ''})}
+                          >
                             <SelectTrigger>
-                              <SelectValue placeholder="Select" />
+                              <SelectValue placeholder="Select group" />
                             </SelectTrigger>
                             <SelectContent>
-                              {ITEM_TYPES.map(type => (
-                                <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                              {itemGroups.map(group => (
+                                <SelectItem key={group.id} value={group.id}>
+                                  {group.group_name}
+                                </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        <div className="space-y-1 md:col-span-2">
+                          <Label className="text-xs">Item *</Label>
+                          <Select 
+                            value={currentItem.item_id} 
+                            onValueChange={(v) => {
+                              const item = items.find(i => i.id === v);
+                              setCurrentItem({...currentItem, item_id: v, item_type: item?.item_name || ''});
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select item" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {items
+                                .filter(item => !currentItem.selectedItemGroupId || item.item_group_id === currentItem.selectedItemGroupId)
+                                .map(item => (
+                                  <SelectItem key={item.id} value={item.id}>
+                                    {item.item_code} - {item.item_name} {item.tamil_name ? `(${item.tamil_name})` : ''}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Gross Weight (g) *</Label>
+                          <Label className="text-xs">Gross Wt (g) *</Label>
                           <Input
                             type="number"
                             step="0.001"
@@ -819,7 +859,7 @@ export default function Loans() {
                           />
                         </div>
                         <div className="space-y-1">
-                          <Label className="text-xs">Stone Weight (g)</Label>
+                          <Label className="text-xs">Stone Wt (g)</Label>
                           <Input
                             type="number"
                             step="0.001"
@@ -840,18 +880,20 @@ export default function Loans() {
                             </SelectContent>
                           </Select>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs">Description</Label>
+                      </div>
+                      <div className="flex gap-3 items-end">
+                        <div className="flex-1 space-y-1">
+                          <Label className="text-xs">Description (Optional)</Label>
                           <Input
                             value={currentItem.description || ''}
                             onChange={(e) => setCurrentItem({...currentItem, description: e.target.value})}
-                            placeholder="Optional"
+                            placeholder="Additional details"
                           />
                         </div>
+                        <Button type="button" onClick={addGoldItem} variant="outline" size="sm">
+                          <Plus className="h-4 w-4 mr-1" /> Add Item
+                        </Button>
                       </div>
-                      <Button type="button" onClick={addGoldItem} variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-1" /> Add Item
-                      </Button>
                     </CardContent>
                   </Card>
 
