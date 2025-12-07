@@ -371,7 +371,7 @@ export type Database = {
           image_url: string | null
           item_group_id: string | null
           item_id: string | null
-          item_type: Database["public"]["Enums"]["gold_item_type"]
+          item_type: string
           loan_id: string
           market_rate_per_gram: number
           net_weight_grams: number
@@ -388,7 +388,7 @@ export type Database = {
           image_url?: string | null
           item_group_id?: string | null
           item_id?: string | null
-          item_type: Database["public"]["Enums"]["gold_item_type"]
+          item_type: string
           loan_id: string
           market_rate_per_gram: number
           net_weight_grams: number
@@ -405,7 +405,7 @@ export type Database = {
           image_url?: string | null
           item_group_id?: string | null
           item_id?: string | null
-          item_type?: Database["public"]["Enums"]["gold_item_type"]
+          item_type?: string
           loan_id?: string
           market_rate_per_gram?: number
           net_weight_grams?: number
