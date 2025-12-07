@@ -181,11 +181,16 @@ export default function Users() {
     setEmail('');
     setPhone('');
     setPassword('');
+    // For tenant admins, auto-set their client_id
     setSelectedClientId(currentClient?.id || '');
     setSelectedBranchId('');
     setSelectedRoles(['loan_officer']);
     setIsActive(true);
     setEditingUser(null);
+    // If tenant admin, fetch branches for their client
+    if (currentClient?.id && !isPlatformAdmin()) {
+      fetchBranches(currentClient.id);
+    }
   };
 
   const openEditDialog = (user: UserWithRoles) => {
@@ -317,8 +322,14 @@ export default function Users() {
     }
   };
 
+  // Filter available roles based on admin type
+  // Platform admins can assign all roles
+  // Tenant admins can only assign non-admin roles (no tenant_admin, super_admin, moderator)
   const availableRoles = ALL_ROLES.filter(role => {
+    // Platform-only roles (super_admin, moderator) only visible to platform admins
     if (role.platformOnly && !isPlatformAdmin()) return false;
+    // Tenant admins cannot assign tenant_admin role to others
+    if (role.value === 'tenant_admin' && !isPlatformAdmin()) return false;
     return true;
   });
 
