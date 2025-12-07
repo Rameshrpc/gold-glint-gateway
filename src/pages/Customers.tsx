@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +11,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User, Trash2, Download, Database } from 'lucide-react';
+import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, Upload, X, FileCheck, User, Trash2, Download, Database, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { getSignedUrl } from '@/lib/storage';
 
 type NomineeRelation = 'father' | 'mother' | 'spouse' | 'son' | 'daughter' | 
                        'brother' | 'sister' | 'grandfather' | 'grandmother' | 
@@ -125,6 +126,18 @@ export default function Customers() {
   const [panCardFile, setPanCardFile] = useState<File | null>(null);
   const [panCardPreview, setPanCardPreview] = useState<string | null>(null);
 
+  // Signed URLs for viewing customer documents
+  const [viewSignedUrls, setViewSignedUrls] = useState<{
+    photo: string | null;
+    aadhaarFront: string | null;
+    aadhaarBack: string | null;
+    panCard: string | null;
+  }>({ photo: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+  const [loadingSignedUrls, setLoadingSignedUrls] = useState(false);
+
+  // Customer photo signed URLs cache for table display
+  const [photoSignedUrls, setPhotoSignedUrls] = useState<Record<string, string>>({});
+
   // File input refs
   const profilePhotoRef = useRef<HTMLInputElement>(null);
   const aadhaarFrontRef = useRef<HTMLInputElement>(null);
@@ -190,7 +203,7 @@ export default function Customers() {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (customer: Customer) => {
+  const openEditDialog = async (customer: Customer) => {
     setEditingCustomer(customer);
     setFullName(customer.full_name);
     setPhone(customer.phone);
@@ -207,17 +220,33 @@ export default function Customers() {
     setSelectedBranchId(customer.branch_id);
     setNomineeName(customer.nominee_name || '');
     setNomineeRelation(customer.nominee_relation || '');
-    // Set existing image previews
-    setProfilePhotoPreview(customer.photo_url);
-    setAadhaarFrontPreview(customer.aadhaar_front_url);
-    setAadhaarBackPreview(customer.aadhaar_back_url);
-    setPanCardPreview(customer.pan_card_url);
+    
     // Clear file selections
     setProfilePhotoFile(null);
     setAadhaarFrontFile(null);
     setAadhaarBackFile(null);
     setPanCardFile(null);
+    
+    // Clear previews first
+    setProfilePhotoPreview(null);
+    setAadhaarFrontPreview(null);
+    setAadhaarBackPreview(null);
+    setPanCardPreview(null);
+    
     setDialogOpen(true);
+    
+    // Load signed URLs for existing images
+    const [photoUrl, aadhaarFrontUrl, aadhaarBackUrl, panCardUrl] = await Promise.all([
+      getSignedUrl('customer-documents', customer.photo_url),
+      getSignedUrl('customer-documents', customer.aadhaar_front_url),
+      getSignedUrl('customer-documents', customer.aadhaar_back_url),
+      getSignedUrl('customer-documents', customer.pan_card_url),
+    ]);
+    
+    setProfilePhotoPreview(photoUrl);
+    setAadhaarFrontPreview(aadhaarFrontUrl);
+    setAadhaarBackPreview(aadhaarBackUrl);
+    setPanCardPreview(panCardUrl);
   };
 
   const handleFileChange = (
@@ -251,11 +280,8 @@ export default function Customers() {
       
     if (uploadError) throw uploadError;
     
-    const { data } = supabase.storage
-      .from('customer-documents')
-      .getPublicUrl(fileName);
-      
-    return data.publicUrl;
+    // Return just the path, not the public URL (for signed URL access)
+    return fileName;
   };
 
   const generateCustomerCode = async (): Promise<string> => {
@@ -568,6 +594,53 @@ export default function Customers() {
   const getBranchName = (branchId: string) => {
     const branch = branches.find(b => b.id === branchId);
     return branch?.branch_name || 'Unknown';
+  };
+
+  // Load signed URLs for a customer when viewing
+  const loadCustomerSignedUrls = useCallback(async (customer: Customer) => {
+    setLoadingSignedUrls(true);
+    setViewSignedUrls({ photo: null, aadhaarFront: null, aadhaarBack: null, panCard: null });
+    
+    try {
+      const [photo, aadhaarFront, aadhaarBack, panCard] = await Promise.all([
+        getSignedUrl('customer-documents', customer.photo_url),
+        getSignedUrl('customer-documents', customer.aadhaar_front_url),
+        getSignedUrl('customer-documents', customer.aadhaar_back_url),
+        getSignedUrl('customer-documents', customer.pan_card_url),
+      ]);
+      
+      setViewSignedUrls({ photo, aadhaarFront, aadhaarBack, panCard });
+    } catch (error) {
+      console.error('Error loading signed URLs:', error);
+    } finally {
+      setLoadingSignedUrls(false);
+    }
+  }, []);
+
+  // Load signed URL for a customer's profile photo (for table display)
+  const loadPhotoSignedUrl = useCallback(async (customerId: string, photoPath: string | null) => {
+    if (!photoPath || photoSignedUrls[customerId]) return;
+    
+    const signedUrl = await getSignedUrl('customer-documents', photoPath);
+    if (signedUrl) {
+      setPhotoSignedUrls(prev => ({ ...prev, [customerId]: signedUrl }));
+    }
+  }, [photoSignedUrls]);
+
+  // Load photo URLs when customers change
+  useEffect(() => {
+    customers.forEach(customer => {
+      if (customer.photo_url && !photoSignedUrls[customer.id]) {
+        loadPhotoSignedUrl(customer.id, customer.photo_url);
+      }
+    });
+  }, [customers, loadPhotoSignedUrl, photoSignedUrls]);
+
+  // Load signed URLs when opening view dialog
+  const handleViewCustomer = (customer: Customer) => {
+    setViewingCustomer(customer);
+    setViewDialogOpen(true);
+    loadCustomerSignedUrls(customer);
   };
 
   const clearFilePreview = (
@@ -1056,11 +1129,17 @@ export default function Customers() {
                     <TableRow key={customer.id}>
                       <TableCell>
                         {customer.photo_url ? (
-                          <img
-                            src={customer.photo_url}
-                            alt={customer.full_name}
-                            className="h-10 w-10 rounded-full object-cover"
-                          />
+                          photoSignedUrls[customer.id] ? (
+                            <img
+                              src={photoSignedUrls[customer.id]}
+                              alt={customer.full_name}
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            </div>
+                          )
                         ) : (
                           <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                             <User className="h-5 w-5 text-muted-foreground" />
@@ -1114,10 +1193,7 @@ export default function Customers() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              setViewingCustomer(customer);
-                              setViewDialogOpen(true);
-                            }}
+                            onClick={() => handleViewCustomer(customer)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -1164,11 +1240,21 @@ export default function Customers() {
                 {/* Profile Section */}
                 <div className="flex gap-4 items-start">
                   {viewingCustomer.photo_url ? (
-                    <img
-                      src={viewingCustomer.photo_url}
-                      alt={viewingCustomer.full_name}
-                      className="h-24 w-24 rounded-lg object-cover"
-                    />
+                    loadingSignedUrls ? (
+                      <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : viewSignedUrls.photo ? (
+                      <img
+                        src={viewSignedUrls.photo}
+                        alt={viewingCustomer.full_name}
+                        className="h-24 w-24 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
+                        <User className="h-12 w-12 text-muted-foreground" />
+                      </div>
+                    )
                   ) : (
                     <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
                       <User className="h-12 w-12 text-muted-foreground" />
@@ -1252,53 +1338,60 @@ export default function Customers() {
                 {/* KYC Documents */}
                 <div className="space-y-3">
                   <Label className="text-muted-foreground">KYC Documents</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Aadhaar Front</p>
-                      {viewingCustomer.aadhaar_front_url ? (
-                        <img
-                          src={viewingCustomer.aadhaar_front_url}
-                          alt="Aadhaar Front"
-                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
-                          onClick={() => window.open(viewingCustomer.aadhaar_front_url!, '_blank')}
-                        />
-                      ) : (
-                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground">Not uploaded</span>
-                        </div>
-                      )}
+                  {loadingSignedUrls ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">Loading documents...</span>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Aadhaar Back</p>
-                      {viewingCustomer.aadhaar_back_url ? (
-                        <img
-                          src={viewingCustomer.aadhaar_back_url}
-                          alt="Aadhaar Back"
-                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
-                          onClick={() => window.open(viewingCustomer.aadhaar_back_url!, '_blank')}
-                        />
-                      ) : (
-                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground">Not uploaded</span>
-                        </div>
-                      )}
+                  ) : (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Aadhaar Front</p>
+                        {viewSignedUrls.aadhaarFront ? (
+                          <img
+                            src={viewSignedUrls.aadhaarFront}
+                            alt="Aadhaar Front"
+                            className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => window.open(viewSignedUrls.aadhaarFront!, '_blank')}
+                          />
+                        ) : (
+                          <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">Not uploaded</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Aadhaar Back</p>
+                        {viewSignedUrls.aadhaarBack ? (
+                          <img
+                            src={viewSignedUrls.aadhaarBack}
+                            alt="Aadhaar Back"
+                            className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => window.open(viewSignedUrls.aadhaarBack!, '_blank')}
+                          />
+                        ) : (
+                          <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">Not uploaded</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">PAN Card</p>
+                        {viewSignedUrls.panCard ? (
+                          <img
+                            src={viewSignedUrls.panCard}
+                            alt="PAN Card"
+                            className="w-full h-24 object-cover rounded-lg border cursor-pointer"
+                            onClick={() => window.open(viewSignedUrls.panCard!, '_blank')}
+                          />
+                        ) : (
+                          <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
+                            <span className="text-xs text-muted-foreground">Not uploaded</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">PAN Card</p>
-                      {viewingCustomer.pan_card_url ? (
-                        <img
-                          src={viewingCustomer.pan_card_url}
-                          alt="PAN Card"
-                          className="w-full h-24 object-cover rounded-lg border cursor-pointer"
-                          onClick={() => window.open(viewingCustomer.pan_card_url!, '_blank')}
-                        />
-                      ) : (
-                        <div className="w-full h-24 bg-muted rounded-lg flex items-center justify-center">
-                          <span className="text-xs text-muted-foreground">Not uploaded</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             )}

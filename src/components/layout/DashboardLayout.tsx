@@ -42,6 +42,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import GlobalSearch from '@/components/GlobalSearch';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -190,6 +191,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </Select>
           </div>
         )}
+
+        {/* Global Search */}
+        <div className="px-3 py-3 border-b border-amber-700/50">
+          <GlobalSearch />
+        </div>
 
         {/* Navigation */}
         <ScrollArea className="flex-1 h-[calc(100vh-14rem)]">
