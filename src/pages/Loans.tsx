@@ -22,6 +22,7 @@ import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
+import LoanEditDialog from '@/components/loans/LoanEditDialog';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { LoanDisbursementPDF } from '@/components/receipts/LoanDisbursementPDF';
 
@@ -144,6 +145,10 @@ export default function Loans() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewingLoan, setViewingLoan] = useState<Loan | null>(null);
   const [viewingGoldItems, setViewingGoldItems] = useState<GoldItem[]>([]);
+  
+  // Edit loan dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
   // PDF receipt dialog
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
@@ -495,6 +500,12 @@ export default function Loans() {
       .eq('loan_id', loan.id);
     setViewingGoldItems(data || []);
     setViewDialogOpen(true);
+  };
+
+  const handleEditLoan = (loan: Loan) => {
+    if (!attemptEdit()) return;
+    setEditingLoan(loan);
+    setEditDialogOpen(true);
   };
 
   const filteredLoans = loans.filter(loan => {
@@ -1061,10 +1072,7 @@ export default function Loans() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              onClick={() => {
-                                if (!attemptEdit()) return;
-                                toast.info('Edit loan functionality coming soon');
-                              }}
+                              onClick={() => handleEditLoan(loan)}
                               disabled={!canEdit}
                               title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
                               className={!canEdit ? "opacity-50 cursor-not-allowed" : ""}
@@ -1217,6 +1225,14 @@ export default function Loans() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Loan Edit Dialog */}
+        <LoanEditDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          loan={editingLoan}
+          onSuccess={fetchLoans}
+        />
 
         {/* Loan Disbursement Receipt PDF Dialog */}
         {createdLoanData && (
