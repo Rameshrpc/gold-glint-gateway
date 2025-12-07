@@ -180,7 +180,17 @@ export default function Redemption() {
     
     setSearching(true);
     try {
-      const { data, error } = await supabase
+      // First, search customers by name/phone to get matching customer IDs
+      const { data: matchingCustomers } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('client_id', client.id)
+        .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`);
+
+      const customerIds = matchingCustomers?.map(c => c.id) || [];
+
+      // Build loans query
+      let loansQuery = supabase
         .from('loans')
         .select(`
           *,
@@ -188,9 +198,16 @@ export default function Redemption() {
           scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
-        .eq('status', 'active')
-        .or(`loan_number.ilike.%${query}%,customer.full_name.ilike.%${query}%,customer.phone.ilike.%${query}%`)
-        .limit(10);
+        .eq('status', 'active');
+
+      // Search by loan_number OR by matching customer IDs
+      if (customerIds.length > 0) {
+        loansQuery = loansQuery.or(`loan_number.ilike.%${query}%,customer_id.in.(${customerIds.join(',')})`);
+      } else {
+        loansQuery = loansQuery.ilike('loan_number', `%${query}%`);
+      }
+
+      const { data, error } = await loansQuery.limit(10);
 
       if (error) throw error;
       setSearchResults(data || []);
