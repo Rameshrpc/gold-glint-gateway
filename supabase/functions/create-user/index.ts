@@ -5,6 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Roles that tenant_admin can assign
+const TENANT_ALLOWED_ROLES = ['branch_manager', 'loan_officer', 'appraiser', 'collection_agent', 'auditor'];
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -36,18 +39,31 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized')
     }
 
-    // Check if requesting user is an admin
+    // Check if requesting user is an admin and get their roles
     const { data: roles } = await supabaseAdmin
       .from('user_roles')
       .select('role')
       .eq('user_id', requestingUser.id)
 
-    const isAdmin = roles?.some(r => 
-      ['super_admin', 'moderator', 'tenant_admin'].includes(r.role)
+    const isPlatformAdmin = roles?.some(r => 
+      ['super_admin', 'moderator'].includes(r.role)
     )
+    const isTenantAdmin = roles?.some(r => r.role === 'tenant_admin')
+    const isAdmin = isPlatformAdmin || isTenantAdmin
 
     if (!isAdmin) {
       throw new Error('Only admins can create users')
+    }
+
+    // Get requesting user's profile to get their client_id
+    const { data: adminProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('client_id')
+      .eq('user_id', requestingUser.id)
+      .single()
+
+    if (!adminProfile) {
+      throw new Error('Admin profile not found')
     }
 
     // Parse request body
@@ -58,6 +74,37 @@ Deno.serve(async (req) => {
     // Validate required fields
     if (!email || !password || !userData?.client_id || !userRoles?.length) {
       throw new Error('Missing required fields: email, password, client_id, or roles')
+    }
+
+    // === TENANT ADMIN RESTRICTIONS ===
+    if (isTenantAdmin && !isPlatformAdmin) {
+      // 1. Tenant admins can only create users for their own client
+      if (userData.client_id !== adminProfile.client_id) {
+        throw new Error('You can only create users for your own organization')
+      }
+
+      // 2. Tenant admins cannot assign admin or platform roles
+      const invalidRoles = userRoles.filter((r: string) => !TENANT_ALLOWED_ROLES.includes(r))
+      if (invalidRoles.length > 0) {
+        throw new Error(`You cannot assign these roles: ${invalidRoles.join(', ')}. Only branch_manager, loan_officer, appraiser, collection_agent, and auditor roles are allowed.`)
+      }
+    }
+
+    // 3. Validate branch belongs to the specified client (for all admins)
+    if (userData.branch_id) {
+      const { data: branch, error: branchError } = await supabaseAdmin
+        .from('branches')
+        .select('client_id')
+        .eq('id', userData.branch_id)
+        .single()
+
+      if (branchError || !branch) {
+        throw new Error('Invalid branch selected')
+      }
+
+      if (branch.client_id !== userData.client_id) {
+        throw new Error('Selected branch does not belong to the specified client')
+      }
     }
 
     // Create user using admin API (doesn't log them in)
