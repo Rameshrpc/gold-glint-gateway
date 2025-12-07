@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      agents: {
+        Row: {
+          address: string | null
+          agent_code: string
+          branch_id: string | null
+          client_id: string
+          commission_percentage: number | null
+          created_at: string | null
+          email: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          phone: string | null
+          total_commission_earned: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          agent_code: string
+          branch_id?: string | null
+          client_id: string
+          commission_percentage?: number | null
+          created_at?: string | null
+          email?: string | null
+          full_name: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          total_commission_earned?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          agent_code?: string
+          branch_id?: string | null
+          client_id?: string
+          commission_percentage?: number | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          phone?: string | null
+          total_commission_earned?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agents_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -306,6 +369,8 @@ export type Database = {
           gross_weight_grams: number
           id: string
           image_url: string | null
+          item_group_id: string | null
+          item_id: string | null
           item_type: Database["public"]["Enums"]["gold_item_type"]
           loan_id: string
           market_rate_per_gram: number
@@ -321,6 +386,8 @@ export type Database = {
           gross_weight_grams: number
           id?: string
           image_url?: string | null
+          item_group_id?: string | null
+          item_id?: string | null
           item_type: Database["public"]["Enums"]["gold_item_type"]
           loan_id: string
           market_rate_per_gram: number
@@ -336,6 +403,8 @@ export type Database = {
           gross_weight_grams?: number
           id?: string
           image_url?: string | null
+          item_group_id?: string | null
+          item_id?: string | null
           item_type?: Database["public"]["Enums"]["gold_item_type"]
           loan_id?: string
           market_rate_per_gram?: number
@@ -345,6 +414,20 @@ export type Database = {
           stone_weight_grams?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "gold_items_item_group_id_fkey"
+            columns: ["item_group_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gold_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "gold_items_loan_id_fkey"
             columns: ["loan_id"]
@@ -455,11 +538,107 @@ export type Database = {
           },
         ]
       }
+      item_groups: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          group_code: string
+          group_name: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          group_code: string
+          group_name: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          group_code?: string
+          group_name?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_groups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      items: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          item_code: string
+          item_group_id: string
+          item_name: string
+          tamil_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_code: string
+          item_group_id: string
+          item_name: string
+          tamil_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          item_code?: string
+          item_group_id?: string
+          item_name?: string
+          tamil_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_item_group_id_fkey"
+            columns: ["item_group_id"]
+            isOneToOne: false
+            referencedRelation: "item_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loans: {
         Row: {
           actual_principal: number | null
           advance_interest_actual: number | null
           advance_interest_shown: number | null
+          agent_id: string | null
           appraised_by: string | null
           appraiser_sheet_url: string | null
           approved_by: string | null
@@ -494,6 +673,7 @@ export type Database = {
           actual_principal?: number | null
           advance_interest_actual?: number | null
           advance_interest_shown?: number | null
+          agent_id?: string | null
           appraised_by?: string | null
           appraiser_sheet_url?: string | null
           approved_by?: string | null
@@ -528,6 +708,7 @@ export type Database = {
           actual_principal?: number | null
           advance_interest_actual?: number | null
           advance_interest_shown?: number | null
+          agent_id?: string | null
           appraised_by?: string | null
           appraiser_sheet_url?: string | null
           approved_by?: string | null
@@ -559,6 +740,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "loans_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "loans_appraised_by_fkey"
             columns: ["appraised_by"]
