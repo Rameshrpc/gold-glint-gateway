@@ -221,6 +221,77 @@ export type Database = {
           },
         ]
       }
+      banks_nbfc: {
+        Row: {
+          account_number: string | null
+          address: string | null
+          bank_code: string
+          bank_name: string
+          bank_type: string
+          branch_name: string | null
+          client_id: string
+          contact_person: string | null
+          created_at: string | null
+          credit_limit: number | null
+          email: string | null
+          id: string
+          ifsc_code: string | null
+          interest_rate: number | null
+          is_active: boolean | null
+          phone: string | null
+          remarks: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          address?: string | null
+          bank_code: string
+          bank_name: string
+          bank_type?: string
+          branch_name?: string | null
+          client_id: string
+          contact_person?: string | null
+          created_at?: string | null
+          credit_limit?: number | null
+          email?: string | null
+          id?: string
+          ifsc_code?: string | null
+          interest_rate?: number | null
+          is_active?: boolean | null
+          phone?: string | null
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          address?: string | null
+          bank_code?: string
+          bank_name?: string
+          bank_type?: string
+          branch_name?: string | null
+          client_id?: string
+          contact_person?: string | null
+          created_at?: string | null
+          credit_limit?: number | null
+          email?: string | null
+          id?: string
+          ifsc_code?: string | null
+          interest_rate?: number | null
+          is_active?: boolean | null
+          phone?: string | null
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "banks_nbfc_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -999,6 +1070,194 @@ export type Database = {
           },
         ]
       }
+      loyalties: {
+        Row: {
+          aadhaar_back_url: string | null
+          aadhaar_front_url: string | null
+          address: string | null
+          alternate_phone: string | null
+          branch_id: string | null
+          city: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          date_of_birth: string | null
+          department: string | null
+          designation: string | null
+          email: string | null
+          employee_id: string | null
+          full_name: string
+          gender: Database["public"]["Enums"]["gender_type"] | null
+          id: string
+          is_active: boolean | null
+          joining_date: string | null
+          loyalty_code: string
+          pan_card_url: string | null
+          phone: string
+          photo_url: string | null
+          pincode: string | null
+          remarks: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          address?: string | null
+          alternate_phone?: string | null
+          branch_id?: string | null
+          city?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation?: string | null
+          email?: string | null
+          employee_id?: string | null
+          full_name: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          is_active?: boolean | null
+          joining_date?: string | null
+          loyalty_code: string
+          pan_card_url?: string | null
+          phone: string
+          photo_url?: string | null
+          pincode?: string | null
+          remarks?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          aadhaar_back_url?: string | null
+          aadhaar_front_url?: string | null
+          address?: string | null
+          alternate_phone?: string | null
+          branch_id?: string | null
+          city?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          date_of_birth?: string | null
+          department?: string | null
+          designation?: string | null
+          email?: string | null
+          employee_id?: string | null
+          full_name?: string
+          gender?: Database["public"]["Enums"]["gender_type"] | null
+          id?: string
+          is_active?: boolean | null
+          joining_date?: string | null
+          loyalty_code?: string
+          pan_card_url?: string | null
+          phone?: string
+          photo_url?: string | null
+          pincode?: string | null
+          remarks?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalties_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalties_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_bank_accounts: {
+        Row: {
+          account_holder_name: string
+          account_number: string
+          account_type: string | null
+          bank_id: string
+          client_id: string
+          created_at: string | null
+          credit_limit: number | null
+          id: string
+          ifsc_code: string | null
+          interest_rate: number | null
+          is_active: boolean | null
+          is_primary: boolean | null
+          loyalty_id: string
+          remarks: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_holder_name: string
+          account_number: string
+          account_type?: string | null
+          bank_id: string
+          client_id: string
+          created_at?: string | null
+          credit_limit?: number | null
+          id?: string
+          ifsc_code?: string | null
+          interest_rate?: number | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          loyalty_id: string
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_holder_name?: string
+          account_number?: string
+          account_type?: string | null
+          bank_id?: string
+          client_id?: string
+          created_at?: string | null
+          credit_limit?: number | null
+          id?: string
+          ifsc_code?: string | null
+          interest_rate?: number | null
+          is_active?: boolean | null
+          is_primary?: boolean | null
+          loyalty_id?: string
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_bank_accounts_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_bank_accounts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_bank_accounts_loyalty_id_fkey"
+            columns: ["loyalty_id"]
+            isOneToOne: false
+            referencedRelation: "loyalties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1150,6 +1409,206 @@ export type Database = {
             columns: ["new_loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repledge_items: {
+        Row: {
+          added_by: string | null
+          appraised_value: number
+          client_id: string
+          created_at: string | null
+          gold_weight_grams: number
+          id: string
+          jewel_images: string[] | null
+          loan_id: string
+          packet_id: string | null
+          principal_amount: number
+          released_date: string | null
+          remarks: string | null
+          repledged_date: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          added_by?: string | null
+          appraised_value: number
+          client_id: string
+          created_at?: string | null
+          gold_weight_grams: number
+          id?: string
+          jewel_images?: string[] | null
+          loan_id: string
+          packet_id?: string | null
+          principal_amount: number
+          released_date?: string | null
+          remarks?: string | null
+          repledged_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          added_by?: string | null
+          appraised_value?: number
+          client_id?: string
+          created_at?: string | null
+          gold_weight_grams?: number
+          id?: string
+          jewel_images?: string[] | null
+          loan_id?: string
+          packet_id?: string | null
+          principal_amount?: number
+          released_date?: string | null
+          remarks?: string | null
+          repledged_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repledge_items_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_items_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: true
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_items_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "repledge_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repledge_packets: {
+        Row: {
+          bank_id: string
+          bank_interest_rate: number | null
+          bank_loan_amount: number | null
+          bank_loan_date: string | null
+          bank_maturity_date: string | null
+          bank_receipt_images: string[] | null
+          bank_reference_number: string | null
+          branch_id: string
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          loyalty_id: string | null
+          packet_date: string
+          packet_images: string[] | null
+          packet_number: string
+          released_date: string | null
+          remarks: string | null
+          status: string | null
+          total_appraised_value: number
+          total_gold_weight_grams: number
+          total_loans: number
+          total_principal: number
+          updated_at: string | null
+        }
+        Insert: {
+          bank_id: string
+          bank_interest_rate?: number | null
+          bank_loan_amount?: number | null
+          bank_loan_date?: string | null
+          bank_maturity_date?: string | null
+          bank_receipt_images?: string[] | null
+          bank_reference_number?: string | null
+          branch_id: string
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          loyalty_id?: string | null
+          packet_date?: string
+          packet_images?: string[] | null
+          packet_number: string
+          released_date?: string | null
+          remarks?: string | null
+          status?: string | null
+          total_appraised_value?: number
+          total_gold_weight_grams?: number
+          total_loans?: number
+          total_principal?: number
+          updated_at?: string | null
+        }
+        Update: {
+          bank_id?: string
+          bank_interest_rate?: number | null
+          bank_loan_amount?: number | null
+          bank_loan_date?: string | null
+          bank_maturity_date?: string | null
+          bank_receipt_images?: string[] | null
+          bank_reference_number?: string | null
+          branch_id?: string
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          loyalty_id?: string | null
+          packet_date?: string
+          packet_images?: string[] | null
+          packet_number?: string
+          released_date?: string | null
+          remarks?: string | null
+          status?: string | null
+          total_appraised_value?: number
+          total_gold_weight_grams?: number
+          total_loans?: number
+          total_principal?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repledge_packets_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_packets_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_packets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_packets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_packets_loyalty_id_fkey"
+            columns: ["loyalty_id"]
+            isOneToOne: false
+            referencedRelation: "loyalties"
             referencedColumns: ["id"]
           },
         ]
@@ -1310,6 +1769,8 @@ export type Database = {
         Args: { p_branch_code: string; p_client_id: string }
         Returns: string
       }
+      generate_loyalty_code: { Args: { p_client_id: string }; Returns: string }
+      generate_packet_number: { Args: { p_client_id: string }; Returns: string }
       generate_receipt_number: {
         Args: { p_client_id: string }
         Returns: string

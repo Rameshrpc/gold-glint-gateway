@@ -12,7 +12,8 @@ import { NavLink } from '@/components/NavLink';
 import { 
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, Menu, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
-  Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, Printer, RefreshCw, Layers
+  Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, Printer, RefreshCw, Layers,
+  Landmark, Gift, Vault
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -64,6 +65,8 @@ const menuGroups: MenuGroup[] = [
       { title: 'Agents', icon: UserCog, href: '/agents', moduleKey: 'agents' },
       { title: 'Items', icon: Package, href: '/items' },
       { title: 'Item Groups', icon: Layers, href: '/item-groups' },
+      { title: 'Bank/NBFC', icon: Landmark, href: '/banks-nbfc', roles: ['super_admin', 'moderator', 'tenant_admin'] },
+      { title: 'Loyalties', icon: Gift, href: '/loyalties', roles: ['super_admin', 'moderator', 'tenant_admin'] },
     ]
   },
   {
@@ -75,6 +78,7 @@ const menuGroups: MenuGroup[] = [
       { title: 'Redemption', icon: Wallet, href: '/redemption', moduleKey: 'redemption' },
       { title: 'Reloan', icon: RefreshCw, href: '/reloan' },
       { title: 'Auction', icon: Gavel, href: '/auction' },
+      { title: 'Gold Vault', icon: Vault, href: '/gold-vault' },
     ]
   },
   {

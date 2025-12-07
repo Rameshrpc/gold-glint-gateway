@@ -25,6 +25,9 @@ import Items from "./pages/Items";
 import ItemGroups from "./pages/ItemGroups";
 import Reloan from "./pages/Reloan";
 import Auction from "./pages/Auction";
+import BanksNbfc from "./pages/BanksNbfc";
+import Loyalties from "./pages/Loyalties";
+import GoldVault from "./pages/GoldVault";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -118,6 +121,21 @@ const App = () => (
             <Route path="/auction" element={
               <ProtectedRoute>
                 <Auction />
+              </ProtectedRoute>
+            } />
+            <Route path="/banks-nbfc" element={
+              <ProtectedRoute>
+                <BanksNbfc />
+              </ProtectedRoute>
+            } />
+            <Route path="/loyalties" element={
+              <ProtectedRoute>
+                <Loyalties />
+              </ProtectedRoute>
+            } />
+            <Route path="/gold-vault" element={
+              <ProtectedRoute>
+                <GoldVault />
               </ProtectedRoute>
             } />
             
