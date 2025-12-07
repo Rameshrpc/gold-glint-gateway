@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -158,6 +158,11 @@ export default function Loans() {
   const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
   const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
   
+  // Payment details
+  const [disbursementMode, setDisbursementMode] = useState('cash');
+  const [documentCharges, setDocumentCharges] = useState(0);
+  const [paymentReference, setPaymentReference] = useState('');
+  
   // Customer creation dialog
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   
@@ -196,6 +201,7 @@ export default function Loans() {
       principalAmount: number;
       advanceInterest: number;
       processingFee: number;
+      documentCharges: number;
       netDisbursed: number;
     };
   } | null>(null);
@@ -313,6 +319,9 @@ export default function Loans() {
     setTenureDays('');
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
+    setDisbursementMode('cash');
+    setDocumentCharges(0);
+    setPaymentReference('');
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -429,8 +438,8 @@ export default function Loans() {
       advance_interest_months: scheme.advance_interest_months || 3,
     }, selectedTenure);
 
-    // Net cash to customer = loan amount - shown interest - processing fee
-    const netCashToCustomer = loanAmount - advanceCalc.shownInterest - processingFee;
+    // Net cash to customer = loan amount - shown interest - processing fee - document charges
+    const netCashToCustomer = loanAmount - advanceCalc.shownInterest - processingFee - documentCharges;
     
     // Calculate rebate schedule for display
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
@@ -439,12 +448,13 @@ export default function Loans() {
       totalAppraisedValue,
       loanAmount,
       processingFee,
+      documentCharges,
       advanceCalc,
       netCashToCustomer,
       rebateSchedule,
       scheme,
     };
-  }, [goldItems, selectedSchemeId, schemes, tenureDays]);
+  }, [goldItems, selectedSchemeId, schemes, tenureDays, documentCharges]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -515,6 +525,9 @@ export default function Loans() {
         appraised_by: profile?.id,
         jewel_photo_url: jewelPhotoUrl,
         appraiser_sheet_url: appraiserSheetUrl,
+        disbursement_mode: disbursementMode,
+        document_charges: documentCharges,
+        payment_reference: paymentReference || null,
       };
 
       const { data: loanResult, error: loanError } = await supabase
@@ -580,6 +593,7 @@ export default function Loans() {
             principalAmount: loanCalculation.loanAmount,
             advanceInterest: loanCalculation.advanceCalc.shownInterest,
             processingFee: loanCalculation.processingFee,
+            documentCharges: loanCalculation.documentCharges,
             netDisbursed: loanCalculation.netCashToCustomer,
           }
         });
@@ -999,6 +1013,12 @@ export default function Loans() {
                               <span>-{formatIndianCurrency(loanCalculation.processingFee)}</span>
                             </div>
                           )}
+                          {loanCalculation.documentCharges > 0 && (
+                            <div className="flex justify-between text-red-600">
+                              <span>Less: Document Charges</span>
+                              <span>-{formatIndianCurrency(loanCalculation.documentCharges)}</span>
+                            </div>
+                          )}
                           <Separator />
                           <div className="flex justify-between font-bold text-lg text-green-700 dark:text-green-400">
                             <span>Net Cash to Customer</span>
@@ -1052,7 +1072,56 @@ export default function Loans() {
                   </div>
                 )}
 
-                {/* Section 5: Loan Images */}
+                <Separator />
+
+                {/* Section 5: Payment Details */}
+                <div className="space-y-4">
+                  <h3 className="font-semibold flex items-center gap-2 text-sm">
+                    <Banknote className="h-4 w-4 text-amber-600" />
+                    Payment Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Disbursement Mode *</Label>
+                      <Select value={disbursementMode} onValueChange={setDisbursementMode}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select payment mode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cash">Cash</SelectItem>
+                          <SelectItem value="upi">UPI</SelectItem>
+                          <SelectItem value="neft">NEFT</SelectItem>
+                          <SelectItem value="rtgs">RTGS</SelectItem>
+                          <SelectItem value="cheque">Cheque</SelectItem>
+                          <SelectItem value="card">Card</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Document Charges (₹)</Label>
+                      <Input
+                        type="number"
+                        value={documentCharges || ''}
+                        onChange={(e) => setDocumentCharges(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
+
+                    {disbursementMode !== 'cash' && (
+                      <div className="space-y-2">
+                        <Label>Reference Number</Label>
+                        <Input
+                          value={paymentReference}
+                          onChange={(e) => setPaymentReference(e.target.value)}
+                          placeholder="Transaction/Cheque number"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <Separator />
                 {client && (
                   <div className="space-y-4">
                     <h3 className="font-semibold flex items-center gap-2 text-sm">

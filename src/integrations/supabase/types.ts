@@ -650,6 +650,8 @@ export type Database = {
           created_by: string | null
           customer_id: string
           differential_capitalized: number | null
+          disbursement_mode: string | null
+          document_charges: number | null
           id: string
           interest_rate: number
           jewel_photo_url: string | null
@@ -659,6 +661,7 @@ export type Database = {
           maturity_date: string
           net_disbursed: number
           next_interest_due_date: string | null
+          payment_reference: string | null
           principal_amount: number
           processing_fee: number | null
           remarks: string | null
@@ -685,6 +688,8 @@ export type Database = {
           created_by?: string | null
           customer_id: string
           differential_capitalized?: number | null
+          disbursement_mode?: string | null
+          document_charges?: number | null
           id?: string
           interest_rate: number
           jewel_photo_url?: string | null
@@ -694,6 +699,7 @@ export type Database = {
           maturity_date: string
           net_disbursed: number
           next_interest_due_date?: string | null
+          payment_reference?: string | null
           principal_amount: number
           processing_fee?: number | null
           remarks?: string | null
@@ -720,6 +726,8 @@ export type Database = {
           created_by?: string | null
           customer_id?: string
           differential_capitalized?: number | null
+          disbursement_mode?: string | null
+          document_charges?: number | null
           id?: string
           interest_rate?: number
           jewel_photo_url?: string | null
@@ -729,6 +737,7 @@ export type Database = {
           maturity_date?: string
           net_disbursed?: number
           next_interest_due_date?: string | null
+          payment_reference?: string | null
           principal_amount?: number
           processing_fee?: number | null
           remarks?: string | null
@@ -945,6 +954,7 @@ export type Database = {
           client_id: string
           created_at: string | null
           description: string | null
+          document_charges: number | null
           effective_rate: number | null
           grace_period_days: number | null
           id: string
@@ -971,6 +981,7 @@ export type Database = {
           client_id: string
           created_at?: string | null
           description?: string | null
+          document_charges?: number | null
           effective_rate?: number | null
           grace_period_days?: number | null
           id?: string
@@ -997,6 +1008,7 @@ export type Database = {
           client_id?: string
           created_at?: string | null
           description?: string | null
+          document_charges?: number | null
           effective_rate?: number | null
           grace_period_days?: number | null
           id?: string
