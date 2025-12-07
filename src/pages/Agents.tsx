@@ -284,14 +284,14 @@ export default function Agents() {
                 <div className="space-y-2">
                   <Label>Branch (Optional)</Label>
                   <Select
-                    value={formData.branch_id}
-                    onValueChange={(value) => setFormData({ ...formData, branch_id: value })}
+                    value={formData.branch_id || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, branch_id: value === "none" ? "" : value })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select branch" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">No specific branch</SelectItem>
+                      <SelectItem value="none">No specific branch</SelectItem>
                       {branches.map((branch) => (
                         <SelectItem key={branch.id} value={branch.id}>
                           {branch.branch_code} - {branch.branch_name}
