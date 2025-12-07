@@ -33,6 +33,7 @@ interface Scheme {
   rate_22kt: number | null;
   ltv_percentage: number;
   processing_fee_percentage: number | null;
+  document_charges: number | null;
   penalty_rate: number | null;
   grace_period_days: number | null;
   is_active: boolean;
@@ -66,6 +67,7 @@ export default function Schemes() {
   const [maxTenureDays, setMaxTenureDays] = useState('365');
   const [ltvPercentage, setLtvPercentage] = useState('75');
   const [processingFeePercentage, setProcessingFeePercentage] = useState('0');
+  const [documentChargesPercentage, setDocumentChargesPercentage] = useState('0');
   const [penaltyRate, setPenaltyRate] = useState('2');
   const [gracePeriodDays, setGracePeriodDays] = useState('7');
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +115,7 @@ export default function Schemes() {
     setMaxTenureDays('365');
     setLtvPercentage('75');
     setProcessingFeePercentage('0');
+    setDocumentChargesPercentage('0');
     setPenaltyRate('2');
     setGracePeriodDays('7');
     setEditingScheme(null);
@@ -142,6 +145,7 @@ export default function Schemes() {
     setMaxTenureDays(scheme.max_tenure_days.toString());
     setLtvPercentage(scheme.ltv_percentage.toString());
     setProcessingFeePercentage(scheme.processing_fee_percentage?.toString() || '0');
+    setDocumentChargesPercentage(scheme.document_charges?.toString() || '0');
     setPenaltyRate(scheme.penalty_rate?.toString() || '2');
     setGracePeriodDays(scheme.grace_period_days?.toString() || '7');
     setDialogOpen(true);
@@ -172,6 +176,7 @@ export default function Schemes() {
         max_tenure_days: parseInt(maxTenureDays),
         ltv_percentage: parseFloat(ltvPercentage),
         processing_fee_percentage: parseFloat(processingFeePercentage) || null,
+        document_charges: parseFloat(documentChargesPercentage) || null,
         penalty_rate: parseFloat(penaltyRate) || null,
         grace_period_days: parseInt(gracePeriodDays) || null,
       };
@@ -433,6 +438,17 @@ export default function Schemes() {
                         step="0.01"
                         value={processingFeePercentage}
                         onChange={(e) => setProcessingFeePercentage(e.target.value)}
+                        placeholder="e.g., 0.5"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="documentChargesPercentage">Document Charges (%)</Label>
+                      <Input
+                        id="documentChargesPercentage"
+                        type="number"
+                        step="0.01"
+                        value={documentChargesPercentage}
+                        onChange={(e) => setDocumentChargesPercentage(e.target.value)}
                         placeholder="e.g., 0.5"
                       />
                     </div>
