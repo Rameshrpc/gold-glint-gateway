@@ -689,6 +689,7 @@ export type Database = {
           document_charges: number | null
           id: string
           interest_rate: number
+          is_reloan: boolean | null
           jewel_photo_url: string | null
           last_interest_paid_date: string | null
           loan_date: string
@@ -697,6 +698,7 @@ export type Database = {
           net_disbursed: number
           next_interest_due_date: string | null
           payment_reference: string | null
+          previous_loan_id: string | null
           principal_amount: number
           processing_fee: number | null
           remarks: string | null
@@ -727,6 +729,7 @@ export type Database = {
           document_charges?: number | null
           id?: string
           interest_rate: number
+          is_reloan?: boolean | null
           jewel_photo_url?: string | null
           last_interest_paid_date?: string | null
           loan_date?: string
@@ -735,6 +738,7 @@ export type Database = {
           net_disbursed: number
           next_interest_due_date?: string | null
           payment_reference?: string | null
+          previous_loan_id?: string | null
           principal_amount: number
           processing_fee?: number | null
           remarks?: string | null
@@ -765,6 +769,7 @@ export type Database = {
           document_charges?: number | null
           id?: string
           interest_rate?: number
+          is_reloan?: boolean | null
           jewel_photo_url?: string | null
           last_interest_paid_date?: string | null
           loan_date?: string
@@ -773,6 +778,7 @@ export type Database = {
           net_disbursed?: number
           next_interest_due_date?: string | null
           payment_reference?: string | null
+          previous_loan_id?: string | null
           principal_amount?: number
           processing_fee?: number | null
           remarks?: string | null
@@ -831,6 +837,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_previous_loan_id_fkey"
+            columns: ["previous_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
             referencedColumns: ["id"]
           },
           {
@@ -911,7 +924,9 @@ export type Database = {
           id: string
           identity_verified: boolean | null
           interest_due: number
+          is_reloan_redemption: boolean | null
           loan_id: string
+          new_loan_id: string | null
           outstanding_principal: number
           payment_mode: string
           payment_reference: string | null
@@ -938,7 +953,9 @@ export type Database = {
           id?: string
           identity_verified?: boolean | null
           interest_due?: number
+          is_reloan_redemption?: boolean | null
           loan_id: string
+          new_loan_id?: string | null
           outstanding_principal: number
           payment_mode?: string
           payment_reference?: string | null
@@ -965,7 +982,9 @@ export type Database = {
           id?: string
           identity_verified?: boolean | null
           interest_due?: number
+          is_reloan_redemption?: boolean | null
           loan_id?: string
+          new_loan_id?: string | null
           outstanding_principal?: number
           payment_mode?: string
           payment_reference?: string | null
@@ -981,7 +1000,15 @@ export type Database = {
           updated_at?: string
           verification_notes?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "redemptions_new_loan_id_fkey"
+            columns: ["new_loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schemes: {
         Row: {
@@ -1182,7 +1209,7 @@ export type Database = {
         | "collection_agent"
         | "auditor"
       branch_type: "main_branch" | "company_owned" | "franchise" | "tenant"
-      closure_type: "redeemed" | "auctioned" | "written_off"
+      closure_type: "redeemed" | "auctioned" | "written_off" | "reloaned"
       gender_type: "male" | "female" | "other"
       gold_item_type:
         | "necklace"
@@ -1361,7 +1388,7 @@ export const Constants = {
         "auditor",
       ],
       branch_type: ["main_branch", "company_owned", "franchise", "tenant"],
-      closure_type: ["redeemed", "auctioned", "written_off"],
+      closure_type: ["redeemed", "auctioned", "written_off", "reloaned"],
       gender_type: ["male", "female", "other"],
       gold_item_type: [
         "necklace",

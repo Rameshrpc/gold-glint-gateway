@@ -23,6 +23,7 @@ import Settings from "./pages/Settings";
 import Agents from "./pages/Agents";
 import Items from "./pages/Items";
 import ItemGroups from "./pages/ItemGroups";
+import Reloan from "./pages/Reloan";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -95,7 +96,7 @@ const App = () => (
             } />
             <Route path="/reloan" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Reloan" description="Process loan renewals and top-ups" />
+                <Reloan />
               </ProtectedRoute>
             } />
             <Route path="/agents" element={
