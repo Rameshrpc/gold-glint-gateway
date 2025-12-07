@@ -160,9 +160,12 @@ export default function Loans() {
   const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
   const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
   
-  // Payment details
-  const [disbursementMode, setDisbursementMode] = useState('cash');
-  const [paymentReference, setPaymentReference] = useState('');
+  // Payment details - multiple payment entries
+  const [paymentEntries, setPaymentEntries] = useState<Array<{
+    mode: string;
+    amount: string;
+    reference: string;
+  }>>([{ mode: 'cash', amount: '', reference: '' }]);
   
   // Customer creation dialog
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -320,8 +323,7 @@ export default function Loans() {
     setTenureDays('');
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
-    setDisbursementMode('cash');
-    setPaymentReference('');
+    setPaymentEntries([{ mode: 'cash', amount: '', reference: '' }]);
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -497,6 +499,13 @@ export default function Loans() {
       return;
     }
 
+    // Validate payment entries tally
+    const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    if (totalPayments !== loanCalculation.netCashToCustomer) {
+      toast.error(`Payment amounts must total ${formatIndianCurrency(loanCalculation.netCashToCustomer)}. Current total: ${formatIndianCurrency(totalPayments)}`);
+      return;
+    }
+
     setSubmitting(true);
     try {
       const loanDate = new Date();
@@ -528,9 +537,9 @@ export default function Loans() {
         appraised_by: profile?.id,
         jewel_photo_url: jewelPhotoUrl,
         appraiser_sheet_url: appraiserSheetUrl,
-        disbursement_mode: disbursementMode,
+        disbursement_mode: paymentEntries[0]?.mode || 'cash',
         document_charges: loanCalculation.documentCharges,
-        payment_reference: paymentReference || null,
+        payment_reference: paymentEntries[0]?.reference || null,
       };
 
       const { data: loanResult, error: loanError } = await supabase
@@ -540,6 +549,26 @@ export default function Loans() {
         .single();
 
       if (loanError) throw loanError;
+
+      // Insert multiple disbursement entries if more than one payment mode
+      if (paymentEntries.length > 0) {
+        const disbursementsData = paymentEntries
+          .filter(entry => parseFloat(entry.amount) > 0)
+          .map(entry => ({
+            loan_id: loanResult.id,
+            payment_mode: entry.mode,
+            amount: parseFloat(entry.amount),
+            reference_number: entry.reference || null,
+          }));
+
+        if (disbursementsData.length > 0) {
+          const { error: disbursementError } = await supabase
+            .from('loan_disbursements')
+            .insert(disbursementsData);
+
+          if (disbursementError) throw disbursementError;
+        }
+      }
 
       // Insert gold items
       const goldItemsData = goldItems.map(item => ({
@@ -1133,32 +1162,134 @@ export default function Loans() {
                     <Banknote className="h-4 w-4 text-amber-600" />
                     Payment Details
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Disbursement Mode *</Label>
-                      <Select value={disbursementMode} onValueChange={setDisbursementMode}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select payment mode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="cash">Cash</SelectItem>
-                          <SelectItem value="upi">UPI</SelectItem>
-                          <SelectItem value="neft">NEFT</SelectItem>
-                          <SelectItem value="rtgs">RTGS</SelectItem>
-                          <SelectItem value="cheque">Cheque</SelectItem>
-                          <SelectItem value="card">Card</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  
+                  {/* Document Charges Display - Read Only */}
+                  {loanCalculation && (
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-muted/50 rounded-lg">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Document Charges %</Label>
+                        <div className="text-sm font-medium">{loanCalculation.documentChargesPercentage}%</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Document Charges Amount</Label>
+                        <div className="text-sm font-medium text-amber-600">{formatIndianCurrency(loanCalculation.documentCharges)}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Processing Fee</Label>
+                        <div className="text-sm font-medium">{formatIndianCurrency(loanCalculation.processingFee)}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Net Cash to Customer</Label>
+                        <div className="text-sm font-bold text-green-600">{formatIndianCurrency(loanCalculation.netCashToCustomer)}</div>
+                      </div>
                     </div>
+                  )}
 
-                    {disbursementMode !== 'cash' && (
-                      <div className="space-y-2">
-                        <Label>Reference Number</Label>
-                        <Input
-                          value={paymentReference}
-                          onChange={(e) => setPaymentReference(e.target.value)}
-                          placeholder="Transaction/Cheque number"
-                        />
+                  {/* Multiple Payment Entries */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Payment Breakup</Label>
+                    {paymentEntries.map((entry, index) => (
+                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border rounded-lg bg-background">
+                        <div className="md:col-span-3 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Payment Mode</Label>
+                          <Select 
+                            value={entry.mode} 
+                            onValueChange={(value) => {
+                              const updated = [...paymentEntries];
+                              updated[index].mode = value;
+                              setPaymentEntries(updated);
+                            }}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select mode" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="cash">Cash</SelectItem>
+                              <SelectItem value="upi">UPI</SelectItem>
+                              <SelectItem value="neft">NEFT</SelectItem>
+                              <SelectItem value="rtgs">RTGS</SelectItem>
+                              <SelectItem value="cheque">Cheque</SelectItem>
+                              <SelectItem value="card">Card</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-3 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Amount (₹)</Label>
+                          <Input
+                            type="number"
+                            value={entry.amount}
+                            onChange={(e) => {
+                              const updated = [...paymentEntries];
+                              updated[index].amount = e.target.value;
+                              setPaymentEntries(updated);
+                            }}
+                            placeholder="Enter amount"
+                          />
+                        </div>
+                        <div className="md:col-span-4 space-y-1">
+                          <Label className="text-xs text-muted-foreground">Reference Number</Label>
+                          <Input
+                            value={entry.reference}
+                            onChange={(e) => {
+                              const updated = [...paymentEntries];
+                              updated[index].reference = e.target.value;
+                              setPaymentEntries(updated);
+                            }}
+                            placeholder={entry.mode === 'cash' ? 'N/A for cash' : 'Transaction/Cheque number'}
+                            disabled={entry.mode === 'cash'}
+                          />
+                        </div>
+                        <div className="md:col-span-2 flex items-end">
+                          {paymentEntries.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setPaymentEntries(paymentEntries.filter((_, i) => i !== index));
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPaymentEntries([...paymentEntries, { mode: 'cash', amount: '', reference: '' }])}
+                      className="w-full border-dashed"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Payment Mode
+                    </Button>
+
+                    {/* Payment Tally */}
+                    {loanCalculation && (
+                      <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg font-medium">
+                        <span>Total Disbursement</span>
+                        {(() => {
+                          const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+                          const isMatched = totalPayments === loanCalculation.netCashToCustomer;
+                          const diff = loanCalculation.netCashToCustomer - totalPayments;
+                          return (
+                            <div className="flex items-center gap-3">
+                              <span className={isMatched ? "text-green-600" : "text-destructive"}>
+                                {formatIndianCurrency(totalPayments)} / {formatIndianCurrency(loanCalculation.netCashToCustomer)}
+                              </span>
+                              {!isMatched && totalPayments > 0 && (
+                                <Badge variant={diff > 0 ? "secondary" : "destructive"} className="text-xs">
+                                  {diff > 0 ? `Short: ${formatIndianCurrency(diff)}` : `Over: ${formatIndianCurrency(Math.abs(diff))}`}
+                                </Badge>
+                              )}
+                              {isMatched && <Badge className="bg-green-600 text-xs">Matched ✓</Badge>}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
