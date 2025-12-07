@@ -14,8 +14,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, RefreshCw, Calculator, IndianRupee, 
   Package, CheckCircle, AlertTriangle, FileText,
-  ArrowRight, ArrowUp, ArrowDown, Coins, Plus, Trash2
+  ArrowRight, ArrowUp, ArrowDown, Coins, Plus, Trash2, Camera
 } from 'lucide-react';
+import ImageCapture from '@/components/loans/ImageCapture';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -159,6 +160,10 @@ export default function Reloan() {
   // PDF Dialog
   const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
   const [reloanForPdf, setReloanForPdf] = useState<any>(null);
+
+  // Image captures
+  const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
+  const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
 
   const canProcessReloan = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -538,6 +543,8 @@ export default function Reloan() {
         remarks: `Reloan from ${selectedLoan.loan_number}. ${remarks || ''}`.trim(),
         is_reloan: true,
         previous_loan_id: selectedLoan.id,
+        jewel_photo_url: jewelPhotoUrl,
+        appraiser_sheet_url: appraiserSheetUrl,
       };
 
       const { data: newLoanResult, error: newLoanError } = await supabase
@@ -659,6 +666,8 @@ export default function Reloan() {
       setRemarks('');
       setOldLoanSettled(false);
       setGoldVerified(false);
+      setJewelPhotoUrl(null);
+      setAppraiserSheetUrl(null);
       
       fetchRecentReloans();
     } catch (error: any) {
@@ -871,6 +880,34 @@ export default function Reloan() {
                       <p className="text-sm text-muted-foreground">Total Appraised Value</p>
                       <p className="font-bold text-lg">{formatIndianCurrency(totalGoldValue)}</p>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Document Images */}
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Camera className="h-5 w-5 text-blue-600" />
+                    Document Images
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <ImageCapture
+                      label="Jewel Photo"
+                      value={jewelPhotoUrl}
+                      onChange={setJewelPhotoUrl}
+                      folder="jewel-photos"
+                      clientId={client?.id || ''}
+                    />
+                    <ImageCapture
+                      label="Appraiser Sheet"
+                      value={appraiserSheetUrl}
+                      onChange={setAppraiserSheetUrl}
+                      folder="appraiser-sheets"
+                      clientId={client?.id || ''}
+                    />
                   </div>
                 </CardContent>
               </Card>
