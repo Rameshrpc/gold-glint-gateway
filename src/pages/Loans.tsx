@@ -167,6 +167,10 @@ export default function Loans() {
     reference: string;
   }>>([{ mode: 'cash', amount: '', reference: '' }]);
   
+  // User-input document charges and approved loan amount
+  const [userDocumentChargesPercent, setUserDocumentChargesPercent] = useState('');
+  const [approvedLoanAmount, setApprovedLoanAmount] = useState('');
+  
   // Customer creation dialog
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   
@@ -324,6 +328,8 @@ export default function Loans() {
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
     setPaymentEntries([{ mode: 'cash', amount: '', reference: '' }]);
+    setUserDocumentChargesPercent('');
+    setApprovedLoanAmount('');
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -425,9 +431,6 @@ export default function Loans() {
     const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
     const maxLoanAmount = totalAppraisedValue * (scheme.ltv_percentage / 100);
     const loanAmount = Math.round(Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount));
-    const processingFee = Math.round(loanAmount * ((scheme.processing_fee_percentage || 0) / 100));
-    // Auto-calculate document charges from scheme percentage
-    const documentCharges = Math.round(loanAmount * ((scheme.document_charges || 0) / 100));
     
     // Use selected tenure or default to max tenure
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
@@ -442,8 +445,26 @@ export default function Loans() {
       advance_interest_months: scheme.advance_interest_months || 3,
     }, selectedTenure);
 
-    // Net cash to customer = loan amount - shown interest - processing fee - document charges
-    const netCashToCustomer = loanAmount - advanceCalc.shownInterest - processingFee - documentCharges;
+    // Principal on Record = Loan Amount + Differential
+    const principalOnRecord = advanceCalc.actualPrincipal;
+    
+    // Max Approved Amount = Principal on Record × 1.10 (10% above)
+    const maxApprovedAmount = Math.round(principalOnRecord * 1.10);
+    
+    // Use user-entered approved amount or default to principal on record
+    const finalApprovedAmount = approvedLoanAmount ? parseFloat(approvedLoanAmount) : principalOnRecord;
+    
+    // User-input document charges percentage (defaults to scheme value if not set)
+    const docChargesPercent = userDocumentChargesPercent ? parseFloat(userDocumentChargesPercent) : (scheme.document_charges || 0);
+    
+    // Document charges calculated on Principal on Record (not approved amount)
+    const documentCharges = Math.round(principalOnRecord * (docChargesPercent / 100));
+    
+    // Processing fee on the final approved amount
+    const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
+
+    // Net cash to customer = Approved Amount - Advance Interest - Processing Fee - Document Charges
+    const netCashToCustomer = finalApprovedAmount - advanceCalc.shownInterest - processingFee - documentCharges;
     
     // Calculate rebate schedule for display
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
@@ -451,15 +472,18 @@ export default function Loans() {
     return {
       totalAppraisedValue,
       loanAmount,
+      principalOnRecord,
+      maxApprovedAmount,
+      finalApprovedAmount,
       processingFee,
       documentCharges,
-      documentChargesPercentage: scheme.document_charges || 0,
+      documentChargesPercentage: docChargesPercent,
       advanceCalc,
       netCashToCustomer,
       rebateSchedule,
       scheme,
     };
-  }, [goldItems, selectedSchemeId, schemes, tenureDays]);
+  }, [goldItems, selectedSchemeId, schemes, tenureDays, userDocumentChargesPercent, approvedLoanAmount]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -499,6 +523,12 @@ export default function Loans() {
       return;
     }
 
+    // Validate approved loan amount
+    if (loanCalculation.finalApprovedAmount > loanCalculation.maxApprovedAmount) {
+      toast.error(`Approved amount cannot exceed ${formatIndianCurrency(loanCalculation.maxApprovedAmount)} (10% above Principal on Record)`);
+      return;
+    }
+
     // Validate payment entries tally
     const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
     if (totalPayments !== loanCalculation.netCashToCustomer) {
@@ -520,9 +550,9 @@ export default function Loans() {
         agent_id: selectedAgentId || null,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),
-        principal_amount: loanCalculation.loanAmount,
+        principal_amount: loanCalculation.finalApprovedAmount, // Use approved loan amount as final
         shown_principal: loanCalculation.loanAmount,
-        actual_principal: loanCalculation.advanceCalc.actualPrincipal, // Principal + differential
+        actual_principal: loanCalculation.principalOnRecord, // Principal on Record
         interest_rate: loanCalculation.scheme.shown_rate || 18,
         tenure_days: parseInt(tenureDays),
         maturity_date: format(maturityDate, 'yyyy-MM-dd'),
@@ -622,7 +652,7 @@ export default function Loans() {
           goldItems: [...goldItems],
           calculation: {
             totalAppraisedValue: loanCalculation.totalAppraisedValue,
-            principalAmount: loanCalculation.loanAmount,
+            principalAmount: loanCalculation.finalApprovedAmount,
             advanceInterest: loanCalculation.advanceCalc.shownInterest,
             processingFee: loanCalculation.processingFee,
             documentCharges: loanCalculation.documentCharges,
@@ -1059,6 +1089,49 @@ export default function Loans() {
                       Loan Calculation
                     </h3>
 
+                    {/* Approved Loan Amount Section */}
+                    <Card className="border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
+                          <IndianRupee className="h-4 w-4" />
+                          Loan Amount Approval
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Loan Amount (LTV)</Label>
+                            <div className="text-sm font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Principal on Record</Label>
+                            <div className="text-sm font-medium text-amber-600">{formatIndianCurrency(loanCalculation.principalOnRecord)}</div>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Max Approved (+10%)</Label>
+                            <div className="text-sm font-medium text-blue-600">{formatIndianCurrency(loanCalculation.maxApprovedAmount)}</div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium">Approved Loan Amount *</Label>
+                            <Input
+                              type="number"
+                              value={approvedLoanAmount}
+                              onChange={(e) => setApprovedLoanAmount(e.target.value)}
+                              placeholder={loanCalculation.principalOnRecord.toString()}
+                              className={`${
+                                approvedLoanAmount && parseFloat(approvedLoanAmount) > loanCalculation.maxApprovedAmount
+                                  ? 'border-destructive focus-visible:ring-destructive'
+                                  : ''
+                              }`}
+                            />
+                            {approvedLoanAmount && parseFloat(approvedLoanAmount) > loanCalculation.maxApprovedAmount && (
+                              <p className="text-xs text-destructive">Cannot exceed {formatIndianCurrency(loanCalculation.maxApprovedAmount)}</p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Loan Calculation - Professional View */}
                       <Card className="border-green-500/30 bg-green-50/50 dark:bg-green-950/20">
@@ -1077,6 +1150,20 @@ export default function Loans() {
                             <span>Loan Amount (@ {loanCalculation.scheme.ltv_percentage}% LTV)</span>
                             <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
                           </div>
+                          <div className="flex justify-between text-amber-600">
+                            <span>Interest Adjustment</span>
+                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
+                          </div>
+                          <div className="flex justify-between font-semibold text-amber-700">
+                            <span>Principal on Record</span>
+                            <span>{formatIndianCurrency(loanCalculation.principalOnRecord)}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-bold text-blue-600">
+                            <span>Approved Loan Amount</span>
+                            <span>{formatIndianCurrency(loanCalculation.finalApprovedAmount)}</span>
+                          </div>
+                          <Separator />
                           <div className="flex justify-between text-muted-foreground">
                             <span>Interest Rate</span>
                             <span>{loanCalculation.scheme.shown_rate}% p.a.</span>
@@ -1105,15 +1192,6 @@ export default function Loans() {
                           <div className="flex justify-between font-bold text-lg text-green-700 dark:text-green-400">
                             <span>Net Cash to Customer</span>
                             <span>{formatIndianCurrency(loanCalculation.netCashToCustomer)}</span>
-                          </div>
-                          <Separator className="my-2" />
-                          <div className="flex justify-between text-amber-600">
-                            <span>Interest Adjustment (Added to Principal)</span>
-                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
-                          </div>
-                          <div className="flex justify-between font-bold text-amber-700">
-                            <span>Principal on Record</span>
-                            <span>{formatIndianCurrency(loanCalculation.advanceCalc.actualPrincipal)}</span>
                           </div>
                         </CardContent>
                       </Card>
@@ -1163,24 +1241,36 @@ export default function Loans() {
                     Payment Details
                   </h3>
                   
-                  {/* Document Charges Display - Read Only */}
+                  {/* Document Charges - User Input */}
                   {loanCalculation && (
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-3 bg-muted/50 rounded-lg">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Document Charges %</Label>
-                        <div className="text-sm font-medium">{loanCalculation.documentChargesPercentage}%</div>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-3 bg-muted/50 rounded-lg">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium">Document Charges %</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={userDocumentChargesPercent}
+                          onChange={(e) => setUserDocumentChargesPercent(e.target.value)}
+                          placeholder={(loanCalculation.scheme.document_charges || 0).toString()}
+                          className="h-9"
+                        />
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Document Charges Amount</Label>
-                        <div className="text-sm font-medium text-amber-600">{formatIndianCurrency(loanCalculation.documentCharges)}</div>
+                        <div className="text-sm font-medium text-amber-600 pt-2">{formatIndianCurrency(loanCalculation.documentCharges)}</div>
+                        <p className="text-xs text-muted-foreground">On Principal on Record</p>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Processing Fee</Label>
-                        <div className="text-sm font-medium">{formatIndianCurrency(loanCalculation.processingFee)}</div>
+                        <div className="text-sm font-medium pt-2">{formatIndianCurrency(loanCalculation.processingFee)}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Advance Interest</Label>
+                        <div className="text-sm font-medium pt-2">{formatIndianCurrency(loanCalculation.advanceCalc.shownInterest)}</div>
                       </div>
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Net Cash to Customer</Label>
-                        <div className="text-sm font-bold text-green-600">{formatIndianCurrency(loanCalculation.netCashToCustomer)}</div>
+                        <div className="text-sm font-bold text-green-600 pt-2">{formatIndianCurrency(loanCalculation.netCashToCustomer)}</div>
                       </div>
                     </div>
                   )}
