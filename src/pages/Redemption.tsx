@@ -30,6 +30,7 @@ import { RedemptionReceiptPDF } from '@/components/receipts/RedemptionReceiptPDF
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
+import { generateRedemptionVoucher } from '@/hooks/useVoucherGeneration';
 
 interface LoanWithDetails {
   id: string;
@@ -350,6 +351,19 @@ export default function Redemption() {
         .eq('id', selectedLoan.id);
 
       if (loanError) throw loanError;
+
+      // Generate accounting voucher
+      await generateRedemptionVoucher({
+        clientId: client.id,
+        branchId: selectedLoan.branch_id,
+        redemptionId: redemptionResult.id,
+        loanNumber: selectedLoan.loan_number,
+        amountReceived: redemptionCalc.breakdown.total,
+        principalAmount: redemptionCalc.breakdown.principal,
+        interestDue: redemptionCalc.breakdown.interest,
+        penaltyAmount: redemptionCalc.breakdown.penalty,
+        rebateAmount: redemptionCalc.breakdown.rebate,
+      });
 
       toast.success(`Loan ${selectedLoan.loan_number} redeemed successfully`);
 

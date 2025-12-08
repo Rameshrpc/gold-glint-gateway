@@ -28,6 +28,7 @@ import AuctionReceiptPDF from '@/components/receipts/AuctionReceiptPDF';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
+import { generateAuctionVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
   id: string;
@@ -362,6 +363,20 @@ const Auction = () => {
         .eq('id', selectedLoan.id);
       
       if (loanError) throw loanError;
+
+      // Generate accounting voucher
+      await generateAuctionVoucher({
+        clientId: profile.client_id,
+        branchId: selectedLoan.branch_id,
+        auctionId: auctionResult.id,
+        loanNumber: selectedLoan.loan_number,
+        soldPrice: soldPriceNum,
+        principalAmount: outstanding.principal,
+        interestAmount: outstanding.interest,
+        penaltyAmount: outstanding.penalty,
+        surplusAmount: surplus,
+        shortfallAmount: shortfall,
+      });
       
       toast.success(`Auction completed! Lot #${lotNumber}`);
       
