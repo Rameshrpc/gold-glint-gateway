@@ -532,6 +532,61 @@ export type Database = {
           },
         ]
       }
+      branch_template_assignments: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          branch_id: string
+          client_id: string
+          id: string
+          is_locked: boolean | null
+          receipt_type: string
+          template_id: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          branch_id: string
+          client_id: string
+          id?: string
+          is_locked?: boolean | null
+          receipt_type: string
+          template_id: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          branch_id?: string
+          client_id?: string
+          id?: string
+          is_locked?: boolean | null
+          receipt_type?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_template_assignments_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_template_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_template_assignments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "print_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -623,6 +678,93 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_print_settings: {
+        Row: {
+          client_id: string
+          copies: number | null
+          created_at: string | null
+          custom_terms: string | null
+          font_size: number | null
+          footer_text: string | null
+          header_text: string | null
+          id: string
+          logo_url: string | null
+          margins: Json | null
+          receipt_type: string
+          show_declaration: boolean | null
+          show_logo: boolean | null
+          show_signature_section: boolean | null
+          show_terms: boolean | null
+          template_id: string | null
+          updated_at: string | null
+          watermark_image_url: string | null
+          watermark_opacity: number | null
+          watermark_text: string | null
+          watermark_type: string | null
+        }
+        Insert: {
+          client_id: string
+          copies?: number | null
+          created_at?: string | null
+          custom_terms?: string | null
+          font_size?: number | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          margins?: Json | null
+          receipt_type: string
+          show_declaration?: boolean | null
+          show_logo?: boolean | null
+          show_signature_section?: boolean | null
+          show_terms?: boolean | null
+          template_id?: string | null
+          updated_at?: string | null
+          watermark_image_url?: string | null
+          watermark_opacity?: number | null
+          watermark_text?: string | null
+          watermark_type?: string | null
+        }
+        Update: {
+          client_id?: string
+          copies?: number | null
+          created_at?: string | null
+          custom_terms?: string | null
+          font_size?: number | null
+          footer_text?: string | null
+          header_text?: string | null
+          id?: string
+          logo_url?: string | null
+          margins?: Json | null
+          receipt_type?: string
+          show_declaration?: boolean | null
+          show_logo?: boolean | null
+          show_signature_section?: boolean | null
+          show_terms?: boolean | null
+          template_id?: string | null
+          updated_at?: string | null
+          watermark_image_url?: string | null
+          watermark_opacity?: number | null
+          watermark_text?: string | null
+          watermark_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_print_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_print_settings_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "print_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -1543,6 +1685,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      print_templates: {
+        Row: {
+          color_scheme: Json | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          language: string | null
+          layout_style: string | null
+          paper_size: string | null
+          preview_image_url: string | null
+          receipt_type: string
+          template_code: string
+          template_name: string
+        }
+        Insert: {
+          color_scheme?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          layout_style?: string | null
+          paper_size?: string | null
+          preview_image_url?: string | null
+          receipt_type: string
+          template_code: string
+          template_name: string
+        }
+        Update: {
+          color_scheme?: Json | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          layout_style?: string | null
+          paper_size?: string | null
+          preview_image_url?: string | null
+          receipt_type?: string
+          template_code?: string
+          template_name?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
