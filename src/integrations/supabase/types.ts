@@ -14,6 +14,195 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_groups: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          display_order: number | null
+          group_code: string
+          group_name: string
+          group_type: string
+          id: string
+          is_system_group: boolean | null
+          parent_group_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          display_order?: number | null
+          group_code: string
+          group_name: string
+          group_type: string
+          id?: string
+          is_system_group?: boolean | null
+          parent_group_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          display_order?: number | null
+          group_code?: string
+          group_name?: string
+          group_type?: string
+          id?: string
+          is_system_group?: boolean | null
+          parent_group_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_groups_parent_group_id_fkey"
+            columns: ["parent_group_id"]
+            isOneToOne: false
+            referencedRelation: "account_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounts: {
+        Row: {
+          account_code: string
+          account_group_id: string
+          account_name: string
+          account_type: string
+          branch_id: string | null
+          client_id: string
+          created_at: string | null
+          current_balance: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_bank_account: boolean | null
+          is_system_account: boolean | null
+          linked_bank_id: string | null
+          linked_loyalty_account_id: string | null
+          opening_balance: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_group_id: string
+          account_name: string
+          account_type: string
+          branch_id?: string | null
+          client_id: string
+          created_at?: string | null
+          current_balance?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_bank_account?: boolean | null
+          is_system_account?: boolean | null
+          linked_bank_id?: string | null
+          linked_loyalty_account_id?: string | null
+          opening_balance?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_group_id?: string
+          account_name?: string
+          account_type?: string
+          branch_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          current_balance?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_bank_account?: boolean | null
+          is_system_account?: boolean | null
+          linked_bank_id?: string | null
+          linked_loyalty_account_id?: string | null
+          opening_balance?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounts_account_group_id_fkey"
+            columns: ["account_group_id"]
+            isOneToOne: false
+            referencedRelation: "account_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_commissions: {
+        Row: {
+          agent_id: string
+          branch_id: string
+          client_id: string
+          commission_amount: number
+          commission_percentage: number
+          created_at: string | null
+          id: string
+          loan_id: string
+          loan_principal: number
+          payment_date: string | null
+          payment_mode: string | null
+          payment_reference: string | null
+          remarks: string | null
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
+          status: string | null
+          updated_at: string | null
+          voucher_id: string | null
+        }
+        Insert: {
+          agent_id: string
+          branch_id: string
+          client_id: string
+          commission_amount: number
+          commission_percentage: number
+          created_at?: string | null
+          id?: string
+          loan_id: string
+          loan_principal: number
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_reference?: string | null
+          remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          voucher_id?: string | null
+        }
+        Update: {
+          agent_id?: string
+          branch_id?: string
+          client_id?: string
+          commission_amount?: number
+          commission_percentage?: number
+          created_at?: string | null
+          id?: string
+          loan_id?: string
+          loan_principal?: number
+          payment_date?: string | null
+          payment_mode?: string | null
+          payment_reference?: string | null
+          remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
+          status?: string | null
+          updated_at?: string | null
+          voucher_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_commissions_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agents: {
         Row: {
           address: string | null
@@ -1977,6 +2166,122 @@ export type Database = {
         }
         Relationships: []
       }
+      voucher_entries: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          credit_amount: number | null
+          debit_amount: number | null
+          id: string
+          narration: string | null
+          voucher_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          id?: string
+          narration?: string | null
+          voucher_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          credit_amount?: number | null
+          debit_amount?: number | null
+          id?: string
+          narration?: string | null
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_entries_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vouchers: {
+        Row: {
+          approved_by: string | null
+          branch_id: string
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_posted: boolean | null
+          is_reversed: boolean | null
+          narration: string
+          reference_id: string | null
+          reference_type: string | null
+          reversed_voucher_id: string | null
+          total_credit: number
+          total_debit: number
+          updated_at: string | null
+          voucher_date: string
+          voucher_number: string
+          voucher_type: string
+        }
+        Insert: {
+          approved_by?: string | null
+          branch_id: string
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_posted?: boolean | null
+          is_reversed?: boolean | null
+          narration: string
+          reference_id?: string | null
+          reference_type?: string | null
+          reversed_voucher_id?: string | null
+          total_credit?: number
+          total_debit?: number
+          updated_at?: string | null
+          voucher_date?: string
+          voucher_number: string
+          voucher_type: string
+        }
+        Update: {
+          approved_by?: string | null
+          branch_id?: string
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_posted?: boolean | null
+          is_reversed?: boolean | null
+          narration?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          reversed_voucher_id?: string | null
+          total_credit?: number
+          total_debit?: number
+          updated_at?: string | null
+          voucher_date?: string
+          voucher_number?: string
+          voucher_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vouchers_reversed_voucher_id_fkey"
+            columns: ["reversed_voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -2004,6 +2309,10 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: string
       }
+      generate_voucher_number: {
+        Args: { p_client_id: string; p_voucher_type: string }
+        Returns: string
+      }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
@@ -2011,6 +2320,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      initialize_account_groups: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
       initialize_platform: {
         Args: {
@@ -2023,6 +2336,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      initialize_system_accounts: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
       is_any_admin: { Args: { _user_id: string }; Returns: boolean }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }

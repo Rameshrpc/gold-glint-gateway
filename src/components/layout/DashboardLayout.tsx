@@ -13,7 +13,7 @@ import {
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, Menu, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
   Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, Printer, RefreshCw, Layers,
-  Landmark, Gift, Vault
+  Landmark, Gift, Vault, Receipt, Coins
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -82,11 +82,19 @@ const menuGroups: MenuGroup[] = [
     ]
   },
   {
+    title: 'Accounting',
+    icon: Calculator,
+    items: [
+      { title: 'Chart of Accounts', icon: Calculator, href: '/accounts' },
+      { title: 'Agent Commissions', icon: Coins, href: '/agent-commissions' },
+      { title: 'Vouchers', icon: Receipt, href: '/vouchers' },
+    ]
+  },
+  {
     title: 'Reports & Comms',
     icon: BarChart3,
     items: [
       { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
-      { title: 'Accounts', icon: Calculator, href: '/accounts' },
       { title: 'Notifications', icon: Bell, href: '/notifications', moduleKey: 'notifications' },
       { title: 'WhatsApp', icon: MessageCircle, href: '/whatsapp' },
       { title: 'SMS', icon: Send, href: '/sms' },
