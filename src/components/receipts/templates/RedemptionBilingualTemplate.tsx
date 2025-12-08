@@ -320,7 +320,7 @@ export function RedemptionBilingualTemplate({
     });
   };
 
-  const t = (key: Parameters<typeof getTranslation>[0]) => {
+  const getText = (key: Parameters<typeof getTranslation>[0]) => {
     const lang = language === 'bilingual' ? 'bilingual' : language === 'tamil' ? 'tamil' : 'english';
     return getTranslation(key, lang);
   };
@@ -365,17 +365,17 @@ export function RedemptionBilingualTemplate({
         <View style={styles.receiptInfo}>
           <View style={styles.infoColumn}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>{t('receiptNo', language)}:</Text>
+              <Text style={styles.infoLabel}>{getText('receiptNo')}:</Text>
               <Text style={styles.infoValue}>{redemption.redemptionNumber}</Text>
             </View>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>{t('date', language)}:</Text>
+              <Text style={styles.infoLabel}>{getText('date')}:</Text>
               <Text style={styles.infoValue}>{formatDate(redemption.redemptionDate)}</Text>
             </View>
           </View>
           <View style={styles.infoColumn}>
             <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>{t('paymentMode', language)}:</Text>
+              <Text style={styles.infoLabel}>{getText('paymentMode')}:</Text>
               <Text style={styles.infoValue}>{redemption.paymentMode}</Text>
             </View>
             {redemption.paymentReference && (
@@ -395,19 +395,19 @@ export function RedemptionBilingualTemplate({
           </Text>
           <View style={styles.customerGrid}>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('customerName', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('customerName')}</Text>
               <Text style={styles.fieldValue}>{customer.name}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('customerId', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('customerId')}</Text>
               <Text style={styles.fieldValue}>{customer.code}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('phone', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('phone')}</Text>
               <Text style={styles.fieldValue}>{customer.phone}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('address', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('address')}</Text>
               <Text style={styles.fieldValue}>{customer.address || '-'}</Text>
             </View>
           </View>
@@ -421,19 +421,19 @@ export function RedemptionBilingualTemplate({
           </Text>
           <View style={styles.customerGrid}>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('loanNumber', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('loanNumber')}</Text>
               <Text style={styles.fieldValue}>{loan.loanNumber}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('loanDate', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('loanDate')}</Text>
               <Text style={styles.fieldValue}>{formatDate(loan.loanDate)}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('principal', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('principalAmount')}</Text>
               <Text style={styles.fieldValue}>{formatCurrency(loan.principalAmount)}</Text>
             </View>
             <View style={styles.customerField}>
-              <Text style={styles.fieldLabel}>{t('interestRate', language)}</Text>
+              <Text style={styles.fieldLabel}>{getText('interestRate')}</Text>
               <Text style={styles.fieldValue}>{loan.interestRate}% p.m.</Text>
             </View>
           </View>
@@ -447,29 +447,29 @@ export function RedemptionBilingualTemplate({
           </Text>
           
           <View style={styles.settlementRow}>
-            <Text style={styles.settlementLabel}>{t('outstandingPrincipal', language)}</Text>
+            <Text style={styles.settlementLabel}>{getText('outstandingPrincipal')}</Text>
             <Text style={styles.settlementValue}>{formatCurrency(settlement.outstandingPrincipal)}</Text>
           </View>
           <View style={styles.settlementRow}>
-            <Text style={styles.settlementLabel}>{t('interestDue', language)}</Text>
+            <Text style={styles.settlementLabel}>{isTamil ? 'வட்டி நிலுவை' : 'Interest Due'}</Text>
             <Text style={styles.settlementValue}>{formatCurrency(settlement.interestDue)}</Text>
           </View>
           {settlement.penaltyAmount > 0 && (
             <View style={styles.settlementRow}>
-              <Text style={styles.settlementLabel}>{t('penalty', language)}</Text>
+              <Text style={styles.settlementLabel}>{getText('penaltyAmount')}</Text>
               <Text style={styles.settlementValue}>{formatCurrency(settlement.penaltyAmount)}</Text>
             </View>
           )}
           {settlement.rebateAmount > 0 && (
             <View style={styles.settlementRow}>
-              <Text style={styles.settlementLabel}>{t('rebate', language)}</Text>
+              <Text style={styles.settlementLabel}>{getText('rebateAmount')}</Text>
               <Text style={[styles.settlementValue, { color: '#22c55e' }]}>
                 -{formatCurrency(settlement.rebateAmount)}
               </Text>
             </View>
           )}
           <View style={styles.settlementTotal}>
-            <Text style={styles.totalLabel}>{t('totalSettlement', language)}</Text>
+            <Text style={styles.totalLabel}>{getText('totalSettlement')}</Text>
             <Text style={styles.totalValue}>{formatCurrency(settlement.totalSettlement)}</Text>
           </View>
         </View>
