@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,22 @@ import { useFinancialReports, BalanceSheetEntry } from '@/hooks/useFinancialRepo
 import { useAuth } from '@/hooks/useAuth';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { BalanceSheetPDF } from '@/components/reports/BalanceSheetPDF';
-import { FileText, RefreshCw, Building2, Wallet, PiggyBank, Scale } from 'lucide-react';
+import { FileText, RefreshCw, Building2, Wallet, PiggyBank, Scale, ExternalLink } from 'lucide-react';
+
+// Map account codes to their source pages
+const accountSourceMap: Record<string, { label: string; href: string }> = {
+  'LOAN-RECV': { label: 'View Active Loans', href: '/loans' },
+  'CASH-001': { label: 'View Day Book', href: '/day-book' },
+  'GOLD-STOCK': { label: 'View Gold Vault', href: '/gold-vault' },
+  'BANK-LOAN-PAY': { label: 'View Repledge Packets', href: '/gold-vault' },
+  'SURPLUS-PAY': { label: 'View Auctions', href: '/auction' },
+  'ADV-INT-SHOWN': { label: 'View Loans', href: '/loans' },
+  'ADV-INT-DIFF': { label: 'View Loans', href: '/loans' },
+  'AGENT-COMM-PAY': { label: 'View Agent Commissions', href: '/agent-commissions' },
+};
 
 export default function BalanceSheet() {
+  const navigate = useNavigate();
   const { profile, client } = useAuth();
   const { getBalanceSheet } = useFinancialReports();
   const [asOfDate, setAsOfDate] = useState(format(new Date(), 'yyyy-MM-dd'));
@@ -111,8 +125,21 @@ export default function BalanceSheet() {
                       </TableCell>
                     </TableRow>
                     {groupEntries.map(entry => (
-                      <TableRow key={entry.account_id}>
-                        <TableCell className="pl-6">{entry.account_name}</TableCell>
+                      <TableRow key={entry.account_id} className="group hover:bg-muted/50">
+                        <TableCell className="pl-6 flex items-center gap-2">
+                          {entry.account_name}
+                          {accountSourceMap[entry.account_code] && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => navigate(accountSourceMap[entry.account_code].href)}
+                            >
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              <span className="text-xs">{accountSourceMap[entry.account_code].label}</span>
+                            </Button>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right font-mono">{formatCurrency(entry.balance)}</TableCell>
                       </TableRow>
                     ))}
