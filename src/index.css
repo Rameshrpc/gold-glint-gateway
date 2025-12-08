@@ -39,20 +39,42 @@ All colors MUST be HSL.
     --radius: 0.5rem;
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Mobile-specific design tokens */
+    --mobile-nav-height: 64px;
+    --mobile-header-height: 120px;
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+
+    /* Mobile gradients - Gold/Finance theme */
+    --gradient-primary-start: 32 95% 44%;
+    --gradient-primary-end: 45 93% 47%;
+    --gradient-secondary-start: 222 47% 11%;
+    --gradient-secondary-end: 217 33% 17%;
+    
+    /* Glassmorphism */
+    --glass-background: 0 0% 100% / 0.7;
+    --glass-border: 0 0% 100% / 0.2;
+    --glass-blur: 12px;
+    
+    /* Mobile shadows */
+    --shadow-mobile-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.1);
+    --shadow-mobile-md: 0 4px 16px -4px hsl(0 0% 0% / 0.12);
+    --shadow-mobile-lg: 0 8px 32px -8px hsl(0 0% 0% / 0.15);
+    --shadow-mobile-glow: 0 0 20px hsl(var(--gradient-primary-start) / 0.3);
+
+    /* Status colors */
+    --status-success: 142 71% 45%;
+    --status-warning: 38 92% 50%;
+    --status-error: 0 84% 60%;
+    --status-info: 217 91% 60%;
   }
 
   .dark {
@@ -91,6 +113,10 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Mobile dark mode tokens */
+    --glass-background: 222 84% 5% / 0.7;
+    --glass-border: 0 0% 100% / 0.1;
   }
 }
 
@@ -121,5 +147,111 @@ All colors MUST be HSL.
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  /* Glassmorphism utilities */
+  .glass {
+    background: hsl(var(--glass-background));
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  .glass-strong {
+    background: hsl(var(--glass-background));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid hsl(var(--glass-border));
+  }
+
+  /* Mobile gradient backgrounds */
+  .gradient-primary {
+    background: linear-gradient(135deg, hsl(var(--gradient-primary-start)), hsl(var(--gradient-primary-end)));
+  }
+
+  .gradient-secondary {
+    background: linear-gradient(135deg, hsl(var(--gradient-secondary-start)), hsl(var(--gradient-secondary-end)));
+  }
+
+  .gradient-gold {
+    background: linear-gradient(135deg, hsl(32 95% 44%), hsl(45 93% 47%), hsl(38 92% 50%));
+  }
+
+  .gradient-dark {
+    background: linear-gradient(180deg, hsl(222 47% 11%), hsl(217 33% 17%));
+  }
+
+  /* Shadow utilities */
+  .shadow-mobile-sm {
+    box-shadow: var(--shadow-mobile-sm);
+  }
+
+  .shadow-mobile-md {
+    box-shadow: var(--shadow-mobile-md);
+  }
+
+  .shadow-mobile-lg {
+    box-shadow: var(--shadow-mobile-lg);
+  }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-mobile-glow);
+  }
+
+  /* Curved/wave clip paths */
+  .curve-bottom {
+    clip-path: ellipse(150% 100% at 50% 0%);
+  }
+
+  .wave-bottom {
+    clip-path: polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%);
+  }
+
+  /* Touch feedback */
+  .tap-highlight {
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.1);
+  }
+
+  .tap-scale {
+    @apply transition-transform duration-150 active:scale-95;
+  }
+
+  /* Status indicators */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-active {
+    @apply bg-[hsl(var(--status-success))];
+  }
+
+  .status-dot-warning {
+    @apply bg-[hsl(var(--status-warning))];
+  }
+
+  .status-dot-error {
+    @apply bg-[hsl(var(--status-error))];
+  }
+
+  /* Animation delays for staggered effects */
+  .delay-75 { animation-delay: 75ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-225 { animation-delay: 225ms; }
+  .delay-300 { animation-delay: 300ms; }
+  .delay-375 { animation-delay: 375ms; }
+  .delay-450 { animation-delay: 450ms; }
+}
+
+/* Shimmer/skeleton loading animation */
+@layer utilities {
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 0%,
+      hsl(var(--background)) 50%,
+      hsl(var(--muted)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
   }
 }
