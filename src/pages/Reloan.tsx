@@ -1155,6 +1155,19 @@ export default function Reloan() {
                   </div>
                 </div>
 
+                {/* Source Account Selection for non-cash payments */}
+                <SourceAccountSelector
+                  clientId={client?.id || ''}
+                  paymentMode={paymentMode}
+                  sourceType={sourceAccount.sourceType}
+                  setSourceType={sourceAccount.setSourceType}
+                  sourceBankId={sourceAccount.sourceBankId}
+                  setSourceBankId={sourceAccount.setSourceBankId}
+                  sourceAccountId={sourceAccount.sourceAccountId}
+                  setSourceAccountId={sourceAccount.setSourceAccountId}
+                  selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
+                  setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
+                />
                 <Separator />
 
                 <div className="flex flex-wrap gap-6">
