@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { pdf } from '@react-pdf/renderer';
-import { Download, Printer, FileText } from 'lucide-react';
+import { Download, Printer, FileText, Layout } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePrintTemplates } from '@/hooks/usePrintTemplates';
+import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { resolveTemplate, getTemplateCodeByPaperSize, TemplateData } from '@/lib/templateResolver';
 
 interface PDFViewerDialogProps {
   open: boolean;
@@ -12,16 +15,67 @@ interface PDFViewerDialogProps {
   title: string;
   document: React.ReactElement;
   fileName: string;
+  // Optional: For dynamic template selection
+  templateData?: TemplateData;
+  receiptType?: 'loan' | 'interest' | 'redemption' | 'auction';
 }
 
-export function PDFViewerDialog({ open, onOpenChange, title, document, fileName }: PDFViewerDialogProps) {
+export function PDFViewerDialog({ 
+  open, 
+  onOpenChange, 
+  title, 
+  document, 
+  fileName,
+  templateData,
+  receiptType = 'loan'
+}: PDFViewerDialogProps) {
   const [loading, setLoading] = useState(false);
   const [paperSize, setPaperSize] = useState<'a4' | 'a5' | 'thermal'>('a4');
+  const [selectedTemplateCode, setSelectedTemplateCode] = useState<string>('');
+  
+  // Fetch available templates and client print settings
+  const { data: templates = [] } = usePrintTemplates(receiptType);
+  const { data: printSettings = [] } = usePrintSettings(receiptType);
+  
+  // Set default template from client settings or first available template
+  useEffect(() => {
+    if (printSettings.length > 0 && printSettings[0].template_id) {
+      const defaultTemplate = templates.find(t => t.id === printSettings[0].template_id);
+      if (defaultTemplate) {
+        setSelectedTemplateCode(defaultTemplate.template_code);
+        // Set paper size from template
+        if (defaultTemplate.paper_size === '80mm') {
+          setPaperSize('thermal');
+        } else if (defaultTemplate.paper_size === 'a5') {
+          setPaperSize('a5');
+        } else {
+          setPaperSize('a4');
+        }
+        return;
+      }
+    }
+    // Fall back to first template or default
+    if (templates.length > 0) {
+      setSelectedTemplateCode(templates[0].template_code);
+    }
+  }, [templates, printSettings]);
+
+  // Get the document to render
+  const getDocumentToRender = () => {
+    // If templateData is provided and we have a selected template, use dynamic resolution
+    if (templateData && selectedTemplateCode) {
+      const adjustedCode = getTemplateCodeByPaperSize(selectedTemplateCode, paperSize);
+      return resolveTemplate(adjustedCode, templateData);
+    }
+    // Otherwise use the static document prop
+    return document;
+  };
 
   const handleDownload = async () => {
     setLoading(true);
     try {
-      const blob = await pdf(document).toBlob();
+      const docToRender = getDocumentToRender();
+      const blob = await pdf(docToRender).toBlob();
       const url = URL.createObjectURL(blob);
       const link = window.document.createElement('a');
       link.href = url;
@@ -40,7 +94,8 @@ export function PDFViewerDialog({ open, onOpenChange, title, document, fileName 
   const handlePrint = async () => {
     setLoading(true);
     try {
-      const blob = await pdf(document).toBlob();
+      const docToRender = getDocumentToRender();
+      const blob = await pdf(docToRender).toBlob();
       const url = URL.createObjectURL(blob);
       const printWindow = window.open(url, '_blank');
       if (printWindow) {
@@ -56,6 +111,9 @@ export function PDFViewerDialog({ open, onOpenChange, title, document, fileName 
     }
   };
 
+  // Filter templates by paper size for quick access
+  const selectedTemplate = templates.find(t => t.template_code === selectedTemplateCode);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -67,6 +125,47 @@ export function PDFViewerDialog({ open, onOpenChange, title, document, fileName 
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Template Selection - Only show if templateData is provided */}
+          {templateData && templates.length > 0 && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Layout className="h-4 w-4" />
+                Template
+              </label>
+              <Select 
+                value={selectedTemplateCode} 
+                onValueChange={(code) => {
+                  setSelectedTemplateCode(code);
+                  // Auto-switch paper size based on template
+                  const template = templates.find(t => t.template_code === code);
+                  if (template?.paper_size === '80mm') {
+                    setPaperSize('thermal');
+                  } else if (template?.paper_size === 'a5') {
+                    setPaperSize('a5');
+                  } else {
+                    setPaperSize('a4');
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.template_code}>
+                      <div className="flex items-center gap-2">
+                        <span>{template.template_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({template.paper_size === '80mm' ? 'Thermal' : template.paper_size?.toUpperCase()})
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Paper Size Selection */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Paper Size</label>
@@ -81,6 +180,20 @@ export function PDFViewerDialog({ open, onOpenChange, title, document, fileName 
               </SelectContent>
             </Select>
           </div>
+
+          {/* Template Info */}
+          {selectedTemplate && (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Language:</span>
+                <span className="font-medium capitalize">{selectedTemplate.language || 'English'}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Layout:</span>
+                <span className="font-medium capitalize">{selectedTemplate.layout_style || 'Classic'}</span>
+              </div>
+            </div>
+          )}
 
           {/* Preview Info */}
           <div className="bg-muted/50 rounded-lg p-4 text-center">

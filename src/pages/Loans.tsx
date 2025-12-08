@@ -33,6 +33,14 @@ interface Customer {
   customer_code: string;
   full_name: string;
   phone: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  photo_url?: string;
+  aadhaar_front_url?: string;
+  aadhaar_back_url?: string;
+  pan_card_url?: string;
 }
 
 interface Scheme {
@@ -237,6 +245,7 @@ export default function Loans() {
     loanDate: string;
     maturityDate: string;
     tenureDays: number;
+    interestRate: number;
     customer: Customer;
     scheme: Scheme;
     goldItems: GoldItem[];
@@ -248,6 +257,9 @@ export default function Loans() {
       documentCharges: number;
       netDisbursed: number;
     };
+    jewelPhotoUrl?: string | null;
+    appraiserSheetUrl?: string | null;
+    photoTimestamp?: string;
   } | null>(null);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
@@ -305,7 +317,7 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('customers')
-      .select('id, customer_code, full_name, phone')
+      .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('full_name');
@@ -771,6 +783,7 @@ export default function Loans() {
           loanDate: format(loanDate, 'yyyy-MM-dd'),
           maturityDate: format(maturityDate, 'yyyy-MM-dd'),
           tenureDays: parseInt(tenureDays),
+          interestRate: selectedScheme.shown_rate || selectedScheme.interest_rate,
           customer: selectedCustomer,
           scheme: selectedScheme,
           goldItems: [...goldItems],
@@ -781,7 +794,10 @@ export default function Loans() {
             processingFee: loanCalculation.processingFee,
             documentCharges: loanCalculation.documentCharges,
             netDisbursed: loanCalculation.netCashToCustomer,
-          }
+          },
+          jewelPhotoUrl,
+          appraiserSheetUrl,
+          photoTimestamp: new Date().toISOString(),
         });
         setShowReceiptDialog(true);
       }
@@ -1980,6 +1996,58 @@ export default function Loans() {
             onOpenChange={setShowReceiptDialog}
             title="Loan Disbursement Receipt"
             fileName={`loan-disbursement-${createdLoanData.loanNumber}`}
+            receiptType="loan"
+            templateData={{
+              company: {
+                name: client?.company_name || 'Gold Finance',
+                address: '',
+                phone: '',
+                email: '',
+              },
+              loan: {
+                loan_number: createdLoanData.loanNumber,
+                loan_date: createdLoanData.loanDate,
+                principal_amount: createdLoanData.calculation.principalAmount,
+                interest_rate: createdLoanData.interestRate,
+                tenure_days: createdLoanData.tenureDays,
+                maturity_date: createdLoanData.maturityDate,
+                advance_interest: createdLoanData.calculation.advanceInterest,
+                net_disbursed: createdLoanData.calculation.netDisbursed,
+              },
+              customer: {
+                full_name: createdLoanData.customer.full_name,
+                customer_code: createdLoanData.customer.customer_code,
+                phone: createdLoanData.customer.phone,
+                address: createdLoanData.customer.address,
+                city: createdLoanData.customer.city,
+                state: createdLoanData.customer.state,
+                pincode: createdLoanData.customer.pincode,
+                photo_url: createdLoanData.customer.photo_url,
+                aadhaar_front_url: createdLoanData.customer.aadhaar_front_url,
+                aadhaar_back_url: createdLoanData.customer.aadhaar_back_url,
+                pan_card_url: createdLoanData.customer.pan_card_url,
+              },
+              scheme: {
+                name: createdLoanData.scheme.scheme_name,
+                rate: createdLoanData.interestRate,
+                ltvPercentage: createdLoanData.scheme.ltv_percentage,
+              },
+              goldItems: createdLoanData.goldItems.map(item => ({
+                item_type: item.item_type,
+                description: item.description,
+                gross_weight_grams: item.gross_weight_grams,
+                net_weight_grams: item.net_weight_grams,
+                purity: item.purity,
+                purity_percentage: item.purity_percentage,
+                appraised_value: item.appraised_value,
+              })),
+              calculation: createdLoanData.calculation,
+              jewelPhotos: {
+                timestamp: createdLoanData.photoTimestamp,
+                appraiser_sheet_url: createdLoanData.appraiserSheetUrl || undefined,
+              },
+              rebateSchedule: calculateRebateSchedule(createdLoanData.calculation.advanceInterest).slots,
+            }}
             document={
               <LoanDisbursementPDF
                 company={{
