@@ -103,6 +103,9 @@ export type Database = {
           reserve_price: number
           shortfall_amount: number | null
           sold_price: number | null
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
           status: string | null
           surplus_amount: number | null
           surplus_returned: boolean | null
@@ -138,6 +141,9 @@ export type Database = {
           reserve_price: number
           shortfall_amount?: number | null
           sold_price?: number | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           status?: string | null
           surplus_amount?: number | null
           surplus_returned?: boolean | null
@@ -173,6 +179,9 @@ export type Database = {
           reserve_price?: number
           shortfall_amount?: number | null
           sold_price?: number | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           status?: string | null
           surplus_amount?: number | null
           surplus_returned?: boolean | null
@@ -217,6 +226,20 @@ export type Database = {
             columns: ["processed_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auctions_source_bank_id_fkey"
+            columns: ["source_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
             referencedColumns: ["id"]
           },
         ]
@@ -674,6 +697,9 @@ export type Database = {
           receipt_number: string
           remarks: string | null
           shown_interest: number
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
           updated_at: string
         }
         Insert: {
@@ -697,6 +723,9 @@ export type Database = {
           receipt_number: string
           remarks?: string | null
           shown_interest: number
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -720,6 +749,9 @@ export type Database = {
           receipt_number?: string
           remarks?: string | null
           shown_interest?: number
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -749,6 +781,20 @@ export type Database = {
             columns: ["loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interest_payments_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "interest_payments_source_bank_id_fkey"
+            columns: ["source_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
             referencedColumns: ["id"]
           },
         ]
@@ -1364,6 +1410,9 @@ export type Database = {
           released_by: string | null
           released_to: string | null
           remarks: string | null
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
           total_settlement: number
           updated_at: string
           verification_notes: string | null
@@ -1393,6 +1442,9 @@ export type Database = {
           released_by?: string | null
           released_to?: string | null
           remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           total_settlement: number
           updated_at?: string
           verification_notes?: string | null
@@ -1422,6 +1474,9 @@ export type Database = {
           released_by?: string | null
           released_to?: string | null
           remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
           total_settlement?: number
           updated_at?: string
           verification_notes?: string | null
@@ -1432,6 +1487,20 @@ export type Database = {
             columns: ["new_loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redemptions_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redemptions_source_bank_id_fkey"
+            columns: ["source_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
             referencedColumns: ["id"]
           },
         ]
@@ -1646,6 +1715,125 @@ export type Database = {
           },
         ]
       }
+      repledge_redemptions: {
+        Row: {
+          approved_by: string | null
+          bank_interest_due: number | null
+          bank_penalty: number | null
+          bank_principal_outstanding: number
+          bank_total_settlement: number
+          branch_id: string
+          client_id: string
+          created_at: string | null
+          id: string
+          packet_id: string
+          payment_mode: string
+          payment_reference: string | null
+          processed_by: string | null
+          redemption_date: string
+          redemption_number: string
+          remarks: string | null
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_by?: string | null
+          bank_interest_due?: number | null
+          bank_penalty?: number | null
+          bank_principal_outstanding: number
+          bank_total_settlement: number
+          branch_id: string
+          client_id: string
+          created_at?: string | null
+          id?: string
+          packet_id: string
+          payment_mode?: string
+          payment_reference?: string | null
+          processed_by?: string | null
+          redemption_date?: string
+          redemption_number: string
+          remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_by?: string | null
+          bank_interest_due?: number | null
+          bank_penalty?: number | null
+          bank_principal_outstanding?: number
+          bank_total_settlement?: number
+          branch_id?: string
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          packet_id?: string
+          payment_mode?: string
+          payment_reference?: string | null
+          processed_by?: string | null
+          redemption_date?: string
+          redemption_number?: string
+          remarks?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repledge_redemptions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "repledge_packets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_processed_by_fkey"
+            columns: ["processed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_redemptions_source_bank_id_fkey"
+            columns: ["source_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schemes: {
         Row: {
           advance_interest_months: number
@@ -1809,6 +1997,10 @@ export type Database = {
         Returns: string
       }
       generate_redemption_number: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      generate_repledge_redemption_number: {
         Args: { p_client_id: string }
         Returns: string
       }

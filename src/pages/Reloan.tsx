@@ -28,6 +28,9 @@ import {
 } from '@/lib/interestCalculations';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { ReloanReceiptPDF } from '@/components/receipts/ReloanReceiptPDF';
+import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import { useSourceAccount } from '@/hooks/useSourceAccount';
+import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
 
 interface LoanWithDetails {
   id: string;
@@ -146,6 +149,9 @@ export default function Reloan() {
   const [paymentMode, setPaymentMode] = useState('cash');
   const [paymentReference, setPaymentReference] = useState('');
   const [remarks, setRemarks] = useState('');
+  
+  // Source account tracking
+  const sourceAccount = useSourceAccount();
   
   // Verification
   const [oldLoanSettled, setOldLoanSettled] = useState(false);
@@ -268,9 +274,17 @@ export default function Reloan() {
   };
 
   const selectLoan = async (loan: LoanWithDetails) => {
+    // Check if loan is repledged
+    const repledgeStatus = await checkRepledgeStatus(loan.id);
+    if (repledgeStatus.isRepledged) {
+      showRepledgeWarning(repledgeStatus.packetNumber!);
+      return;
+    }
+    
     setSelectedLoan(loan);
     setSearchResults([]);
     setSearchQuery('');
+    sourceAccount.resetSourceAccount();
     
     // Fetch gold items
     const { data } = await supabase
@@ -584,7 +598,8 @@ export default function Reloan() {
         .update({ new_loan_id: newLoanResult.id })
         .eq('id', redemptionResult.id);
 
-      // 6. Create disbursement record
+      // 6. Create disbursement record with source account
+      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
       await supabase
         .from('loan_disbursements')
         .insert({
@@ -592,6 +607,9 @@ export default function Reloan() {
           payment_mode: paymentMode,
           amount: newLoanCalc.netCashToCustomer,
           reference_number: paymentReference || null,
+          source_type: sourceData.source_type,
+          source_bank_id: sourceData.source_bank_id,
+          source_account_id: sourceData.source_account_id,
         });
 
       toast.success(`Reloan processed: ${selectedLoan.loan_number} → ${newLoanNumber}`);
@@ -668,6 +686,7 @@ export default function Reloan() {
       setGoldVerified(false);
       setJewelPhotoUrl(null);
       setAppraiserSheetUrl(null);
+      sourceAccount.resetSourceAccount();
       
       fetchRecentReloans();
     } catch (error: any) {

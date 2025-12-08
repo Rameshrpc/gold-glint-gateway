@@ -27,6 +27,9 @@ import {
 } from '@/lib/interestCalculations';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { RedemptionReceiptPDF } from '@/components/receipts/RedemptionReceiptPDF';
+import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import { useSourceAccount } from '@/hooks/useSourceAccount';
+import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
 
 interface LoanWithDetails {
   id: string;
@@ -114,6 +117,9 @@ export default function Redemption() {
   const [paymentMode, setPaymentMode] = useState('cash');
   const [paymentReference, setPaymentReference] = useState('');
   const [remarks, setRemarks] = useState('');
+  
+  // Source account tracking
+  const sourceAccount = useSourceAccount();
   
   // Verification
   const [identityVerified, setIdentityVerified] = useState(false);
@@ -219,10 +225,18 @@ export default function Redemption() {
   };
 
   const selectLoan = async (loan: LoanWithDetails) => {
+    // Check if loan is repledged
+    const repledgeStatus = await checkRepledgeStatus(loan.id);
+    if (repledgeStatus.isRepledged) {
+      showRepledgeWarning(repledgeStatus.packetNumber!);
+      return;
+    }
+    
     setSelectedLoan(loan);
     setSearchResults([]);
     setSearchQuery('');
     setReleasedTo(loan.customer.full_name);
+    sourceAccount.resetSourceAccount();
     
     // Fetch gold items
     const { data } = await supabase
@@ -287,6 +301,9 @@ export default function Redemption() {
       const redemptionNumber = `RED${format(new Date(), 'yyMMdd')}${String((redemptionCount.count || 0) + 1).padStart(5, '0')}`;
       const today = format(new Date(), 'yyyy-MM-dd');
 
+      // Get source account data
+      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
+
       // Create redemption record
       const redemptionData = {
         loan_id: selectedLoan.id,
@@ -309,6 +326,9 @@ export default function Redemption() {
         identity_verified: identityVerified,
         processed_by: profile.id,
         remarks: remarks || null,
+        source_type: sourceData.source_type,
+        source_bank_id: sourceData.source_bank_id,
+        source_account_id: sourceData.source_account_id,
       };
 
       const { data: redemptionResult, error: redemptionError } = await supabase
@@ -386,6 +406,7 @@ export default function Redemption() {
       setIdentityVerified(false);
       setGoldReleased(false);
       setReleasedTo('');
+      sourceAccount.resetSourceAccount();
       
       fetchRecentRedemptions();
     } catch (error: any) {
@@ -645,6 +666,22 @@ export default function Redemption() {
                       rows={2}
                     />
                   </div>
+
+                  {/* Source Account Selector */}
+                  {client && (
+                    <SourceAccountSelector
+                      clientId={client.id}
+                      paymentMode={paymentMode}
+                      sourceType={sourceAccount.sourceType}
+                      setSourceType={sourceAccount.setSourceType}
+                      sourceBankId={sourceAccount.sourceBankId}
+                      setSourceBankId={sourceAccount.setSourceBankId}
+                      sourceAccountId={sourceAccount.sourceAccountId}
+                      setSourceAccountId={sourceAccount.setSourceAccountId}
+                      selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
+                      setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
+                    />
+                  )}
                 </CardContent>
               </Card>
 

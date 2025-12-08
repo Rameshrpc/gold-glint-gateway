@@ -28,6 +28,8 @@ import {
   type DualRateInterest,
   type PaymentAllocation,
 } from '@/lib/interestCalculations';
+import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import { useSourceAccount } from '@/hooks/useSourceAccount';
 
 interface LoanWithDetails {
   id: string;
@@ -111,6 +113,9 @@ export default function Interest() {
   const [remarks, setRemarks] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [paymentAllocation, setPaymentAllocation] = useState<PaymentAllocation | null>(null);
+  
+  // Source account tracking
+  const sourceAccount = useSourceAccount();
   
   // History dialog state
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -262,6 +267,7 @@ export default function Interest() {
     setPaymentMode('cash');
     setRemarks('');
     setPaymentAllocation(null);
+    sourceAccount.resetSourceAccount();
     setCollectionDialogOpen(true);
   };
 
@@ -300,6 +306,9 @@ export default function Interest() {
       const lastPaidDate = selectedLoan.last_interest_paid_date || selectedLoan.loan_date;
       const today = format(new Date(), 'yyyy-MM-dd');
       
+      // Get source account data
+      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
+
       // Insert payment record
       const paymentData = {
         loan_id: selectedLoan.id,
@@ -320,6 +329,9 @@ export default function Interest() {
         penalty_amount: paymentAllocation.penalty,
         collected_by: profile.id,
         remarks: remarks || null,
+        source_type: sourceData.source_type,
+        source_bank_id: sourceData.source_bank_id,
+        source_account_id: sourceData.source_account_id,
       };
 
       const { data: paymentResult, error: paymentError } = await supabase
@@ -688,6 +700,22 @@ export default function Interest() {
                     </Select>
                   </div>
                 </div>
+
+                {/* Source Account Selector */}
+                {client && (
+                  <SourceAccountSelector
+                    clientId={client.id}
+                    paymentMode={paymentMode}
+                    sourceType={sourceAccount.sourceType}
+                    setSourceType={sourceAccount.setSourceType}
+                    sourceBankId={sourceAccount.sourceBankId}
+                    setSourceBankId={sourceAccount.setSourceBankId}
+                    sourceAccountId={sourceAccount.sourceAccountId}
+                    setSourceAccountId={sourceAccount.setSourceAccountId}
+                    selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
+                    setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
+                  />
+                )}
 
                 {/* Payment Allocation Preview */}
                 {paymentAllocation && (

@@ -25,6 +25,9 @@ import {
 } from '@/lib/interestCalculations';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import AuctionReceiptPDF from '@/components/receipts/AuctionReceiptPDF';
+import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import { useSourceAccount } from '@/hooks/useSourceAccount';
+import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
 
 interface Customer {
   id: string;
@@ -116,6 +119,9 @@ const Auction = () => {
   const [customerNotified, setCustomerNotified] = useState(false);
   const [goldVerified, setGoldVerified] = useState(false);
   const [remarks, setRemarks] = useState('');
+  
+  // Source account tracking
+  const sourceAccount = useSourceAccount();
   
   // Processing state
   const [processing, setProcessing] = useState(false);
@@ -238,7 +244,14 @@ const Auction = () => {
     };
   };
 
-  const selectLoanForAuction = (loan: EligibleLoan) => {
+  const selectLoanForAuction = async (loan: EligibleLoan) => {
+    // Check if loan is repledged
+    const repledgeStatus = await checkRepledgeStatus(loan.id);
+    if (repledgeStatus.isRepledged) {
+      showRepledgeWarning(repledgeStatus.packetNumber!);
+      return;
+    }
+    
     setSelectedLoan(loan);
     // Reset form
     setAuctionDate(format(new Date(), 'yyyy-MM-dd'));
@@ -251,6 +264,7 @@ const Auction = () => {
     setCustomerNotified(false);
     setGoldVerified(false);
     setRemarks('');
+    sourceAccount.resetSourceAccount();
   };
 
   const processAuction = async () => {
@@ -294,6 +308,9 @@ const Auction = () => {
       
       if (lotError) throw lotError;
       
+      // Get source account data
+      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
+      
       // Create auction record
       const auctionData = {
         client_id: profile.client_id,
@@ -321,6 +338,9 @@ const Auction = () => {
         gold_verified: goldVerified,
         processed_by: profile.id,
         remarks: remarks || null,
+        source_type: sourceData.source_type,
+        source_bank_id: sourceData.source_bank_id,
+        source_account_id: sourceData.source_account_id,
       };
       
       const { data: auctionResult, error: auctionError } = await supabase
@@ -686,6 +706,22 @@ const Auction = () => {
                           />
                         </div>
                       </div>
+
+                      {/* Source Account Selector */}
+                      {profile?.client_id && (
+                        <SourceAccountSelector
+                          clientId={profile.client_id}
+                          paymentMode={paymentMode}
+                          sourceType={sourceAccount.sourceType}
+                          setSourceType={sourceAccount.setSourceType}
+                          sourceBankId={sourceAccount.sourceBankId}
+                          setSourceBankId={sourceAccount.setSourceBankId}
+                          sourceAccountId={sourceAccount.sourceAccountId}
+                          setSourceAccountId={sourceAccount.setSourceAccountId}
+                          selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
+                          setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
+                        />
+                      )}
 
                       {/* Settlement Summary */}
                       {soldPriceNum > 0 && selectedOutstanding && (
