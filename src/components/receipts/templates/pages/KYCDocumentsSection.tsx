@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from '@react-pdf/renderer';
 import { bilingualLabel, translations } from '@/lib/translations';
+import '@/lib/fonts';
 
 // Credit card size in points (86mm x 54mm = 244pt x 153pt at 72dpi)
 const CARD_WIDTH = 200;
@@ -8,6 +9,7 @@ const CARD_HEIGHT = 126;
 
 const styles = StyleSheet.create({
   section: {
+    fontFamily: 'Catamaran',
     padding: 20,
   },
   title: {

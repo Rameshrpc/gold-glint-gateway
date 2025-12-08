@@ -6,10 +6,11 @@ import { KYCDocumentsSection } from './pages/KYCDocumentsSection';
 import { GoldDeclarationSection } from './pages/GoldDeclarationSection';
 import { TermsConditionsSection } from './pages/TermsConditionsSection';
 import { bilingualLabel } from '@/lib/translations';
+import '@/lib/fonts';
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
+    fontFamily: 'Catamaran',
     fontSize: 10,
     paddingTop: 30,
     paddingBottom: 50,

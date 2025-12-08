@@ -6,13 +6,14 @@ import { KYCDocumentsSection } from './pages/KYCDocumentsSection';
 import { GoldDeclarationSection } from './pages/GoldDeclarationSection';
 import { TermsConditionsSection } from './pages/TermsConditionsSection';
 import { bilingualLabel } from '@/lib/translations';
+import '@/lib/fonts';
 
 // 80mm thermal paper = 226.77pt (80mm * 2.8346pt/mm)
 const THERMAL_WIDTH = 227;
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Helvetica',
+    fontFamily: 'Catamaran',
     fontSize: 8,
     paddingTop: 10,
     paddingBottom: 10,

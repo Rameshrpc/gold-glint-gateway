@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image } from '@react-pdf/renderer';
 import { bilingualLabel, translations } from '@/lib/translations';
+import '@/lib/fonts';
 
 const styles = StyleSheet.create({
   section: {
+    fontFamily: 'Catamaran',
     padding: 20,
   },
   header: {
