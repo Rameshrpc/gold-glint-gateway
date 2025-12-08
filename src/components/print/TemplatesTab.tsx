@@ -3,9 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Check, FileText, Receipt, Gavel, Undo2 } from 'lucide-react';
+import { Check, FileText, Receipt, Gavel, Undo2, Settings2 } from 'lucide-react';
 import { useTemplatesByType, PrintTemplate } from '@/hooks/usePrintTemplates';
 import { usePrintSettings, useSavePrintSettings } from '@/hooks/usePrintSettings';
+import { TemplateEditor, TemplateConfig } from './TemplateEditor';
 import { cn } from '@/lib/utils';
 
 const receiptTypes = [
@@ -32,13 +33,14 @@ interface TemplateCardProps {
   template: PrintTemplate;
   isSelected: boolean;
   onSelect: () => void;
+  onEdit: () => void;
 }
 
-function TemplateCard({ template, isSelected, onSelect }: TemplateCardProps) {
+function TemplateCard({ template, isSelected, onSelect, onEdit }: TemplateCardProps) {
   return (
     <Card 
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md",
+        "cursor-pointer transition-all hover:shadow-md relative group",
         isSelected && "ring-2 ring-primary border-primary"
       )}
       onClick={onSelect}
@@ -51,15 +53,17 @@ function TemplateCard({ template, isSelected, onSelect }: TemplateCardProps) {
               {template.layout_style} Style
             </p>
           </div>
-          {isSelected && (
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-              <Check className="h-3 w-3 text-primary-foreground" />
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            {isSelected && (
+              <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                <Check className="h-3 w-3 text-primary-foreground" />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Template Preview */}
-        <div className="bg-muted/50 rounded-lg p-3 mb-3 aspect-[3/4] flex flex-col items-center justify-center border">
+        <div className="bg-muted/50 rounded-lg p-3 mb-3 aspect-[3/4] flex flex-col items-center justify-center border relative">
           <div className="w-full max-w-[80%] space-y-1">
             <div className="h-2 bg-muted-foreground/20 rounded w-1/2 mx-auto" />
             <div className="h-1.5 bg-muted-foreground/20 rounded w-3/4 mx-auto" />
@@ -75,6 +79,21 @@ function TemplateCard({ template, isSelected, onSelect }: TemplateCardProps) {
                 <div className="h-1 bg-purple-500/20 rounded w-5/6" />
               </div>
             )}
+          </div>
+          
+          {/* Edit overlay */}
+          <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg">
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
+            >
+              <Settings2 className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
           </div>
         </div>
 
@@ -94,6 +113,10 @@ function TemplateCard({ template, isSelected, onSelect }: TemplateCardProps) {
 
 export function TemplatesTab() {
   const [activeType, setActiveType] = useState('loan');
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<PrintTemplate | null>(null);
+  const [editingType, setEditingType] = useState('');
+  
   const { loanTemplates, interestTemplates, redemptionTemplates, auctionTemplates, isLoading } = useTemplatesByType();
   const { data: settings } = usePrintSettings();
   const saveMutation = useSavePrintSettings();
@@ -113,11 +136,22 @@ export function TemplatesTab() {
     return setting?.template_id;
   };
 
+  const getTemplateConfig = (type: string): Partial<TemplateConfig> | undefined => {
+    const setting = settings?.find(s => s.receipt_type === type);
+    return setting?.template_config as Partial<TemplateConfig> | undefined;
+  };
+
   const handleSelectTemplate = (templateId: string, receiptType: string) => {
     saveMutation.mutate({
       receipt_type: receiptType,
       template_id: templateId,
     });
+  };
+
+  const handleEditTemplate = (template: PrintTemplate, type: string) => {
+    setEditingTemplate(template);
+    setEditingType(type);
+    setEditorOpen(true);
   };
 
   if (isLoading) {
@@ -143,7 +177,7 @@ export function TemplatesTab() {
                 <CardTitle>{type.label} Templates</CardTitle>
                 <CardDescription>
                   Select a template for {type.label.toLowerCase()} receipts. 
-                  Bilingual templates show both English and Tamil.
+                  Hover over a template and click Edit to customize.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -154,6 +188,7 @@ export function TemplatesTab() {
                       template={template}
                       isSelected={getSelectedTemplateId(type.key) === template.id}
                       onSelect={() => handleSelectTemplate(template.id, type.key)}
+                      onEdit={() => handleEditTemplate(template, type.key)}
                     />
                   ))}
                 </div>
@@ -162,6 +197,15 @@ export function TemplatesTab() {
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Template Editor */}
+      <TemplateEditor
+        open={editorOpen}
+        onOpenChange={setEditorOpen}
+        template={editingTemplate}
+        receiptType={editingType}
+        existingConfig={getTemplateConfig(editingType)}
+      />
     </div>
   );
 }

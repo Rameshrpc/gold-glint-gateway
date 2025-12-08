@@ -39,6 +39,7 @@ import BalanceSheet from "./pages/BalanceSheet";
 import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
+import PrintSetup from "./pages/PrintSetup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -215,7 +216,7 @@ const App = () => (
             } />
             <Route path="/print-setup" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Print Setup" description="Configure print templates and settings" />
+                <PrintSetup />
               </ProtectedRoute>
             } />
             
