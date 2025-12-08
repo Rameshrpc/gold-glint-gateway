@@ -382,36 +382,46 @@ export default function MarketRates() {
                   <Copy className="h-3 w-3" />
                   Quick Fill
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={copyFromYesterday}
-                    disabled={!yesterdayRate}
-                  >
-                    📋 Copy Yesterday
-                    {yesterdayRate && (
-                      <span className="ml-1 text-muted-foreground">
-                        (₹{yesterdayRate.rate_22kt.toLocaleString('en-IN')})
+                {rates.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    Quick fill will be available after you save your first rate.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={copyFromYesterday}
+                      disabled={!yesterdayRate}
+                      title={!yesterdayRate ? "No rate found for yesterday" : `Copy rate from ${format(subDays(new Date(), 1), 'dd MMM')}`}
+                      className={!yesterdayRate ? "opacity-50" : ""}
+                    >
+                      📋 Copy Yesterday
+                      <span className="ml-1 text-muted-foreground text-xs">
+                        {yesterdayRate 
+                          ? `(₹${yesterdayRate.rate_22kt.toLocaleString('en-IN')})` 
+                          : "(N/A)"}
                       </span>
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={copyLastRate}
-                    disabled={!lastRate}
-                  >
-                    📋 Copy Last Rate
-                    {lastRate && (
-                      <span className="ml-1 text-muted-foreground">
-                        ({format(new Date(lastRate.rate_date), 'dd MMM')})
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={copyLastRate}
+                      disabled={!lastRate}
+                      title={lastRate ? `Copy rate from ${format(new Date(lastRate.rate_date), 'dd MMM')}` : "No previous rates available"}
+                      className={!lastRate ? "opacity-50" : ""}
+                    >
+                      📋 Copy Last Rate
+                      <span className="ml-1 text-muted-foreground text-xs">
+                        {lastRate 
+                          ? `(${format(new Date(lastRate.rate_date), 'dd MMM')})` 
+                          : "(N/A)"}
                       </span>
-                    )}
-                  </Button>
-                </div>
+                    </Button>
+                  </div>
+                )}
               </div>
 
               <Separator />
