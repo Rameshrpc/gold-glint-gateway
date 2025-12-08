@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Calendar, IndianRupee } from 'lucide-react';
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Calendar, IndianRupee, ExternalLink, Copy } from 'lucide-react';
 import { useMarketRates, useSaveMarketRate, useDeleteMarketRate, useTodayMarketRate } from '@/hooks/useMarketRates';
 import { toast } from 'sonner';
 import { format, subDays } from 'date-fns';
@@ -122,6 +122,45 @@ export default function MarketRates() {
 
   const priceChange = getPriceChange();
 
+  // Copy from yesterday's rate
+  const copyFromYesterday = () => {
+    if (!editingRate) return;
+    const yesterday = format(subDays(new Date(), 1), 'yyyy-MM-dd');
+    const yesterdayRate = rates.find(r => r.rate_date === yesterday);
+    if (yesterdayRate) {
+      setEditingRate({
+        ...editingRate,
+        rate_22kt: String(yesterdayRate.rate_22kt),
+        rate_24kt: String(yesterdayRate.rate_24kt),
+        rate_18kt: String(yesterdayRate.rate_18kt),
+      });
+      toast.success(`Rates copied from ${format(new Date(yesterday), 'dd MMM')}`);
+    } else {
+      toast.error('No rate found for yesterday');
+    }
+  };
+
+  // Copy from last available rate
+  const copyLastRate = () => {
+    if (!editingRate) return;
+    if (rates.length > 0) {
+      const lastRate = rates[0]; // rates are sorted by date desc
+      setEditingRate({
+        ...editingRate,
+        rate_22kt: String(lastRate.rate_22kt),
+        rate_24kt: String(lastRate.rate_24kt),
+        rate_18kt: String(lastRate.rate_18kt),
+      });
+      toast.success(`Rates copied from ${format(new Date(lastRate.rate_date), 'dd MMM')}`);
+    } else {
+      toast.error('No previous rates available');
+    }
+  };
+
+  // Get yesterday's rate for display
+  const yesterdayRate = rates.find(r => r.rate_date === format(subDays(new Date(), 1), 'yyyy-MM-dd'));
+  const lastRate = rates.length > 0 ? rates[0] : null;
+
   // Prepare chart data (last 30 days)
   const chartData = rates
     .slice(0, 30)
@@ -147,6 +186,41 @@ export default function MarketRates() {
             Add Today's Rate
           </Button>
         </div>
+
+        {/* Quick Reference Links */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Check Current Rates
+            </CardTitle>
+            <CardDescription>Open external sources in new tab to check latest gold prices</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://ibja.co" target="_blank" rel="noopener noreferrer">
+                  🏦 IBJA Official
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://www.goodreturns.in/gold-rates/chennai.aspx" target="_blank" rel="noopener noreferrer">
+                  📈 GoodReturns (Chennai)
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://www.mcxindia.com/market-data/spot-market-price" target="_blank" rel="noopener noreferrer">
+                  💹 MCX Live
+                </a>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://goldpriceindia.com" target="_blank" rel="noopener noreferrer">
+                  🥇 Gold Price India
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Today's Rate Card */}
         <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
@@ -302,6 +376,46 @@ export default function MarketRates() {
           </DialogHeader>
           {editingRate && (
             <div className="space-y-4">
+              {/* Quick Fill Buttons */}
+              <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-sm font-medium mb-2 flex items-center gap-1">
+                  <Copy className="h-3 w-3" />
+                  Quick Fill
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyFromYesterday}
+                    disabled={!yesterdayRate}
+                  >
+                    📋 Copy Yesterday
+                    {yesterdayRate && (
+                      <span className="ml-1 text-muted-foreground">
+                        (₹{yesterdayRate.rate_22kt.toLocaleString('en-IN')})
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={copyLastRate}
+                    disabled={!lastRate}
+                  >
+                    📋 Copy Last Rate
+                    {lastRate && (
+                      <span className="ml-1 text-muted-foreground">
+                        ({format(new Date(lastRate.rate_date), 'dd MMM')})
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Date</Label>
