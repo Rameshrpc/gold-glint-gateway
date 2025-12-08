@@ -699,6 +699,7 @@ export type Database = {
           show_logo: boolean | null
           show_signature_section: boolean | null
           show_terms: boolean | null
+          template_config: Json | null
           template_id: string | null
           updated_at: string | null
           watermark_image_url: string | null
@@ -722,6 +723,7 @@ export type Database = {
           show_logo?: boolean | null
           show_signature_section?: boolean | null
           show_terms?: boolean | null
+          template_config?: Json | null
           template_id?: string | null
           updated_at?: string | null
           watermark_image_url?: string | null
@@ -745,6 +747,7 @@ export type Database = {
           show_logo?: boolean | null
           show_signature_section?: boolean | null
           show_terms?: boolean | null
+          template_config?: Json | null
           template_id?: string | null
           updated_at?: string | null
           watermark_image_url?: string | null

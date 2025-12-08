@@ -104,11 +104,11 @@ export const translations = {
 
 export type TranslationKey = keyof typeof translations;
 
-export const getTranslation = (key: TranslationKey, language: 'english' | 'tamil' | 'bilingual' = 'english') => {
+export const getTranslation = (key: TranslationKey, language: 'english' | 'tamil' | 'bilingual' | 'en' = 'english') => {
   const translation = translations[key];
   if (!translation) return key;
   
-  if (language === 'english') return translation.en;
+  if (language === 'english' || language === 'en') return translation.en;
   if (language === 'tamil') return translation.ta;
   return `${translation.en} / ${translation.ta}`;
 };

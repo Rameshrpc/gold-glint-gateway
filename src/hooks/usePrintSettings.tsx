@@ -24,6 +24,7 @@ export interface PrintSettings {
   margins: Json | null;
   font_size: number;
   copies: number;
+  template_config: Json | null;
 }
 
 export interface BranchAssignment {
@@ -81,25 +82,30 @@ export function useSavePrintSettings() {
         .single();
 
       // Build the update/insert payload with proper types
-      const payload = {
+      const payload: Record<string, unknown> = {
         receipt_type: settings.receipt_type,
-        template_id: settings.template_id,
-        logo_url: settings.logo_url,
-        watermark_type: settings.watermark_type,
-        watermark_text: settings.watermark_text,
-        watermark_image_url: settings.watermark_image_url,
-        watermark_opacity: settings.watermark_opacity,
-        header_text: settings.header_text,
-        footer_text: settings.footer_text,
-        show_logo: settings.show_logo,
-        show_declaration: settings.show_declaration,
-        show_signature_section: settings.show_signature_section,
-        show_terms: settings.show_terms,
-        custom_terms: settings.custom_terms,
-        margins: settings.margins as Json,
-        font_size: settings.font_size,
-        copies: settings.copies,
       };
+
+      // Only include defined values
+      if (settings.template_id !== undefined) payload.template_id = settings.template_id;
+      if (settings.logo_url !== undefined) payload.logo_url = settings.logo_url;
+      if (settings.watermark_type !== undefined) payload.watermark_type = settings.watermark_type;
+      if (settings.watermark_text !== undefined) payload.watermark_text = settings.watermark_text;
+      if (settings.watermark_image_url !== undefined) payload.watermark_image_url = settings.watermark_image_url;
+      if (settings.watermark_opacity !== undefined) payload.watermark_opacity = settings.watermark_opacity;
+      if (settings.header_text !== undefined) payload.header_text = settings.header_text;
+      if (settings.footer_text !== undefined) payload.footer_text = settings.footer_text;
+      if (settings.show_logo !== undefined) payload.show_logo = settings.show_logo;
+      if (settings.show_declaration !== undefined) payload.show_declaration = settings.show_declaration;
+      if (settings.show_signature_section !== undefined) payload.show_signature_section = settings.show_signature_section;
+      if (settings.show_terms !== undefined) payload.show_terms = settings.show_terms;
+      if (settings.custom_terms !== undefined) payload.custom_terms = settings.custom_terms;
+      if (settings.margins !== undefined) payload.margins = settings.margins as Json;
+      if (settings.font_size !== undefined) payload.font_size = settings.font_size;
+      if (settings.copies !== undefined) payload.copies = settings.copies;
+      if ((settings as { template_config?: Json }).template_config !== undefined) {
+        payload.template_config = (settings as { template_config?: Json }).template_config;
+      }
 
       if (existing) {
         const { error } = await supabase
@@ -113,10 +119,10 @@ export function useSavePrintSettings() {
       } else {
         const { error } = await supabase
           .from('client_print_settings')
-          .insert({
+          .insert([{
             ...payload,
             client_id: profile.client_id,
-          });
+          }]);
         if (error) throw error;
       }
     },
