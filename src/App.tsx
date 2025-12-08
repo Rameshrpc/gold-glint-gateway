@@ -30,6 +30,7 @@ import Loyalties from "./pages/Loyalties";
 import GoldVault from "./pages/GoldVault";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import AgentCommissions from "./pages/AgentCommissions";
+import Vouchers from "./pages/Vouchers";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -155,6 +156,11 @@ const App = () => (
             <Route path="/agent-commissions" element={
               <ProtectedRoute>
                 <AgentCommissions />
+              </ProtectedRoute>
+            } />
+            <Route path="/vouchers" element={
+              <ProtectedRoute>
+                <Vouchers />
               </ProtectedRoute>
             } />
             <Route path="/notifications" element={
