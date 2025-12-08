@@ -1509,6 +1509,7 @@ export type Database = {
           client_id: string
           created_at: string | null
           created_by: string | null
+          credit_account_id: string | null
           id: string
           loyalty_id: string | null
           packet_date: string
@@ -1535,6 +1536,7 @@ export type Database = {
           client_id: string
           created_at?: string | null
           created_by?: string | null
+          credit_account_id?: string | null
           id?: string
           loyalty_id?: string | null
           packet_date?: string
@@ -1561,6 +1563,7 @@ export type Database = {
           client_id?: string
           created_at?: string | null
           created_by?: string | null
+          credit_account_id?: string | null
           id?: string
           loyalty_id?: string | null
           packet_date?: string
@@ -1602,6 +1605,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_packets_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
             referencedColumns: ["id"]
           },
           {

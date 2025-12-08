@@ -23,6 +23,7 @@ interface RepledgePacket {
   packet_date: string;
   bank_id: string;
   loyalty_id: string | null;
+  credit_account_id: string | null;
   total_loans: number;
   total_principal: number;
   total_gold_weight_grams: number;
@@ -36,6 +37,16 @@ interface RepledgePacket {
   remarks: string | null;
   bank?: { bank_name: string; bank_code: string };
   loyalty?: { full_name: string };
+  credit_account?: { id: string; account_number: string; account_holder_name: string; bank?: { bank_name: string } };
+}
+
+interface LoyaltyBankAccount {
+  id: string;
+  account_number: string;
+  account_holder_name: string;
+  account_type: string;
+  bank_id: string;
+  bank?: { bank_name: string };
 }
 
 interface RepledgeItem {
@@ -81,6 +92,7 @@ export default function GoldVault() {
   const [inVaultItems, setInVaultItems] = useState<RepledgeItem[]>([]);
   const [banks, setBanks] = useState<BankNbfc[]>([]);
   const [loyalties, setLoyalties] = useState<Loyalty[]>([]);
+  const [loyaltyBankAccounts, setLoyaltyBankAccounts] = useState<LoyaltyBankAccount[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Create packet dialog
@@ -90,6 +102,7 @@ export default function GoldVault() {
   const [selectedLoans, setSelectedLoans] = useState<string[]>([]);
   const [selectedBankId, setSelectedBankId] = useState('');
   const [selectedLoyaltyId, setSelectedLoyaltyId] = useState('');
+  const [selectedCreditAccountId, setSelectedCreditAccountId] = useState('');
   const [bankLoanAmount, setBankLoanAmount] = useState('');
   const [bankInterestRate, setBankInterestRate] = useState('');
   const [bankReferenceNumber, setBankReferenceNumber] = useState('');
@@ -131,7 +144,7 @@ export default function GoldVault() {
     
     const { data, error } = await supabase
       .from('repledge_packets')
-      .select('*, bank:banks_nbfc(bank_name, bank_code), loyalty:loyalties(full_name)')
+      .select('*, bank:banks_nbfc(bank_name, bank_code), loyalty:loyalties(full_name), credit_account:loyalty_bank_accounts(id, account_number, account_holder_name, bank:banks_nbfc(bank_name))')
       .eq('client_id', client.id)
       .order('packet_date', { ascending: false });
 
@@ -140,6 +153,25 @@ export default function GoldVault() {
       return;
     }
     setPackets(data || []);
+  };
+
+  const fetchLoyaltyBankAccounts = async (loyaltyId: string) => {
+    if (!client || !loyaltyId) {
+      setLoyaltyBankAccounts([]);
+      return;
+    }
+    
+    const { data, error } = await supabase
+      .from('loyalty_bank_accounts')
+      .select('id, account_number, account_holder_name, account_type, bank_id, bank:banks_nbfc(bank_name)')
+      .eq('client_id', client.id)
+      .eq('loyalty_id', loyaltyId)
+      .eq('is_active', true)
+      .order('is_primary', { ascending: false });
+
+    if (!error && data) {
+      setLoyaltyBankAccounts(data);
+    }
   };
 
   const fetchInVaultItems = async () => {
@@ -236,6 +268,8 @@ export default function GoldVault() {
     setSelectedLoans([]);
     setSelectedBankId('');
     setSelectedLoyaltyId('');
+    setSelectedCreditAccountId('');
+    setLoyaltyBankAccounts([]);
     setBankLoanAmount('');
     setBankInterestRate('');
     setBankReferenceNumber('');
@@ -244,6 +278,16 @@ export default function GoldVault() {
     setPacketImages([]);
     setBankReceiptImages([]);
     setRemarks('');
+  };
+
+  const handleLoyaltyChange = (loyaltyId: string) => {
+    setSelectedLoyaltyId(loyaltyId);
+    setSelectedCreditAccountId('');
+    if (loyaltyId) {
+      fetchLoyaltyBankAccounts(loyaltyId);
+    } else {
+      setLoyaltyBankAccounts([]);
+    }
   };
 
   const uploadImages = async (files: File[], folder: string, packetId: string): Promise<string[]> => {
@@ -304,6 +348,7 @@ export default function GoldVault() {
           branch_id: currentBranch.id,
           bank_id: selectedBankId,
           loyalty_id: selectedLoyaltyId || null,
+          credit_account_id: selectedCreditAccountId || null,
           packet_number: packetNumber,
           packet_date: new Date().toISOString().split('T')[0],
           total_loans: totals.loans,
@@ -637,7 +682,7 @@ export default function GoldVault() {
                 </div>
                 <div className="space-y-2">
                   <Label>Handled By (Employee)</Label>
-                  <Select value={selectedLoyaltyId} onValueChange={setSelectedLoyaltyId}>
+                  <Select value={selectedLoyaltyId} onValueChange={handleLoyaltyChange}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select employee" />
                     </SelectTrigger>
@@ -651,6 +696,34 @@ export default function GoldVault() {
                   </Select>
                 </div>
               </div>
+
+              {/* Credit Account Selection - shown only when loyalty is selected */}
+              {selectedLoyaltyId && (
+                <div className="space-y-2">
+                  <Label>Credit To Account {loyaltyBankAccounts.length > 0 && '*'}</Label>
+                  {loyaltyBankAccounts.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No bank accounts found for this employee
+                    </p>
+                  ) : (
+                    <Select value={selectedCreditAccountId} onValueChange={setSelectedCreditAccountId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select account for bank credit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {loyaltyBankAccounts.map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>
+                            {acc.bank?.bank_name} - A/C {acc.account_number} ({acc.account_type})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Bank credit will be deposited to this account
+                  </p>
+                </div>
+              )}
 
               {/* Loan Selection */}
               <div className="space-y-2">
