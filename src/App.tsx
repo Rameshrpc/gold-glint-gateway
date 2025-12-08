@@ -43,6 +43,12 @@ import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import PrintSetup from "./pages/PrintSetup";
 import NotFound from "./pages/NotFound";
 
+// Mobile Components
+import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
+import MobileDashboard from "./components/mobile/MobileDashboard";
+import MobileLoans from "./components/mobile/MobileLoans";
+import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -60,7 +66,10 @@ const App = () => (
             {/* Protected Routes */}
             <Route path="/dashboard" element={
               <ProtectedRoute>
-                <Dashboard />
+                <DeviceAwareWrapper 
+                  mobile={<MobileDashboard />} 
+                  desktop={<Dashboard />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/profile" element={
@@ -92,7 +101,17 @@ const App = () => (
             {/* Loans & Operations */}
             <Route path="/loans" element={
               <ProtectedRoute>
-                <Loans />
+                <DeviceAwareWrapper 
+                  mobile={<MobileLoans />} 
+                  desktop={<Loans />} 
+                />
+              </ProtectedRoute>
+            } />
+            
+            {/* Mobile More Menu */}
+            <Route path="/more" element={
+              <ProtectedRoute>
+                <MobileMoreMenu />
               </ProtectedRoute>
             } />
             <Route path="/schemes" element={
