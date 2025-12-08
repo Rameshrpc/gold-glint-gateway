@@ -161,12 +161,42 @@ export default function Loans() {
   const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
   const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
   
-  // Payment details - multiple payment entries
+  // Payment details - multiple payment entries with source account tracking
   const [paymentEntries, setPaymentEntries] = useState<Array<{
     mode: string;
     amount: string;
     reference: string;
-  }>>([{ mode: 'cash', amount: '', reference: '' }]);
+    sourceType: 'cash' | 'company' | 'employee';
+    sourceBankId: string;
+    sourceAccountId: string;
+    selectedLoyaltyId: string;
+  }>>([{ mode: 'cash', amount: '', reference: '', sourceType: 'cash', sourceBankId: '', sourceAccountId: '', selectedLoyaltyId: '' }]);
+
+  // Banks, Loyalties, and Loyalty Bank Accounts for source tracking
+  interface BankNBFC {
+    id: string;
+    bank_code: string;
+    bank_name: string;
+    account_number: string | null;
+    branch_name: string | null;
+  }
+  interface Loyalty {
+    id: string;
+    loyalty_code: string;
+    full_name: string;
+  }
+  interface LoyaltyBankAccount {
+    id: string;
+    loyalty_id: string;
+    bank_id: string;
+    account_number: string;
+    account_holder_name: string;
+    account_type: string | null;
+    bank?: { bank_name: string };
+  }
+  const [banksNbfc, setBanksNbfc] = useState<BankNBFC[]>([]);
+  const [loyalties, setLoyalties] = useState<Loyalty[]>([]);
+  const [loyaltyBankAccountsMap, setLoyaltyBankAccountsMap] = useState<Record<string, LoyaltyBankAccount[]>>({});
   
   // User-input document charges and approved loan amount
   const [userDocumentChargesPercent, setUserDocumentChargesPercent] = useState('');
@@ -225,6 +255,8 @@ export default function Loans() {
       fetchAgents();
       fetchItemGroups();
       fetchItems();
+      fetchBanksNbfc();
+      fetchLoyalties();
     }
   }, [client]);
 
@@ -319,6 +351,43 @@ export default function Loans() {
     setItems(data || []);
   };
 
+  const fetchBanksNbfc = async () => {
+    if (!client) return;
+    const { data } = await supabase
+      .from('banks_nbfc')
+      .select('id, bank_code, bank_name, account_number, branch_name')
+      .eq('client_id', client.id)
+      .eq('is_active', true)
+      .order('bank_name');
+    setBanksNbfc(data || []);
+  };
+
+  const fetchLoyalties = async () => {
+    if (!client) return;
+    const { data } = await supabase
+      .from('loyalties')
+      .select('id, loyalty_code, full_name')
+      .eq('client_id', client.id)
+      .eq('is_active', true)
+      .order('full_name');
+    setLoyalties(data || []);
+  };
+
+  const fetchLoyaltyBankAccounts = async (loyaltyId: string) => {
+    if (!client || !loyaltyId) return;
+    if (loyaltyBankAccountsMap[loyaltyId]) return; // Already fetched
+    
+    const { data } = await supabase
+      .from('loyalty_bank_accounts')
+      .select('id, loyalty_id, bank_id, account_number, account_holder_name, account_type, bank:banks_nbfc(bank_name)')
+      .eq('loyalty_id', loyaltyId)
+      .eq('is_active', true);
+    
+    if (data) {
+      setLoyaltyBankAccountsMap(prev => ({ ...prev, [loyaltyId]: data as LoyaltyBankAccount[] }));
+    }
+  };
+
   const resetForm = () => {
     setSelectedCustomerId('');
     setSelectedSchemeId('');
@@ -328,7 +397,7 @@ export default function Loans() {
     setTenureDays('');
     setJewelPhotoUrl(null);
     setAppraiserSheetUrl(null);
-    setPaymentEntries([{ mode: 'cash', amount: '', reference: '' }]);
+    setPaymentEntries([{ mode: 'cash', amount: '', reference: '', sourceType: 'cash', sourceBankId: '', sourceAccountId: '', selectedLoyaltyId: '' }]);
     setUserDocumentChargesPercent('');
     setApprovedLoanAmount('');
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
@@ -581,7 +650,7 @@ export default function Loans() {
 
       if (loanError) throw loanError;
 
-      // Insert multiple disbursement entries if more than one payment mode
+      // Insert multiple disbursement entries with source account tracking
       if (paymentEntries.length > 0) {
         const disbursementsData = paymentEntries
           .filter(entry => parseFloat(entry.amount) > 0)
@@ -590,6 +659,9 @@ export default function Loans() {
             payment_mode: entry.mode,
             amount: parseFloat(entry.amount),
             reference_number: entry.reference || null,
+            source_type: entry.sourceType,
+            source_bank_id: entry.sourceType === 'company' ? (entry.sourceBankId || null) : null,
+            source_account_id: entry.sourceType === 'employee' ? (entry.sourceAccountId || null) : null,
           }));
 
         if (disbursementsData.length > 0) {
@@ -1280,71 +1352,191 @@ export default function Loans() {
                   <div className="space-y-3">
                     <Label className="text-sm font-medium">Payment Breakup</Label>
                     {paymentEntries.map((entry, index) => (
-                      <div key={index} className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-3 border rounded-lg bg-background">
-                        <div className="md:col-span-3 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Payment Mode</Label>
-                          <Select 
-                            value={entry.mode} 
-                            onValueChange={(value) => {
-                              const updated = [...paymentEntries];
-                              updated[index].mode = value;
-                              setPaymentEntries(updated);
-                            }}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">Cash</SelectItem>
-                              <SelectItem value="upi">UPI</SelectItem>
-                              <SelectItem value="neft">NEFT</SelectItem>
-                              <SelectItem value="rtgs">RTGS</SelectItem>
-                              <SelectItem value="cheque">Cheque</SelectItem>
-                              <SelectItem value="card">Card</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="md:col-span-3 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Amount (₹)</Label>
-                          <Input
-                            type="number"
-                            value={entry.amount}
-                            onChange={(e) => {
-                              const updated = [...paymentEntries];
-                              updated[index].amount = e.target.value;
-                              setPaymentEntries(updated);
-                            }}
-                            placeholder="Enter amount"
-                          />
-                        </div>
-                        <div className="md:col-span-4 space-y-1">
-                          <Label className="text-xs text-muted-foreground">Reference Number</Label>
-                          <Input
-                            value={entry.reference}
-                            onChange={(e) => {
-                              const updated = [...paymentEntries];
-                              updated[index].reference = e.target.value;
-                              setPaymentEntries(updated);
-                            }}
-                            placeholder={entry.mode === 'cash' ? 'N/A for cash' : 'Transaction/Cheque number'}
-                            disabled={entry.mode === 'cash'}
-                          />
-                        </div>
-                        <div className="md:col-span-2 flex items-end">
-                          {paymentEntries.length > 1 && (
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                setPaymentEntries(paymentEntries.filter((_, i) => i !== index));
+                      <div key={index} className="space-y-3 p-3 border rounded-lg bg-background">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-xs text-muted-foreground">Payment Mode</Label>
+                            <Select 
+                              value={entry.mode} 
+                              onValueChange={(value) => {
+                                const updated = [...paymentEntries];
+                                updated[index].mode = value;
+                                // Auto-set source type based on mode
+                                if (value === 'cash') {
+                                  updated[index].sourceType = 'cash';
+                                  updated[index].sourceBankId = '';
+                                  updated[index].sourceAccountId = '';
+                                  updated[index].selectedLoyaltyId = '';
+                                } else if (!updated[index].sourceType || updated[index].sourceType === 'cash') {
+                                  updated[index].sourceType = 'company';
+                                }
+                                setPaymentEntries(updated);
                               }}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select mode" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">Cash</SelectItem>
+                                <SelectItem value="upi">UPI</SelectItem>
+                                <SelectItem value="neft">NEFT</SelectItem>
+                                <SelectItem value="rtgs">RTGS</SelectItem>
+                                <SelectItem value="cheque">Cheque</SelectItem>
+                                <SelectItem value="card">Card</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="md:col-span-2 space-y-1">
+                            <Label className="text-xs text-muted-foreground">Amount (₹)</Label>
+                            <Input
+                              type="number"
+                              value={entry.amount}
+                              onChange={(e) => {
+                                const updated = [...paymentEntries];
+                                updated[index].amount = e.target.value;
+                                setPaymentEntries(updated);
+                              }}
+                              placeholder="Enter amount"
+                            />
+                          </div>
+                          <div className="md:col-span-3 space-y-1">
+                            <Label className="text-xs text-muted-foreground">Reference Number</Label>
+                            <Input
+                              value={entry.reference}
+                              onChange={(e) => {
+                                const updated = [...paymentEntries];
+                                updated[index].reference = e.target.value;
+                                setPaymentEntries(updated);
+                              }}
+                              placeholder={entry.mode === 'cash' ? 'N/A for cash' : 'Transaction/Cheque number'}
+                              disabled={entry.mode === 'cash'}
+                            />
+                          </div>
+                          <div className="md:col-span-4">
+                            {/* Source Account - Only show for non-cash */}
+                            {entry.mode !== 'cash' && (
+                              <div className="space-y-1">
+                                <Label className="text-xs text-muted-foreground">Source Type</Label>
+                                <Select 
+                                  value={entry.sourceType} 
+                                  onValueChange={(value: 'company' | 'employee') => {
+                                    const updated = [...paymentEntries];
+                                    updated[index].sourceType = value;
+                                    updated[index].sourceBankId = '';
+                                    updated[index].sourceAccountId = '';
+                                    updated[index].selectedLoyaltyId = '';
+                                    setPaymentEntries(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select source" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="company">Company Account</SelectItem>
+                                    <SelectItem value="employee">Employee Account</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                          <div className="md:col-span-1 flex items-end justify-end">
+                            {paymentEntries.length > 1 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => {
+                                  setPaymentEntries(paymentEntries.filter((_, i) => i !== index));
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
+                        
+                        {/* Source Account Selection Row - Only for non-cash */}
+                        {entry.mode !== 'cash' && (
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end pl-2 border-l-2 border-amber-500/30">
+                            {entry.sourceType === 'company' && (
+                              <div className="md:col-span-6 space-y-1">
+                                <Label className="text-xs text-muted-foreground">Company Bank Account</Label>
+                                <Select 
+                                  value={entry.sourceBankId} 
+                                  onValueChange={(value) => {
+                                    const updated = [...paymentEntries];
+                                    updated[index].sourceBankId = value;
+                                    setPaymentEntries(updated);
+                                  }}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select company bank account" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {banksNbfc.map((bank) => (
+                                      <SelectItem key={bank.id} value={bank.id}>
+                                        {bank.bank_name} {bank.branch_name ? `- ${bank.branch_name}` : ''} {bank.account_number ? `(A/C ${bank.account_number})` : ''}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                            
+                            {entry.sourceType === 'employee' && (
+                              <>
+                                <div className="md:col-span-4 space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Employee</Label>
+                                  <Select 
+                                    value={entry.selectedLoyaltyId} 
+                                    onValueChange={(value) => {
+                                      const updated = [...paymentEntries];
+                                      updated[index].selectedLoyaltyId = value;
+                                      updated[index].sourceAccountId = '';
+                                      setPaymentEntries(updated);
+                                      fetchLoyaltyBankAccounts(value);
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select employee" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {loyalties.map((loyalty) => (
+                                        <SelectItem key={loyalty.id} value={loyalty.id}>
+                                          {loyalty.loyalty_code} - {loyalty.full_name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div className="md:col-span-5 space-y-1">
+                                  <Label className="text-xs text-muted-foreground">Employee Bank Account</Label>
+                                  <Select 
+                                    value={entry.sourceAccountId} 
+                                    onValueChange={(value) => {
+                                      const updated = [...paymentEntries];
+                                      updated[index].sourceAccountId = value;
+                                      setPaymentEntries(updated);
+                                    }}
+                                    disabled={!entry.selectedLoyaltyId}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder={entry.selectedLoyaltyId ? "Select account" : "Select employee first"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(loyaltyBankAccountsMap[entry.selectedLoyaltyId] || []).map((account) => (
+                                        <SelectItem key={account.id} value={account.id}>
+                                          {account.bank?.bank_name || 'Bank'} - A/C {account.account_number} ({account.account_type || 'Savings'})
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </div>
                     ))}
                     
@@ -1352,7 +1544,7 @@ export default function Loans() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => setPaymentEntries([...paymentEntries, { mode: 'cash', amount: '', reference: '' }])}
+                      onClick={() => setPaymentEntries([...paymentEntries, { mode: 'cash', amount: '', reference: '', sourceType: 'cash', sourceBankId: '', sourceAccountId: '', selectedLoyaltyId: '' }])}
                       className="w-full border-dashed"
                     >
                       <Plus className="h-4 w-4 mr-2" />

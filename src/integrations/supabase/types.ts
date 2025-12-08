@@ -856,6 +856,9 @@ export type Database = {
           loan_id: string
           payment_mode: string
           reference_number: string | null
+          source_account_id: string | null
+          source_bank_id: string | null
+          source_type: string | null
         }
         Insert: {
           amount: number
@@ -864,6 +867,9 @@ export type Database = {
           loan_id: string
           payment_mode: string
           reference_number?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
         }
         Update: {
           amount?: number
@@ -872,6 +878,9 @@ export type Database = {
           loan_id?: string
           payment_mode?: string
           reference_number?: string | null
+          source_account_id?: string | null
+          source_bank_id?: string | null
+          source_type?: string | null
         }
         Relationships: [
           {
@@ -879,6 +888,20 @@ export type Database = {
             columns: ["loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_disbursements_source_account_id_fkey"
+            columns: ["source_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_disbursements_source_bank_id_fkey"
+            columns: ["source_bank_id"]
+            isOneToOne: false
+            referencedRelation: "banks_nbfc"
             referencedColumns: ["id"]
           },
         ]
