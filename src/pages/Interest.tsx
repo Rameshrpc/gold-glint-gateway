@@ -30,6 +30,7 @@ import {
 } from '@/lib/interestCalculations';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
+import { generateInterestVoucher } from '@/hooks/useVoucherGeneration';
 
 interface LoanWithDetails {
   id: string;
@@ -354,6 +355,19 @@ export default function Interest() {
         .eq('id', selectedLoan.id);
 
       if (loanError) throw loanError;
+
+      // Generate accounting voucher
+      await generateInterestVoucher({
+        clientId: client.id,
+        branchId: selectedLoan.branch_id,
+        paymentId: paymentResult.id,
+        loanNumber: selectedLoan.loan_number,
+        amountPaid: amount,
+        interestAmount: paymentAllocation.interestPaid,
+        penaltyAmount: paymentAllocation.penalty,
+        principalReduction: paymentAllocation.totalPrincipalReduction,
+        paymentMode: paymentMode,
+      });
 
       toast.success(`Payment collected. Receipt: ${receiptNumber}`);
       
