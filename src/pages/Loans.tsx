@@ -25,7 +25,7 @@ import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { LoanDisbursementPDF } from '@/components/receipts/LoanDisbursementPDF';
-import { generateLoanDisbursementVoucher } from '@/hooks/useVoucherGeneration';
+import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
   id: string;
@@ -726,6 +726,20 @@ export default function Loans() {
             .from('agents')
             .update({ total_commission_earned: newTotalCommission })
             .eq('id', selectedAgentId);
+
+          // Generate agent commission accrual voucher
+          const commissionVoucherResult = await generateAgentCommissionAccrualVoucher({
+            clientId: client.id,
+            branchId: selectedBranchId,
+            loanId: loanResult.id,
+            loanNumber: loanResult.loan_number,
+            commissionAmount,
+            agentName: selectedAgent.full_name,
+          });
+
+          if (!commissionVoucherResult.success && commissionVoucherResult.error) {
+            console.warn('Commission accrual voucher failed:', commissionVoucherResult.error);
+          }
         }
       }
 

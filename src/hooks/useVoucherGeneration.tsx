@@ -747,3 +747,41 @@ export async function generateRepledgeRedemptionVoucher(params: {
     entries,
   });
 }
+
+// Helper function to generate agent commission accrual voucher (when loan is created with agent)
+export async function generateAgentCommissionAccrualVoucher(params: {
+  clientId: string;
+  branchId: string;
+  loanId: string;
+  loanNumber: string;
+  commissionAmount: number;
+  agentName: string;
+}): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // Debit: Agent Commission Expense
+  entries.push({
+    accountCode: 'AGENT-COMM-EXP',
+    debitAmount: params.commissionAmount,
+    creditAmount: 0,
+    narration: `Commission accrued for ${params.agentName}`,
+  });
+
+  // Credit: Agent Commission Payable (liability until paid)
+  entries.push({
+    accountCode: 'AGENT-COMM-PAY',
+    debitAmount: 0,
+    creditAmount: params.commissionAmount,
+    narration: `Commission payable to ${params.agentName}`,
+  });
+
+  return generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'agent_commission_accrual',
+    referenceType: 'loan',
+    referenceId: params.loanId,
+    narration: `Agent commission accrual for loan ${params.loanNumber}`,
+    entries,
+  });
+}

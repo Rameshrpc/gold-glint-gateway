@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,10 +12,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, ChevronRight, FolderOpen, FileText, RefreshCw, Building2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Plus, ChevronRight, FolderOpen, FileText, RefreshCw, Building2, CheckCircle2, XCircle, AlertTriangle, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-
 interface AccountGroup {
   id: string;
   client_id: string;
@@ -55,13 +56,15 @@ const groupTypeColors: Record<string, string> = {
 
 export default function ChartOfAccounts() {
   const { profile, client } = useAuth();
+  const navigate = useNavigate();
   const [accountGroups, setAccountGroups] = useState<AccountGroup[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [openGroups, setOpenGroups] = useState<string[]>([]);
   const [isAccountDialogOpen, setIsAccountDialogOpen] = useState(false);
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
-
+  const [balanceCheck, setBalanceCheck] = useState<{ totalDebit: number; totalCredit: number; isBalanced: boolean } | null>(null);
+  const [voucherCount, setVoucherCount] = useState<{ total: number; pending: number } | null>(null);
   // New account form
   const [newAccount, setNewAccount] = useState({
     account_code: '',
@@ -82,8 +85,77 @@ export default function ChartOfAccounts() {
   useEffect(() => {
     if (profile?.client_id) {
       fetchData();
+      fetchBalanceCheck();
+      fetchVoucherStatus();
     }
   }, [profile?.client_id]);
+
+  const fetchBalanceCheck = async () => {
+    if (!profile?.client_id) return;
+    try {
+      // Get all voucher entries to calculate total debits and credits
+      const { data: entries } = await supabase
+        .from('voucher_entries')
+        .select('debit_amount, credit_amount, voucher:vouchers!inner(client_id)')
+        .eq('voucher.client_id', profile.client_id);
+
+      // Also get opening balances from accounts
+      const { data: accountsData } = await supabase
+        .from('accounts')
+        .select('account_type, opening_balance, current_balance')
+        .eq('client_id', profile.client_id);
+
+      let totalDebit = 0;
+      let totalCredit = 0;
+
+      // Add opening balances
+      (accountsData || []).forEach(acc => {
+        const isDebitNature = ['asset', 'expense'].includes(acc.account_type);
+        if (isDebitNature && acc.opening_balance > 0) {
+          totalDebit += acc.opening_balance;
+        } else if (!isDebitNature && acc.opening_balance > 0) {
+          totalCredit += acc.opening_balance;
+        }
+      });
+
+      // Add voucher entries
+      (entries || []).forEach(entry => {
+        totalDebit += entry.debit_amount || 0;
+        totalCredit += entry.credit_amount || 0;
+      });
+
+      const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
+      setBalanceCheck({ totalDebit, totalCredit, isBalanced });
+    } catch (error) {
+      console.error('Failed to fetch balance check:', error);
+    }
+  };
+
+  const fetchVoucherStatus = async () => {
+    if (!profile?.client_id) return;
+    try {
+      // Count total transactions
+      const [loansCount, interestCount, redemptionsCount, auctionsCount] = await Promise.all([
+        supabase.from('loans').select('id', { count: 'exact', head: true }).eq('client_id', profile.client_id),
+        supabase.from('interest_payments').select('id', { count: 'exact', head: true }).eq('client_id', profile.client_id),
+        supabase.from('redemptions').select('id', { count: 'exact', head: true }).eq('client_id', profile.client_id),
+        supabase.from('auctions').select('id', { count: 'exact', head: true }).eq('client_id', profile.client_id).eq('status', 'sold'),
+      ]);
+
+      const totalTransactions = (loansCount.count || 0) + (interestCount.count || 0) + (redemptionsCount.count || 0) + (auctionsCount.count || 0);
+
+      // Count vouchers
+      const { count: voucherTotal } = await supabase
+        .from('vouchers')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', profile.client_id);
+
+      const pending = Math.max(0, totalTransactions - (voucherTotal || 0));
+      setVoucherCount({ total: voucherTotal || 0, pending });
+    } catch (error) {
+      console.error('Failed to fetch voucher status:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -303,7 +375,7 @@ export default function ChartOfAccounts() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={fetchData} disabled={loading}>
+            <Button variant="outline" onClick={() => { fetchData(); fetchBalanceCheck(); fetchVoucherStatus(); }} disabled={loading}>
               <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
               Refresh
             </Button>
@@ -454,6 +526,66 @@ export default function ChartOfAccounts() {
             </Dialog>
           </div>
         </div>
+
+        {/* Balance Verification Panel */}
+        {balanceCheck && (
+          <Alert className={cn(
+            'border-2',
+            balanceCheck.isBalanced 
+              ? 'border-green-500/50 bg-green-50/50 dark:bg-green-950/20' 
+              : 'border-red-500/50 bg-red-50/50 dark:bg-red-950/20'
+          )}>
+            {balanceCheck.isBalanced ? (
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+            ) : (
+              <XCircle className="h-4 w-4 text-red-600" />
+            )}
+            <AlertTitle className="flex items-center gap-2">
+              {balanceCheck.isBalanced ? 'Books Balanced' : 'Books Not Balanced'}
+            </AlertTitle>
+            <AlertDescription>
+              <div className="flex flex-wrap items-center gap-4 mt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Total Debits:</span>
+                  <span className="font-semibold text-green-600">{formatCurrency(balanceCheck.totalDebit)}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Total Credits:</span>
+                  <span className="font-semibold text-blue-600">{formatCurrency(balanceCheck.totalCredit)}</span>
+                </div>
+                {!balanceCheck.isBalanced && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Difference:</span>
+                    <span className="font-semibold text-red-600">{formatCurrency(Math.abs(balanceCheck.totalDebit - balanceCheck.totalCredit))}</span>
+                  </div>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Voucher Status Panel */}
+        {voucherCount && voucherCount.pending > 0 && (
+          <Alert className="border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle>Missing Vouchers Detected</AlertTitle>
+            <AlertDescription>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-sm">
+                  {voucherCount.pending} transactions are missing accounting vouchers
+                </span>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => navigate('/backfill-vouchers')}
+                >
+                  Backfill Vouchers <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">

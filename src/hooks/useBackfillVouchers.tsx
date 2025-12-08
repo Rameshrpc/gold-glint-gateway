@@ -162,6 +162,38 @@ export function useBackfillVouchers() {
         if (!result.success && result.voucherNumber !== 'SKIPPED') {
           errors.push(`Loan ${loan.loan_number}: ${result.error}`);
         }
+
+        // If loan has an agent, generate commission accrual voucher
+        if (loan.agent_id) {
+          // Get agent details
+          const { data: agent } = await supabase
+            .from('agents')
+            .select('full_name, commission_percentage')
+            .eq('id', loan.agent_id)
+            .single();
+
+          if (agent && agent.commission_percentage > 0) {
+            const commissionAmount = (loan.principal_amount * agent.commission_percentage) / 100;
+            
+            const commissionResult = await generateVoucher({
+              clientId,
+              branchId: loan.branch_id,
+              voucherType: 'agent_commission_accrual',
+              referenceType: 'agent_commission_accrual',
+              referenceId: loan.id,
+              narration: `Agent commission accrual - ${loan.loan_number}`,
+              entries: [
+                { accountCode: 'AGENT-COMM-EXP', debitAmount: commissionAmount, creditAmount: 0, narration: `Commission for ${agent.full_name}` },
+                { accountCode: 'AGENT-COMM-PAY', debitAmount: 0, creditAmount: commissionAmount, narration: `Payable to ${agent.full_name}` },
+              ],
+            });
+
+            if (!commissionResult.success && commissionResult.voucherNumber !== 'SKIPPED') {
+              errors.push(`Agent commission for ${loan.loan_number}: ${commissionResult.error}`);
+            }
+          }
+        }
+
         completed++;
         setProgress(prev => ({ ...prev, completed, errors }));
       }
