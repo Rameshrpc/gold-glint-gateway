@@ -162,13 +162,15 @@ export function PDFViewerDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pdf">PDF Mode (English only)</SelectItem>
+                  <SelectItem value="pdf" disabled={isBilingualTemplate}>
+                    PDF Mode (English only)
+                  </SelectItem>
                   <SelectItem value="html">HTML Mode (Tamil/Bilingual)</SelectItem>
                 </SelectContent>
               </Select>
-              {isBilingualTemplate && printMode === 'pdf' && (
+              {isBilingualTemplate && (
                 <p className="text-xs text-amber-600">
-                  ⚠️ Tamil fonts may not render correctly in PDF mode. Use HTML mode for bilingual receipts.
+                  ⚠️ Bilingual templates require HTML mode for proper Tamil font rendering.
                 </p>
               )}
             </div>

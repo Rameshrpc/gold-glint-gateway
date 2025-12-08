@@ -5,7 +5,7 @@ import '@/lib/fonts';
 
 const styles = StyleSheet.create({
   section: {
-    fontFamily: 'Catamaran',
+    fontFamily: 'Helvetica',
     padding: 20,
   },
   header: {

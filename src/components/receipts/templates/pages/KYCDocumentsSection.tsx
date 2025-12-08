@@ -9,7 +9,7 @@ const CARD_HEIGHT = 126;
 
 const styles = StyleSheet.create({
   section: {
-    fontFamily: 'Catamaran',
+    fontFamily: 'Helvetica',
     padding: 20,
   },
   title: {
