@@ -28,6 +28,8 @@ import Auction from "./pages/Auction";
 import BanksNbfc from "./pages/BanksNbfc";
 import Loyalties from "./pages/Loyalties";
 import GoldVault from "./pages/GoldVault";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
+import AgentCommissions from "./pages/AgentCommissions";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -147,7 +149,12 @@ const App = () => (
             } />
             <Route path="/accounts" element={
               <ProtectedRoute>
-                <PlaceholderPage title="Accounts" description="Manage financial accounts and ledgers" />
+                <ChartOfAccounts />
+              </ProtectedRoute>
+            } />
+            <Route path="/agent-commissions" element={
+              <ProtectedRoute>
+                <AgentCommissions />
               </ProtectedRoute>
             } />
             <Route path="/notifications" element={
