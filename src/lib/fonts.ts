@@ -15,16 +15,16 @@ Font.register({
   ],
 });
 
-// Register Tamil fonts (Noto Sans Tamil from Google Fonts)
+// Register Catamaran font (supports both English and Tamil)
 Font.register({
-  family: 'NotoSansTamil',
+  family: 'Catamaran',
   fonts: [
     { 
-      src: 'https://fonts.gstatic.com/s/notosanstamil/v27/ieVc2YdFI3GCY6SyQy1KfStzYKZgzN1z4LKDbeZce-0429tBManUktuex7vGor0R.ttf', 
+      src: 'https://cdn.jsdelivr.net/gh/AravindIM/Catamaran@2.0/fonts/Catamaran-Regular.ttf', 
       fontWeight: 400 
     },
     { 
-      src: 'https://fonts.gstatic.com/s/notosanstamil/v27/ieVc2YdFI3GCY6SyQy1KfStzYKZgzN1z4LKDbeZce-0429tBManUktuex7u9p70R.ttf', 
+      src: 'https://cdn.jsdelivr.net/gh/AravindIM/Catamaran@2.0/fonts/Catamaran-Bold.ttf', 
       fontWeight: 700 
     },
   ],
@@ -32,7 +32,8 @@ Font.register({
 
 export const fontFamilies = {
   english: 'Roboto',
-  tamil: 'NotoSansTamil',
+  tamil: 'Catamaran',
+  bilingual: 'Catamaran',
 };
 
 export const getPaperSize = (size: string) => {
