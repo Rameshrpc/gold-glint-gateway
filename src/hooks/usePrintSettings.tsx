@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface PrintSettings {
   id: string;
@@ -20,7 +21,7 @@ export interface PrintSettings {
   show_signature_section: boolean;
   show_terms: boolean;
   custom_terms: string | null;
-  margins: unknown;
+  margins: Json | null;
   font_size: number;
   copies: number;
 }
@@ -79,11 +80,32 @@ export function useSavePrintSettings() {
         .eq('receipt_type', settings.receipt_type)
         .single();
 
+      // Build the update/insert payload with proper types
+      const payload = {
+        receipt_type: settings.receipt_type,
+        template_id: settings.template_id,
+        logo_url: settings.logo_url,
+        watermark_type: settings.watermark_type,
+        watermark_text: settings.watermark_text,
+        watermark_image_url: settings.watermark_image_url,
+        watermark_opacity: settings.watermark_opacity,
+        header_text: settings.header_text,
+        footer_text: settings.footer_text,
+        show_logo: settings.show_logo,
+        show_declaration: settings.show_declaration,
+        show_signature_section: settings.show_signature_section,
+        show_terms: settings.show_terms,
+        custom_terms: settings.custom_terms,
+        margins: settings.margins as Json,
+        font_size: settings.font_size,
+        copies: settings.copies,
+      };
+
       if (existing) {
         const { error } = await supabase
           .from('client_print_settings')
           .update({
-            ...settings,
+            ...payload,
             updated_at: new Date().toISOString(),
           })
           .eq('id', existing.id);
@@ -92,7 +114,7 @@ export function useSavePrintSettings() {
         const { error } = await supabase
           .from('client_print_settings')
           .insert({
-            ...settings,
+            ...payload,
             client_id: profile.client_id,
           });
         if (error) throw error;
