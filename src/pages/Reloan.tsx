@@ -31,6 +31,7 @@ import { ReloanReceiptPDF } from '@/components/receipts/ReloanReceiptPDF';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
+import { generateReloanVoucher } from '@/hooks/useVoucherGeneration';
 
 interface LoanWithDetails {
   id: string;
@@ -611,6 +612,34 @@ export default function Reloan() {
           source_bank_id: sourceData.source_bank_id,
           source_account_id: sourceData.source_account_id,
         });
+
+      // Generate accounting voucher for reloan
+      const voucherResult = await generateReloanVoucher({
+        clientId: client.id,
+        branchId: currentBranch?.id || selectedLoan.branch_id,
+        oldLoanId: selectedLoan.id,
+        oldLoanNumber: selectedLoan.loan_number,
+        newLoanId: newLoanResult.id,
+        newLoanNumber: newLoanNumber,
+        oldPrincipal: oldLoanCalc.breakdown.principal,
+        oldInterest: oldLoanCalc.breakdown.interest,
+        oldPenalty: oldLoanCalc.breakdown.penalty,
+        oldRebate: oldLoanCalc.breakdown.rebate,
+        oldTotalSettlement: oldLoanCalc.breakdown.total,
+        newPrincipal: newLoanCalc.finalApprovedAmount,
+        newNetDisbursed: newLoanCalc.netCashToCustomer,
+        newProcessingFee: newLoanCalc.processingFee,
+        newDocumentCharges: newLoanCalc.documentCharges,
+        newAdvanceInterestShown: newLoanCalc.advanceCalc.shownInterest,
+        newAdvanceInterestActual: newLoanCalc.advanceCalc.actualInterest,
+        netAmount: netSettlement.netAmount,
+        direction: netSettlement.direction,
+        paymentMode: paymentMode,
+      });
+
+      if (!voucherResult.success && voucherResult.error) {
+        console.warn('Voucher generation failed:', voucherResult.error);
+      }
 
       toast.success(`Reloan processed: ${selectedLoan.loan_number} → ${newLoanNumber}`);
 
