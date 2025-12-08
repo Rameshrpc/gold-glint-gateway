@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { differenceInDays, parseISO, format } from 'date-fns';
+import { generateRepledgeCreditVoucher, generateRepledgeRedemptionVoucher } from '@/hooks/useVoucherGeneration';
 
 interface RepledgePacket {
   id: string;
@@ -467,6 +468,23 @@ export default function GoldVault() {
 
       if (itemsError) throw itemsError;
 
+      // Generate accounting voucher for repledge credit (if bank loan amount is provided)
+      if (bankLoanAmount && parseFloat(bankLoanAmount) > 0) {
+        const selectedBank = banks.find(b => b.id === selectedBankId);
+        const voucherResult = await generateRepledgeCreditVoucher({
+          clientId: client.id,
+          branchId: currentBranch.id,
+          packetId: packet.id,
+          packetNumber: packetNumber,
+          bankLoanAmount: parseFloat(bankLoanAmount),
+          bankName: selectedBank?.bank_name || 'Bank',
+        });
+
+        if (!voucherResult.success && voucherResult.error) {
+          console.warn('Voucher generation failed:', voucherResult.error);
+        }
+      }
+
       toast.success('Repledge packet created successfully');
       setCreateDialogOpen(false);
       resetCreateForm();
@@ -563,6 +581,23 @@ export default function GoldVault() {
         .eq('packet_id', packetToRedeem.id);
 
       if (itemsError) throw itemsError;
+
+      // Generate accounting voucher for repledge redemption
+      const voucherResult = await generateRepledgeRedemptionVoucher({
+        clientId: client.id,
+        branchId: currentBranch.id,
+        redemptionId: redemptionNumber,
+        packetNumber: packetToRedeem.packet_number,
+        principalPaid: principalOutstanding,
+        interestPaid: interestDue,
+        penaltyPaid: penalty,
+        totalSettlement: totalSettlement,
+        bankName: packetToRedeem.bank?.bank_name || 'Bank',
+      });
+
+      if (!voucherResult.success && voucherResult.error) {
+        console.warn('Voucher generation failed:', voucherResult.error);
+      }
 
       toast.success(`Packet ${packetToRedeem.packet_number} redeemed successfully. Loans are now available for customer redemption/auction.`);
       setRedeemDialogOpen(false);

@@ -21,7 +21,7 @@ interface AccountMap {
   [accountCode: string]: string; // accountCode -> accountId
 }
 
-export async function generateVoucher(params: VoucherParams): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+export async function generateVoucher(params: VoucherParams): Promise<{ success: boolean; voucherNumber?: string; voucherId?: string; error?: string }> {
   try {
     // Get account IDs for the entries
     const accountCodes = params.entries.map(e => e.accountCode);
@@ -116,11 +116,62 @@ export async function generateVoucher(params: VoucherParams): Promise<{ success:
       }
     }
 
-    return { success: true, voucherNumber };
+    return { success: true, voucherNumber, voucherId: voucher.id };
   } catch (error: any) {
     console.error('Voucher generation failed:', error);
     return { success: false, error: error.message };
   }
+}
+
+// Helper function to get or create bank account
+export async function getOrCreateBankAccount(clientId: string, bankId: string, bankName: string, bankCode: string): Promise<string | null> {
+  const accountCode = `BANK-${bankCode}`;
+  
+  // Check if account exists
+  const { data: existingAccount } = await supabase
+    .from('accounts')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('account_code', accountCode)
+    .single();
+
+  if (existingAccount) {
+    return existingAccount.id;
+  }
+
+  // Get Cash & Bank group
+  const { data: cashBankGroup } = await supabase
+    .from('account_groups')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('group_code', 'CASH_BANK')
+    .single();
+
+  if (!cashBankGroup) return null;
+
+  // Create bank account
+  const { data: newAccount, error } = await supabase
+    .from('accounts')
+    .insert({
+      client_id: clientId,
+      account_group_id: cashBankGroup.id,
+      account_code: accountCode,
+      account_name: `${bankName} A/C`,
+      account_type: 'asset',
+      is_bank_account: true,
+      is_system_account: false,
+      linked_bank_id: bankId,
+      description: `Bank account for ${bankName}`,
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('Failed to create bank account:', error);
+    return null;
+  }
+
+  return newAccount?.id || null;
 }
 
 // Helper function to generate interest collection voucher
@@ -139,7 +190,7 @@ export async function generateInterestVoucher(params: {
   
   // Debit: Cash/Bank (amount received)
   entries.push({
-    accountCode: 'CASH-001', // Or bank account based on payment mode
+    accountCode: 'CASH-001',
     debitAmount: params.amountPaid,
     creditAmount: 0,
     narration: `Interest received for ${params.loanNumber}`,
@@ -318,9 +369,6 @@ export async function generateAuctionVoucher(params: {
     });
   }
 
-  // Note: Shortfall is a loss but we don't create an expense entry here
-  // It would require a separate bad debt write-off process
-
   return generateVoucher({
     clientId: params.clientId,
     branchId: params.branchId,
@@ -353,13 +401,13 @@ export async function generateAgentCommissionVoucher(params: {
 
   // Credit: Cash/Bank (payment made)
   entries.push({
-    accountCode: 'CASH-001', // Or bank account based on payment mode
+    accountCode: 'CASH-001',
     debitAmount: 0,
     creditAmount: params.totalAmount,
     narration: `Commission paid - ${params.paymentMode}`,
   });
 
-  const result = await generateVoucher({
+  return generateVoucher({
     clientId: params.clientId,
     branchId: params.branchId,
     voucherType: 'agent_commission',
@@ -368,17 +416,334 @@ export async function generateAgentCommissionVoucher(params: {
     narration: `Agent commission payment to ${params.agentName}`,
     entries,
   });
+}
 
-  // Get voucher ID for linking
-  if (result.success && result.voucherNumber && result.voucherNumber !== 'SKIPPED') {
-    const { data: voucher } = await supabase
-      .from('vouchers')
-      .select('id')
-      .eq('voucher_number', result.voucherNumber)
-      .single();
-    
-    return { ...result, voucherId: voucher?.id };
+// Helper function to generate loan disbursement voucher
+export async function generateLoanDisbursementVoucher(params: {
+  clientId: string;
+  branchId: string;
+  loanId: string;
+  loanNumber: string;
+  principalAmount: number;
+  netDisbursed: number;
+  processingFee: number;
+  documentCharges: number;
+  advanceInterestShown: number;
+  advanceInterestActual: number;
+  paymentMode: string;
+}): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // Debit: Loan Principal Receivable (full principal)
+  entries.push({
+    accountCode: 'LOAN-RECV',
+    debitAmount: params.principalAmount,
+    creditAmount: 0,
+    narration: `Loan principal for ${params.loanNumber}`,
+  });
+
+  // Credit: Cash/Bank (net amount disbursed)
+  entries.push({
+    accountCode: 'CASH-001',
+    debitAmount: 0,
+    creditAmount: params.netDisbursed,
+    narration: `Net disbursement - ${params.paymentMode}`,
+  });
+
+  // Credit: Processing Fee Income
+  if (params.processingFee > 0) {
+    entries.push({
+      accountCode: 'PROC-FEE-INC',
+      debitAmount: 0,
+      creditAmount: params.processingFee,
+      narration: 'Processing fee',
+    });
   }
 
-  return result;
+  // Credit: Document Charges Income
+  if (params.documentCharges > 0) {
+    entries.push({
+      accountCode: 'DOC-CHARGE-INC',
+      debitAmount: 0,
+      creditAmount: params.documentCharges,
+      narration: 'Document charges',
+    });
+  }
+
+  // Credit: Advance Interest (Shown Rate) - liability
+  if (params.advanceInterestShown > 0) {
+    entries.push({
+      accountCode: 'ADV-INT-SHOWN',
+      debitAmount: 0,
+      creditAmount: params.advanceInterestShown,
+      narration: 'Advance interest collected (shown rate)',
+    });
+  }
+
+  // Credit: Advance Interest (Differential) - liability for the difference
+  const differential = params.advanceInterestActual - params.advanceInterestShown;
+  if (differential > 0) {
+    entries.push({
+      accountCode: 'ADV-INT-DIFF',
+      debitAmount: 0,
+      creditAmount: differential,
+      narration: 'Advance interest differential',
+    });
+  }
+
+  return generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'loan_disbursement',
+    referenceType: 'loan',
+    referenceId: params.loanId,
+    narration: `Loan disbursement - ${params.loanNumber}`,
+    entries,
+  });
+}
+
+// Helper function to generate reloan voucher (compound entry: old redemption + new disbursement)
+export async function generateReloanVoucher(params: {
+  clientId: string;
+  branchId: string;
+  oldLoanId: string;
+  oldLoanNumber: string;
+  newLoanId: string;
+  newLoanNumber: string;
+  // Old loan settlement
+  oldPrincipal: number;
+  oldInterest: number;
+  oldPenalty: number;
+  oldRebate: number;
+  oldTotalSettlement: number;
+  // New loan disbursement
+  newPrincipal: number;
+  newNetDisbursed: number;
+  newProcessingFee: number;
+  newDocumentCharges: number;
+  newAdvanceInterestShown: number;
+  newAdvanceInterestActual: number;
+  // Net settlement
+  netAmount: number;
+  direction: 'to_customer' | 'from_customer';
+  paymentMode: string;
+}): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // --- OLD LOAN SETTLEMENT ---
+  // Credit: Old Loan Receivable (principal cleared)
+  entries.push({
+    accountCode: 'LOAN-RECV',
+    debitAmount: 0,
+    creditAmount: params.oldPrincipal,
+    narration: `Old loan principal cleared - ${params.oldLoanNumber}`,
+  });
+
+  // Credit: Interest Income (from old loan)
+  if (params.oldInterest > 0) {
+    entries.push({
+      accountCode: 'INT-INC-SHOWN',
+      debitAmount: 0,
+      creditAmount: params.oldInterest,
+      narration: `Interest from old loan - ${params.oldLoanNumber}`,
+    });
+  }
+
+  // Credit: Penalty Income (from old loan)
+  if (params.oldPenalty > 0) {
+    entries.push({
+      accountCode: 'PENALTY-INC',
+      debitAmount: 0,
+      creditAmount: params.oldPenalty,
+      narration: `Penalty from old loan - ${params.oldLoanNumber}`,
+    });
+  }
+
+  // Debit: Rebate Expense (if any)
+  if (params.oldRebate > 0) {
+    entries.push({
+      accountCode: 'REBATE-EXP',
+      debitAmount: params.oldRebate,
+      creditAmount: 0,
+      narration: `Rebate on old loan - ${params.oldLoanNumber}`,
+    });
+  }
+
+  // --- NEW LOAN DISBURSEMENT ---
+  // Debit: New Loan Receivable (principal)
+  entries.push({
+    accountCode: 'LOAN-RECV',
+    debitAmount: params.newPrincipal,
+    creditAmount: 0,
+    narration: `New loan principal - ${params.newLoanNumber}`,
+  });
+
+  // Credit: Processing Fee Income
+  if (params.newProcessingFee > 0) {
+    entries.push({
+      accountCode: 'PROC-FEE-INC',
+      debitAmount: 0,
+      creditAmount: params.newProcessingFee,
+      narration: 'Processing fee on new loan',
+    });
+  }
+
+  // Credit: Document Charges Income
+  if (params.newDocumentCharges > 0) {
+    entries.push({
+      accountCode: 'DOC-CHARGE-INC',
+      debitAmount: 0,
+      creditAmount: params.newDocumentCharges,
+      narration: 'Document charges on new loan',
+    });
+  }
+
+  // Credit: Advance Interest (Shown Rate)
+  if (params.newAdvanceInterestShown > 0) {
+    entries.push({
+      accountCode: 'ADV-INT-SHOWN',
+      debitAmount: 0,
+      creditAmount: params.newAdvanceInterestShown,
+      narration: 'Advance interest on new loan',
+    });
+  }
+
+  // Credit: Advance Interest Differential
+  const differential = params.newAdvanceInterestActual - params.newAdvanceInterestShown;
+  if (differential > 0) {
+    entries.push({
+      accountCode: 'ADV-INT-DIFF',
+      debitAmount: 0,
+      creditAmount: differential,
+      narration: 'Advance interest differential on new loan',
+    });
+  }
+
+  // --- NET SETTLEMENT ---
+  if (params.direction === 'to_customer') {
+    // We pay customer: Credit Cash
+    entries.push({
+      accountCode: 'CASH-001',
+      debitAmount: 0,
+      creditAmount: params.netAmount,
+      narration: `Net payment to customer - ${params.paymentMode}`,
+    });
+  } else {
+    // Customer pays us: Debit Cash
+    entries.push({
+      accountCode: 'CASH-001',
+      debitAmount: params.netAmount,
+      creditAmount: 0,
+      narration: `Net received from customer - ${params.paymentMode}`,
+    });
+  }
+
+  return generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'reloan',
+    referenceType: 'reloan',
+    referenceId: `${params.oldLoanId}:${params.newLoanId}`,
+    narration: `Reloan: ${params.oldLoanNumber} → ${params.newLoanNumber}`,
+    entries,
+  });
+}
+
+// Helper function to generate repledge credit voucher (bank loan received)
+export async function generateRepledgeCreditVoucher(params: {
+  clientId: string;
+  branchId: string;
+  packetId: string;
+  packetNumber: string;
+  bankLoanAmount: number;
+  bankName: string;
+}): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // Debit: Cash/Bank (loan received from bank)
+  entries.push({
+    accountCode: 'CASH-001',
+    debitAmount: params.bankLoanAmount,
+    creditAmount: 0,
+    narration: `Repledge credit from ${params.bankName}`,
+  });
+
+  // Credit: Bank Loan Payable (liability)
+  entries.push({
+    accountCode: 'BANK-LOAN-PAY',
+    debitAmount: 0,
+    creditAmount: params.bankLoanAmount,
+    narration: `Bank loan for packet ${params.packetNumber}`,
+  });
+
+  return generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'repledge_credit',
+    referenceType: 'repledge_packet',
+    referenceId: params.packetId,
+    narration: `Repledge credit received - ${params.packetNumber}`,
+    entries,
+  });
+}
+
+// Helper function to generate repledge redemption voucher (paying back bank)
+export async function generateRepledgeRedemptionVoucher(params: {
+  clientId: string;
+  branchId: string;
+  redemptionId: string;
+  packetNumber: string;
+  principalPaid: number;
+  interestPaid: number;
+  penaltyPaid: number;
+  totalSettlement: number;
+  bankName: string;
+}): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // Debit: Bank Loan Payable (clear the liability)
+  entries.push({
+    accountCode: 'BANK-LOAN-PAY',
+    debitAmount: params.principalPaid,
+    creditAmount: 0,
+    narration: `Bank loan principal paid - ${params.packetNumber}`,
+  });
+
+  // Debit: Bank Interest Expense
+  if (params.interestPaid > 0) {
+    entries.push({
+      accountCode: 'BANK-INT-EXP',
+      debitAmount: params.interestPaid,
+      creditAmount: 0,
+      narration: `Bank interest paid - ${params.packetNumber}`,
+    });
+  }
+
+  // Debit: Bank Interest Expense (penalty as additional interest cost)
+  if (params.penaltyPaid > 0) {
+    entries.push({
+      accountCode: 'BANK-INT-EXP',
+      debitAmount: params.penaltyPaid,
+      creditAmount: 0,
+      narration: `Bank penalty paid - ${params.packetNumber}`,
+    });
+  }
+
+  // Credit: Cash/Bank (payment made)
+  entries.push({
+    accountCode: 'CASH-001',
+    debitAmount: 0,
+    creditAmount: params.totalSettlement,
+    narration: `Payment to ${params.bankName}`,
+  });
+
+  return generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'repledge_redemption',
+    referenceType: 'repledge_redemption',
+    referenceId: params.redemptionId,
+    narration: `Repledge redemption - ${params.packetNumber}`,
+    entries,
+  });
 }

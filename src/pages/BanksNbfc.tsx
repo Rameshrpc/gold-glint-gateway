@@ -13,6 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Plus, Building2, Search, Edit, Trash2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { getOrCreateBankAccount } from '@/hooks/useVoucherGeneration';
 import { toast } from 'sonner';
 
 interface BankNbfc {
@@ -161,10 +162,23 @@ export default function BanksNbfc() {
         if (error) throw error;
         toast.success('Bank/NBFC updated successfully');
       } else {
-        const { error } = await supabase
+        const { data: newBank, error } = await supabase
           .from('banks_nbfc')
-          .insert(data);
+          .insert(data)
+          .select()
+          .single();
         if (error) throw error;
+
+        // Auto-create ledger account for this bank
+        if (newBank && client) {
+          await getOrCreateBankAccount(
+            client.id,
+            newBank.id,
+            newBank.bank_name,
+            newBank.bank_code
+          );
+        }
+
         toast.success('Bank/NBFC created successfully');
       }
 

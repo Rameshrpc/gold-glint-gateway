@@ -25,6 +25,7 @@ import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { LoanDisbursementPDF } from '@/components/receipts/LoanDisbursementPDF';
+import { generateLoanDisbursementVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
   id: string;
@@ -694,6 +695,25 @@ export default function Loans() {
         .insert(goldItemsData);
 
       if (itemsError) throw itemsError;
+
+      // Generate accounting voucher for loan disbursement
+      const voucherResult = await generateLoanDisbursementVoucher({
+        clientId: client.id,
+        branchId: selectedBranchId,
+        loanId: loanResult.id,
+        loanNumber: loanResult.loan_number,
+        principalAmount: loanCalculation.finalApprovedAmount,
+        netDisbursed: loanCalculation.netCashToCustomer,
+        processingFee: loanCalculation.processingFee,
+        documentCharges: loanCalculation.documentCharges,
+        advanceInterestShown: loanCalculation.advanceCalc.shownInterest,
+        advanceInterestActual: loanCalculation.advanceCalc.actualInterest,
+        paymentMode: paymentEntries[0]?.mode || 'cash',
+      });
+
+      if (!voucherResult.success && voucherResult.error) {
+        console.warn('Voucher generation failed:', voucherResult.error);
+      }
 
       // Calculate and update agent commission if agent is selected
       if (selectedAgentId) {
