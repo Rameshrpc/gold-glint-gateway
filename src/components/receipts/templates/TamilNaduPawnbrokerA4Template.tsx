@@ -10,7 +10,7 @@ import '@/lib/fonts';
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Catamaran',
+    fontFamily: 'Helvetica',
     fontSize: 10,
     paddingTop: 30,
     paddingBottom: 50,

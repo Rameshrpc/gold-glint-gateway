@@ -13,7 +13,7 @@ const THERMAL_WIDTH = 227;
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: 'Catamaran',
+    fontFamily: 'Helvetica',
     fontSize: 8,
     paddingTop: 10,
     paddingBottom: 10,

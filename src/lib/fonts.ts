@@ -1,6 +1,7 @@
 import { Font } from '@react-pdf/renderer';
 
-// Register English fonts
+// Register English fonts only - Catamaran URLs are broken
+// For Tamil/bilingual, use HTML mode which handles Tamil fonts correctly
 Font.register({
   family: 'Roboto',
   fonts: [
@@ -15,25 +16,10 @@ Font.register({
   ],
 });
 
-// Register Catamaran font (supports both English and Tamil)
-Font.register({
-  family: 'Catamaran',
-  fonts: [
-    { 
-      src: 'https://cdn.jsdelivr.net/gh/AravindIM/Catamaran@2.0/fonts/Catamaran-Regular.ttf', 
-      fontWeight: 400 
-    },
-    { 
-      src: 'https://cdn.jsdelivr.net/gh/AravindIM/Catamaran@2.0/fonts/Catamaran-Bold.ttf', 
-      fontWeight: 700 
-    },
-  ],
-});
-
 export const fontFamilies = {
   english: 'Roboto',
-  tamil: 'Catamaran',
-  bilingual: 'Catamaran',
+  tamil: 'Helvetica', // PDF uses Helvetica; HTML mode handles Tamil correctly
+  bilingual: 'Helvetica', // PDF uses Helvetica; HTML mode handles bilingual correctly
 };
 
 export const getPaperSize = (size: string) => {
