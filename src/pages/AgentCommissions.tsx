@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { generateAgentCommissionVoucher } from '@/hooks/useVoucherGeneration';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -148,7 +149,27 @@ export default function AgentCommissions() {
     }
 
     try {
-      // Update commission records
+      const paidCommissions = commissions.filter(c => selectedCommissions.includes(c.id));
+      const agentTotals: Record<string, { amount: number; name: string }> = {};
+      
+      paidCommissions.forEach(c => {
+        if (!agentTotals[c.agent_id]) {
+          agentTotals[c.agent_id] = { amount: 0, name: c.agent?.full_name || 'Agent' };
+        }
+        agentTotals[c.agent_id].amount += c.commission_amount;
+      });
+
+      // Generate voucher for commission payment
+      const voucherResult = await generateAgentCommissionVoucher({
+        clientId: profile?.client_id || '',
+        branchId: currentBranch?.id || '',
+        commissionIds: selectedCommissions,
+        totalAmount: totalSelected,
+        paymentMode: paymentMode,
+        agentName: Object.values(agentTotals).map(a => a.name).join(', '),
+      });
+
+      // Update commission records with voucher
       const { error: updateError } = await supabase
         .from('agent_commissions')
         .update({
@@ -159,30 +180,27 @@ export default function AgentCommissions() {
           source_type: sourceAccount.sourceType,
           source_bank_id: sourceAccount.sourceBankId || null,
           source_account_id: sourceAccount.sourceAccountId || null,
+          voucher_id: voucherResult.voucherId || null,
         })
         .in('id', selectedCommissions);
 
       if (updateError) throw updateError;
 
       // Update agent's total_commission_earned
-      const paidCommissions = commissions.filter(c => selectedCommissions.includes(c.id));
-      const agentTotals: Record<string, number> = {};
-      
-      paidCommissions.forEach(c => {
-        agentTotals[c.agent_id] = (agentTotals[c.agent_id] || 0) + c.commission_amount;
-      });
-
-      for (const [agentId, amount] of Object.entries(agentTotals)) {
+      for (const [agentId, data] of Object.entries(agentTotals)) {
         const agent = agents.find(a => a.id === agentId);
         if (agent) {
           await supabase
             .from('agents')
-            .update({ total_commission_earned: (agent.total_commission_earned || 0) + amount })
+            .update({ total_commission_earned: (agent.total_commission_earned || 0) + data.amount })
             .eq('id', agentId);
         }
       }
 
-      toast.success(`${selectedCommissions.length} commission(s) paid successfully`);
+      const voucherMsg = voucherResult.voucherNumber && voucherResult.voucherNumber !== 'SKIPPED' 
+        ? ` (Voucher: ${voucherResult.voucherNumber})` 
+        : '';
+      toast.success(`${selectedCommissions.length} commission(s) paid successfully${voucherMsg}`);
       setIsPaymentDialogOpen(false);
       setSelectedCommissions([]);
       setPaymentReference('');

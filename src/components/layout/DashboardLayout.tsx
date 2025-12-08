@@ -87,6 +87,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Chart of Accounts', icon: Calculator, href: '/accounts' },
       { title: 'Agent Commissions', icon: Coins, href: '/agent-commissions' },
+      { title: 'Commission Reports', icon: BarChart3, href: '/commission-reports' },
       { title: 'Vouchers', icon: Receipt, href: '/vouchers' },
     ]
   },
