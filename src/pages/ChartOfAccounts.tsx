@@ -359,14 +359,14 @@ export default function ChartOfAccounts() {
                   <div className="space-y-2">
                     <Label>Parent Group (Optional)</Label>
                     <Select
-                      value={newGroup.parent_group_id}
-                      onValueChange={value => setNewGroup({ ...newGroup, parent_group_id: value })}
+                      value={newGroup.parent_group_id || "none"}
+                      onValueChange={value => setNewGroup({ ...newGroup, parent_group_id: value === "none" ? "" : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select parent group" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None (Top Level)</SelectItem>
+                        <SelectItem value="none">None (Top Level)</SelectItem>
                         {accountGroups.map(g => (
                           <SelectItem key={g.id} value={g.id}>{g.group_name}</SelectItem>
                         ))}
