@@ -318,8 +318,8 @@ export default function Branches() {
         .eq('user_id', currentManager.user_id);
     }
 
-    // Assign new manager if selected
-    if (selectedManagerId) {
+    // Assign new manager if selected (and not "unassign")
+    if (selectedManagerId && selectedManagerId !== 'unassign') {
       const { error } = await supabase
         .from('profiles')
         .update({ branch_id: selectedBranchForManager.id })
@@ -677,7 +677,7 @@ export default function Branches() {
                         <SelectValue placeholder="Select a manager" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Unassign Manager</SelectItem>
+                        <SelectItem value="unassign">Unassign Manager</SelectItem>
                         {availableManagers.map((manager) => (
                           <SelectItem key={manager.user_id} value={manager.user_id}>
                             {manager.full_name} {manager.branch_id ? '(Currently assigned)' : ''}
@@ -698,7 +698,7 @@ export default function Branches() {
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                   >
                     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                    {selectedManagerId ? 'Assign Manager' : 'Unassign'}
+                    {selectedManagerId && selectedManagerId !== 'unassign' ? 'Assign Manager' : 'Unassign'}
                   </Button>
                 </div>
               </div>
