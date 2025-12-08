@@ -331,3 +331,54 @@ export async function generateAuctionVoucher(params: {
     entries,
   });
 }
+
+// Helper function to generate agent commission payment voucher
+export async function generateAgentCommissionVoucher(params: {
+  clientId: string;
+  branchId: string;
+  commissionIds: string[];
+  totalAmount: number;
+  paymentMode: string;
+  agentName: string;
+}): Promise<{ success: boolean; voucherNumber?: string; voucherId?: string; error?: string }> {
+  const entries: VoucherEntry[] = [];
+  
+  // Debit: Agent Commission Expense
+  entries.push({
+    accountCode: 'AGENT-COMM-EXP',
+    debitAmount: params.totalAmount,
+    creditAmount: 0,
+    narration: `Commission payment to ${params.agentName}`,
+  });
+
+  // Credit: Cash/Bank (payment made)
+  entries.push({
+    accountCode: 'CASH-001', // Or bank account based on payment mode
+    debitAmount: 0,
+    creditAmount: params.totalAmount,
+    narration: `Commission paid - ${params.paymentMode}`,
+  });
+
+  const result = await generateVoucher({
+    clientId: params.clientId,
+    branchId: params.branchId,
+    voucherType: 'agent_commission',
+    referenceType: 'agent_commission_payment',
+    referenceId: params.commissionIds.join(','),
+    narration: `Agent commission payment to ${params.agentName}`,
+    entries,
+  });
+
+  // Get voucher ID for linking
+  if (result.success && result.voucherNumber && result.voucherNumber !== 'SKIPPED') {
+    const { data: voucher } = await supabase
+      .from('vouchers')
+      .select('id')
+      .eq('voucher_number', result.voucherNumber)
+      .single();
+    
+    return { ...result, voucherId: voucher?.id };
+  }
+
+  return result;
+}
