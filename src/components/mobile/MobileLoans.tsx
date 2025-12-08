@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Filter, Plus, Loader2 } from 'lucide-react';
+import { Search, Plus, Loader2, X } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileHeader from './MobileHeader';
+import MobileGradientHeader from './MobileGradientHeader';
 import LoanCard from './LoanCard';
 import { cn } from '@/lib/utils';
 
@@ -37,11 +37,11 @@ export default function MobileLoans() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('active');
   const [showSearch, setShowSearch] = useState(false);
 
-  const filters: { key: FilterType; label: string }[] = [
-    { key: 'all', label: 'All' },
-    { key: 'active', label: 'Active' },
-    { key: 'overdue', label: 'Overdue' },
-    { key: 'closed', label: 'Closed' },
+  const filters: { key: FilterType; label: string; count?: number }[] = [
+    { key: 'all', label: 'All', count: loans.length },
+    { key: 'active', label: 'Active', count: loans.filter(l => l.status === 'active').length },
+    { key: 'overdue', label: 'Overdue', count: loans.filter(l => l.status === 'active' && new Date(l.maturity_date) < new Date()).length },
+    { key: 'closed', label: 'Closed', count: loans.filter(l => l.status === 'closed').length },
   ];
 
   useEffect(() => {
@@ -107,8 +107,9 @@ export default function MobileLoans() {
 
   return (
     <MobileLayout>
-      <MobileHeader 
+      <MobileGradientHeader 
         title="Loans" 
+        variant="minimal"
         showSearch 
         onSearchClick={() => setShowSearch(!showSearch)} 
       />
@@ -117,37 +118,53 @@ export default function MobileLoans() {
         {/* Search Bar */}
         {showSearch && (
           <div className="relative animate-slide-down">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search by loan number, customer..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border-0 text-sm focus:ring-2 focus:ring-primary/20 transition-all"
+              className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-card border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-mobile-sm"
               autoFocus
             />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-muted flex items-center justify-center tap-scale"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
         )}
 
         {/* Filter Chips */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
-          {filters.map((filter) => (
+          {filters.map((filter, index) => (
             <button
               key={filter.key}
               onClick={() => setActiveFilter(filter.key)}
               className={cn(
-                "flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                "relative flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 tap-scale animate-slide-up-fade",
                 activeFilter === filter.key
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  ? "gradient-gold text-white shadow-mobile-md"
+                  : "bg-card border border-border text-muted-foreground hover:bg-muted"
               )}
+              style={{ animationDelay: `${index * 50}ms` }}
             >
-              {filter.label}
-              {filter.key === 'active' && loans.filter(l => l.status === 'active').length > 0 && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-primary-foreground/20 text-[10px]">
-                  {loans.filter(l => l.status === 'active').length}
-                </span>
-              )}
+              <span className="flex items-center gap-1.5">
+                {filter.label}
+                {filter.count !== undefined && filter.count > 0 && (
+                  <span className={cn(
+                    "min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center",
+                    activeFilter === filter.key
+                      ? "bg-white/20 text-white"
+                      : "bg-muted text-muted-foreground"
+                  )}>
+                    {filter.count}
+                  </span>
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -155,20 +172,25 @@ export default function MobileLoans() {
         {/* Loans List */}
         <div className="space-y-3">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            <div className="space-y-3">
+              {Array(3).fill(0).map((_, i) => (
+                <div key={i} className="h-32 rounded-2xl shimmer" />
+              ))}
             </div>
           ) : filteredLoans.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Search className="w-8 h-8 text-muted-foreground" />
+            <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
+              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <Search className="w-10 h-10 text-muted-foreground/50" />
               </div>
-              <p className="text-muted-foreground">
-                {searchQuery ? 'No loans found' : 'No loans yet'}
+              <h3 className="text-lg font-semibold mb-1">
+                {searchQuery ? 'No results found' : 'No loans yet'}
+              </h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                {searchQuery ? 'Try a different search term' : 'Create your first loan to get started'}
               </p>
               <button
                 onClick={() => navigate('/loans')}
-                className="mt-4 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
+                className="px-6 py-3 rounded-full gradient-gold text-white font-medium shadow-mobile-md tap-scale"
               >
                 Create New Loan
               </button>
@@ -177,6 +199,7 @@ export default function MobileLoans() {
             filteredLoans.map((loan, index) => (
               <div 
                 key={loan.id}
+                className="animate-slide-up-fade"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <LoanCard
@@ -190,14 +213,17 @@ export default function MobileLoans() {
           )}
         </div>
 
-        {/* FAB for new loan - Additional to bottom nav */}
-        <button
-          onClick={() => navigate('/loans')}
-          className="fixed right-4 bottom-24 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 flex items-center justify-center active:scale-95 transition-transform z-40"
-        >
-          <Plus className="w-6 h-6" />
-        </button>
+        {/* Bottom spacer */}
+        <div className="h-20" />
       </div>
+
+      {/* FAB for new loan */}
+      <button
+        onClick={() => navigate('/loans')}
+        className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </MobileLayout>
   );
 }
