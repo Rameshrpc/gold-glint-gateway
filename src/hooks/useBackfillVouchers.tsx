@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { generateVoucher } from './useVoucherGeneration';
 
@@ -17,9 +17,18 @@ interface BackfillSummary {
   repledgePackets: { total: number; backfilled: number };
 }
 
+interface SyncStatus {
+  status: 'idle' | 'checking' | 'syncing' | 'synced' | 'pending';
+  pending: number;
+  synced: number;
+  lastSyncedAt?: Date;
+}
+
 export function useBackfillVouchers() {
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState<BackfillProgress>({ total: 0, completed: 0, current: '', errors: [] });
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ status: 'idle', pending: 0, synced: 0 });
+  const autoSyncRunning = useRef(false);
 
   const getSummary = async (clientId: string): Promise<BackfillSummary> => {
     // Get counts of transactions without vouchers
@@ -367,11 +376,100 @@ export function useBackfillVouchers() {
     }
   };
 
+  // Auto-sync function for background processing
+  const autoSync = useCallback(async (clientId: string): Promise<{ synced: number; pending: number }> => {
+    // Prevent multiple simultaneous auto-syncs
+    if (autoSyncRunning.current) {
+      return { synced: 0, pending: 0 };
+    }
+
+    autoSyncRunning.current = true;
+    setSyncStatus({ status: 'checking', pending: 0, synced: 0 });
+
+    try {
+      const summary = await getSummary(clientId);
+      
+      const totalTransactions = 
+        summary.loans.total + 
+        summary.interestPayments.total + 
+        summary.redemptions.total + 
+        summary.auctions.total + 
+        summary.repledgePackets.total;
+      
+      const totalBackfilled = 
+        summary.loans.backfilled + 
+        summary.interestPayments.backfilled + 
+        summary.redemptions.backfilled + 
+        summary.auctions.backfilled + 
+        summary.repledgePackets.backfilled;
+      
+      const pending = totalTransactions - totalBackfilled;
+
+      if (pending === 0) {
+        setSyncStatus({ status: 'synced', pending: 0, synced: totalBackfilled, lastSyncedAt: new Date() });
+        return { synced: totalBackfilled, pending: 0 };
+      }
+
+      // Start background sync
+      setSyncStatus({ status: 'syncing', pending, synced: totalBackfilled });
+      
+      const result = await backfillAll(clientId);
+      
+      if (result.success) {
+        const newSynced = totalBackfilled + (result.completed || 0);
+        setSyncStatus({ 
+          status: 'synced', 
+          pending: 0, 
+          synced: newSynced, 
+          lastSyncedAt: new Date() 
+        });
+        return { synced: result.completed || 0, pending: 0 };
+      } else {
+        setSyncStatus({ status: 'pending', pending, synced: totalBackfilled });
+        return { synced: 0, pending };
+      }
+    } catch (error) {
+      console.error('Auto-sync error:', error);
+      setSyncStatus(prev => ({ ...prev, status: 'pending' }));
+      return { synced: 0, pending: 0 };
+    } finally {
+      autoSyncRunning.current = false;
+    }
+  }, []);
+
+  // Quick check for pending count without full sync
+  const checkPendingCount = useCallback(async (clientId: string): Promise<number> => {
+    try {
+      const summary = await getSummary(clientId);
+      
+      const totalTransactions = 
+        summary.loans.total + 
+        summary.interestPayments.total + 
+        summary.redemptions.total + 
+        summary.auctions.total + 
+        summary.repledgePackets.total;
+      
+      const totalBackfilled = 
+        summary.loans.backfilled + 
+        summary.interestPayments.backfilled + 
+        summary.redemptions.backfilled + 
+        summary.auctions.backfilled + 
+        summary.repledgePackets.backfilled;
+      
+      return totalTransactions - totalBackfilled;
+    } catch {
+      return 0;
+    }
+  }, []);
+
   return {
     isRunning,
     progress,
+    syncStatus,
     getSummary,
     backfillAll,
     setOpeningBalances,
+    autoSync,
+    checkPendingCount,
   };
 }

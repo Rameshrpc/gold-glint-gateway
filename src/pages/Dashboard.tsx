@@ -1,5 +1,7 @@
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useBackfillVouchers } from '@/hooks/useBackfillVouchers';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,12 +18,19 @@ import {
   Wallet,
   RefreshCw,
   Plus,
+  CheckCircle2,
+  Loader2,
+  BookOpen,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { profile, client, currentBranch, branches, roles, hasRole } = useAuth();
+  const { autoSync, syncStatus } = useBackfillVouchers();
+  const hasAutoSynced = useRef(false);
+  const [showSyncCard, setShowSyncCard] = useState(true);
 
   const hasMultipleBranches = branches && branches.length > 1;
 
@@ -77,17 +86,67 @@ export default function Dashboard() {
     return colors[type] || 'bg-muted text-muted-foreground';
   };
 
+  // Auto-sync vouchers on dashboard load
+  useEffect(() => {
+    if (profile?.client_id && !hasAutoSynced.current) {
+      hasAutoSynced.current = true;
+      
+      autoSync(profile.client_id).then((result) => {
+        if (result.synced > 0) {
+          toast.success(`Synced ${result.synced} accounting entries`, {
+            description: 'All transactions now have vouchers',
+            duration: 3000,
+          });
+        }
+      });
+    }
+  }, [profile?.client_id, autoSync]);
+
+  const getSyncStatusDisplay = () => {
+    switch (syncStatus.status) {
+      case 'checking':
+        return { icon: Loader2, text: 'Checking...', color: 'text-muted-foreground', animate: true };
+      case 'syncing':
+        return { icon: Loader2, text: `Syncing ${syncStatus.pending} entries...`, color: 'text-amber-600', animate: true };
+      case 'synced':
+        return { icon: CheckCircle2, text: 'All synced', color: 'text-green-600', animate: false };
+      case 'pending':
+        return { icon: AlertTriangle, text: `${syncStatus.pending} pending`, color: 'text-amber-600', animate: false };
+      default:
+        return { icon: BookOpen, text: 'Ready', color: 'text-muted-foreground', animate: false };
+    }
+  };
+
+  const statusDisplay = getSyncStatusDisplay();
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Welcome Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
-          </h1>
-          <p className="text-muted-foreground">
-            {client?.company_name}{currentBranch ? ` • ${currentBranch.branch_name}` : ''}
-          </p>
+        {/* Welcome Header with Sync Status */}
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              Welcome back, {profile?.full_name?.split(' ')[0] || 'User'}!
+            </h1>
+            <p className="text-muted-foreground">
+              {client?.company_name}{currentBranch ? ` • ${currentBranch.branch_name}` : ''}
+            </p>
+          </div>
+          
+          {/* Compact Sync Status Badge */}
+          <div 
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${
+              syncStatus.status === 'synced' 
+                ? 'bg-green-50 border border-green-200' 
+                : syncStatus.status === 'syncing' || syncStatus.status === 'checking'
+                ? 'bg-amber-50 border border-amber-200'
+                : 'bg-muted border border-border'
+            }`}
+            title="Accounting sync status"
+          >
+            <statusDisplay.icon className={`h-4 w-4 ${statusDisplay.color} ${statusDisplay.animate ? 'animate-spin' : ''}`} />
+            <span className={`font-medium ${statusDisplay.color}`}>{statusDisplay.text}</span>
+          </div>
         </div>
 
         {/* Quick Actions */}
