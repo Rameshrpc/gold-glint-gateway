@@ -19,6 +19,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
 import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule } from '@/lib/interestCalculations';
+import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
@@ -90,6 +91,8 @@ interface GoldItem {
   stone_weight_grams: number;
   market_rate_per_gram: number;
   appraised_value: number;
+  market_value?: number;
+  market_rate_date?: string;
 }
 
 interface Loan {
@@ -137,6 +140,7 @@ const ITEM_TYPES = ['necklace', 'chain', 'bangle', 'ring', 'earring', 'pendant',
 export default function Loans() {
   const { client, currentBranch, branches, profile, isPlatformAdmin, hasRole } = useAuth();
   const { canEdit, canDelete, attemptEdit, attemptDelete } = usePermissions();
+  const { data: todayMarketRate } = useTodayMarketRate();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [schemes, setSchemes] = useState<Scheme[]>([]);
@@ -460,8 +464,19 @@ export default function Loans() {
     const purityPercent = PURITY_MAP[purity];
     const rateForPurity = getRateForPurity(purity, scheme);
     
-    // Direct calculation: Net Weight × Rate for that purity
+    // Direct calculation: Net Weight × Rate for that purity (Appraised Value for loan)
     const appraisedValue = netWeight * rateForPurity;
+    
+    // Calculate market value from today's market rate
+    let marketValue = 0;
+    const today = new Date().toISOString().split('T')[0];
+    if (todayMarketRate) {
+      const marketRateForPurity = purity === '24k' ? todayMarketRate.rate_24kt 
+        : purity === '22k' ? todayMarketRate.rate_22kt 
+        : purity === '18k' ? todayMarketRate.rate_18kt
+        : todayMarketRate.rate_22kt * (PURITY_MAP[purity] / 91.6);
+      marketValue = netWeight * marketRateForPurity;
+    }
 
     const newItem: GoldItem = {
       item_type: selectedItem ? `${selectedItem.item_code} - ${selectedItem.item_name}` : itemName,
@@ -475,6 +490,8 @@ export default function Loans() {
       stone_weight_grams: currentItem.stone_weight_grams || 0,
       market_rate_per_gram: rateForPurity,
       appraised_value: appraisedValue,
+      market_value: marketValue,
+      market_rate_date: todayMarketRate?.rate_date || today,
     };
 
     setGoldItems([...goldItems, newItem]);
@@ -1154,7 +1171,8 @@ export default function Loans() {
                               <TableHead>Type</TableHead>
                               <TableHead>Net Wt (g)</TableHead>
                               <TableHead>Purity</TableHead>
-                              <TableHead className="text-right">Value</TableHead>
+                              <TableHead className="text-right">Market Value</TableHead>
+                              <TableHead className="text-right">Loan Value</TableHead>
                               <TableHead></TableHead>
                             </TableRow>
                           </TableHeader>
@@ -1164,7 +1182,10 @@ export default function Loans() {
                                 <TableCell className="capitalize">{item.item_type}</TableCell>
                                 <TableCell>{item.net_weight_grams.toFixed(3)}</TableCell>
                                 <TableCell>{item.purity}</TableCell>
-                                <TableCell className="text-right">{formatIndianCurrency(item.appraised_value)}</TableCell>
+                                <TableCell className="text-right text-muted-foreground">
+                                  {item.market_value ? formatIndianCurrency(item.market_value) : '-'}
+                                </TableCell>
+                                <TableCell className="text-right font-medium">{formatIndianCurrency(item.appraised_value)}</TableCell>
                                 <TableCell>
                                   <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -1173,7 +1194,10 @@ export default function Loans() {
                               </TableRow>
                             ))}
                             <TableRow className="bg-muted/50">
-                              <TableCell colSpan={3} className="font-semibold">Total Appraised Value</TableCell>
+                              <TableCell colSpan={3} className="font-semibold">Totals</TableCell>
+                              <TableCell className="text-right text-muted-foreground">
+                                {formatIndianCurrency(goldItems.reduce((sum, item) => sum + (item.market_value || 0), 0))}
+                              </TableCell>
                               <TableCell className="text-right font-semibold">
                                 {formatIndianCurrency(goldItems.reduce((sum, item) => sum + item.appraised_value, 0))}
                               </TableCell>

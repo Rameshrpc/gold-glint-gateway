@@ -122,6 +122,7 @@ export function useSavePrintSettings() {
           .insert([{
             ...payload,
             client_id: profile.client_id,
+            receipt_type: settings.receipt_type,
           }]);
         if (error) throw error;
       }

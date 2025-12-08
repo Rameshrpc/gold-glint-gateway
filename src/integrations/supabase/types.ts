@@ -973,7 +973,9 @@ export type Database = {
           item_id: string | null
           item_type: string
           loan_id: string
+          market_rate_date: string | null
           market_rate_per_gram: number
+          market_value: number | null
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
@@ -990,7 +992,9 @@ export type Database = {
           item_id?: string | null
           item_type: string
           loan_id: string
+          market_rate_date?: string | null
           market_rate_per_gram: number
+          market_value?: number | null
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
@@ -1007,7 +1011,9 @@ export type Database = {
           item_id?: string | null
           item_type?: string
           loan_id?: string
+          market_rate_date?: string | null
           market_rate_per_gram?: number
+          market_value?: number | null
           net_weight_grams?: number
           purity?: Database["public"]["Enums"]["gold_purity"]
           purity_percentage?: number
@@ -1033,6 +1039,59 @@ export type Database = {
             columns: ["loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gold_market_rates: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          rate_18kt: number
+          rate_22kt: number
+          rate_24kt: number
+          rate_date: string
+          rate_source: string | null
+          remarks: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          rate_18kt: number
+          rate_22kt: number
+          rate_24kt: number
+          rate_date?: string
+          rate_source?: string | null
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          rate_18kt?: number
+          rate_22kt?: number
+          rate_24kt?: number
+          rate_date?: string
+          rate_source?: string | null
+          remarks?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gold_market_rates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
