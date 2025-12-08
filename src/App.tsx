@@ -32,6 +32,11 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import AgentCommissions from "./pages/AgentCommissions";
 import CommissionReports from "./pages/CommissionReports";
 import Vouchers from "./pages/Vouchers";
+import TrialBalance from "./pages/TrialBalance";
+import ProfitAndLoss from "./pages/ProfitAndLoss";
+import BalanceSheet from "./pages/BalanceSheet";
+import LedgerStatement from "./pages/LedgerStatement";
+import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -143,11 +148,22 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Reports & Communications */}
-            <Route path="/reports" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="Reports" description="View business reports and analytics" />
-              </ProtectedRoute>
+            {/* Financial Reports */}
+            <Route path="/reports" element={<Navigate to="/trial-balance" replace />} />
+            <Route path="/trial-balance" element={
+              <ProtectedRoute><TrialBalance /></ProtectedRoute>
+            } />
+            <Route path="/profit-loss" element={
+              <ProtectedRoute><ProfitAndLoss /></ProtectedRoute>
+            } />
+            <Route path="/balance-sheet" element={
+              <ProtectedRoute><BalanceSheet /></ProtectedRoute>
+            } />
+            <Route path="/ledger-statement" element={
+              <ProtectedRoute><LedgerStatement /></ProtectedRoute>
+            } />
+            <Route path="/day-book" element={
+              <ProtectedRoute><DayBook /></ProtectedRoute>
             } />
             <Route path="/accounts" element={
               <ProtectedRoute>

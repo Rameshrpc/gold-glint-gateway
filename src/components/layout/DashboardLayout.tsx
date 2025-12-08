@@ -86,9 +86,14 @@ const menuGroups: MenuGroup[] = [
     icon: Calculator,
     items: [
       { title: 'Chart of Accounts', icon: Calculator, href: '/accounts' },
+      { title: 'Day Book', icon: FileText, href: '/day-book' },
+      { title: 'Ledger Statement', icon: FileText, href: '/ledger-statement' },
+      { title: 'Trial Balance', icon: BarChart3, href: '/trial-balance' },
+      { title: 'Profit & Loss', icon: BarChart3, href: '/profit-loss' },
+      { title: 'Balance Sheet', icon: BarChart3, href: '/balance-sheet' },
+      { title: 'Vouchers', icon: Receipt, href: '/vouchers' },
       { title: 'Agent Commissions', icon: Coins, href: '/agent-commissions' },
       { title: 'Commission Reports', icon: BarChart3, href: '/commission-reports' },
-      { title: 'Vouchers', icon: Receipt, href: '/vouchers' },
     ]
   },
   {
