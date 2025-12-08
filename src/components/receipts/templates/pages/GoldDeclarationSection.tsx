@@ -68,7 +68,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 1.4,
     color: '#666',
-    fontStyle: 'italic',
   },
   goldSummary: {
     marginTop: 15,
@@ -116,7 +115,6 @@ const styles = StyleSheet.create({
     color: '#B91C1C',
     textAlign: 'center',
     marginTop: 4,
-    fontStyle: 'italic',
   },
   placeDate: {
     flexDirection: 'row',

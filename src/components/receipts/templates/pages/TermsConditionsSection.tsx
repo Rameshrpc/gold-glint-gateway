@@ -23,7 +23,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 15,
     color: '#666',
-    fontStyle: 'italic',
   },
   termsList: {
     marginBottom: 20,
@@ -48,7 +47,6 @@ const styles = StyleSheet.create({
     fontSize: 8,
     lineHeight: 1.4,
     color: '#666',
-    fontStyle: 'italic',
     marginTop: 2,
     textAlign: 'justify',
   },
@@ -70,7 +68,6 @@ const styles = StyleSheet.create({
     lineHeight: 1.4,
     textAlign: 'center',
     color: '#15803D',
-    fontStyle: 'italic',
     marginTop: 4,
   },
   signatureSection: {
