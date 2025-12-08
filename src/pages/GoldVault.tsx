@@ -72,6 +72,16 @@ interface Loan {
   gold_items?: { net_weight_grams: number; appraised_value: number }[];
 }
 
+interface InVaultLoan {
+  id: string;
+  loan_number: string;
+  loan_date: string;
+  principal_amount: number;
+  status: string;
+  customer?: { full_name: string };
+  gold_items?: { net_weight_grams: number; appraised_value: number }[];
+}
+
 interface BankNbfc {
   id: string;
   bank_code: string;
@@ -89,7 +99,7 @@ export default function GoldVault() {
   const [activeTab, setActiveTab] = useState('repledged');
   const [loading, setLoading] = useState(true);
   const [packets, setPackets] = useState<RepledgePacket[]>([]);
-  const [inVaultItems, setInVaultItems] = useState<RepledgeItem[]>([]);
+  const [inVaultLoans, setInVaultLoans] = useState<InVaultLoan[]>([]);
   const [banks, setBanks] = useState<BankNbfc[]>([]);
   const [loyalties, setLoyalties] = useState<Loyalty[]>([]);
   const [loyaltyBankAccounts, setLoyaltyBankAccounts] = useState<LoyaltyBankAccount[]>([]);
@@ -129,7 +139,7 @@ export default function GoldVault() {
     try {
       await Promise.all([
         fetchPackets(),
-        fetchInVaultItems(),
+        fetchInVaultLoans(),
         fetchBanks(),
         fetchLoyalties(),
         fetchAvailableLoans()
@@ -174,22 +184,36 @@ export default function GoldVault() {
     }
   };
 
-  const fetchInVaultItems = async () => {
+  const fetchInVaultLoans = async () => {
     if (!client) return;
     
-    const { data, error } = await supabase
+    // Get all loan IDs that are already in repledge_items (tracked)
+    const { data: repledgedItems } = await supabase
       .from('repledge_items')
-      .select('*, loan:loans(loan_number, customer:customers(full_name))')
+      .select('loan_id')
+      .eq('client_id', client.id);
+
+    const repledgedLoanIds = repledgedItems?.map(i => i.loan_id) || [];
+
+    // Fetch active loans NOT in repledge_items
+    let query = supabase
+      .from('loans')
+      .select('id, loan_number, loan_date, principal_amount, status, customer:customers(full_name), gold_items(net_weight_grams, appraised_value)')
       .eq('client_id', client.id)
-      .is('packet_id', null)
-      .eq('status', 'in_vault')
-      .order('created_at', { ascending: false });
+      .eq('status', 'active')
+      .order('loan_date', { ascending: false });
+
+    if (repledgedLoanIds.length > 0) {
+      query = query.not('id', 'in', `(${repledgedLoanIds.join(',')})`);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching in-vault items:', error);
+      console.error('Error fetching in-vault loans:', error);
       return;
     }
-    setInVaultItems(data || []);
+    setInVaultLoans(data || []);
   };
 
   const fetchBanks = async () => {
@@ -437,16 +461,16 @@ export default function GoldVault() {
     p.bank_reference_number?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredInVault = inVaultItems.filter(i =>
-    i.loan?.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.loan?.customer?.full_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredInVault = inVaultLoans.filter(l =>
+    l.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    l.customer?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const totalStats = {
     packetsActive: packets.filter(p => p.status === 'active').length,
     totalRepledged: packets.reduce((sum, p) => sum + p.total_principal, 0),
-    inVaultCount: inVaultItems.length,
-    inVaultValue: inVaultItems.reduce((sum, i) => sum + i.principal_amount, 0)
+    inVaultCount: inVaultLoans.length,
+    inVaultValue: inVaultLoans.reduce((sum, l) => sum + l.principal_amount, 0)
   };
 
   return (
@@ -615,6 +639,7 @@ export default function GoldVault() {
                       <TableRow>
                         <TableHead>Loan #</TableHead>
                         <TableHead>Customer</TableHead>
+                        <TableHead>Loan Date</TableHead>
                         <TableHead>Principal</TableHead>
                         <TableHead>Gold (g)</TableHead>
                         <TableHead>Appraised Value</TableHead>
@@ -625,28 +650,33 @@ export default function GoldVault() {
                     <TableBody>
                       {filteredInVault.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No loans in vault
+                          <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                            No untracked loans in vault
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredInVault.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-mono text-sm">{item.loan?.loan_number}</TableCell>
-                            <TableCell>{item.loan?.customer?.full_name}</TableCell>
-                            <TableCell>{formatCurrency(item.principal_amount)}</TableCell>
-                            <TableCell>{item.gold_weight_grams.toFixed(2)}g</TableCell>
-                            <TableCell>{formatCurrency(item.appraised_value)}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">In Vault</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <Button size="sm" variant="ghost">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
+                        filteredInVault.map((loan) => {
+                          const goldWeight = loan.gold_items?.reduce((sum, g) => sum + g.net_weight_grams, 0) || 0;
+                          const appraisedValue = loan.gold_items?.reduce((sum, g) => sum + g.appraised_value, 0) || 0;
+                          return (
+                            <TableRow key={loan.id}>
+                              <TableCell className="font-mono text-sm">{loan.loan_number}</TableCell>
+                              <TableCell>{loan.customer?.full_name}</TableCell>
+                              <TableCell>{new Date(loan.loan_date).toLocaleDateString('en-IN')}</TableCell>
+                              <TableCell>{formatCurrency(loan.principal_amount)}</TableCell>
+                              <TableCell>{goldWeight.toFixed(2)}g</TableCell>
+                              <TableCell>{formatCurrency(appraisedValue)}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">In Vault</Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button size="sm" variant="ghost">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
                       )}
                     </TableBody>
                   </Table>
