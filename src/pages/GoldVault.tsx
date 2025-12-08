@@ -11,11 +11,15 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Package, Search, Eye, Loader2, Building2, Upload, FileImage, X, Vault } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Plus, Package, Search, Eye, Loader2, Building2, Upload, FileImage, X, Vault, Unlock, AlertTriangle } from 'lucide-react';
 import MultiFileUpload from '@/components/uploads/MultiFileUpload';
+import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { differenceInDays, parseISO, format } from 'date-fns';
 
 interface RepledgePacket {
   id: string;
@@ -31,6 +35,7 @@ interface RepledgePacket {
   bank_loan_amount: number | null;
   bank_interest_rate: number | null;
   bank_reference_number: string | null;
+  bank_loan_date: string | null;
   status: string;
   packet_images: string[] | null;
   bank_receipt_images: string[] | null;
@@ -94,8 +99,16 @@ interface Loyalty {
   full_name: string;
 }
 
+const PAYMENT_MODES = [
+  { value: 'cash', label: 'Cash' },
+  { value: 'upi', label: 'UPI' },
+  { value: 'neft', label: 'NEFT' },
+  { value: 'rtgs', label: 'RTGS' },
+  { value: 'cheque', label: 'Cheque' },
+];
+
 export default function GoldVault() {
-  const { client, currentBranch, isPlatformAdmin, hasRole } = useAuth();
+  const { client, currentBranch, profile, isPlatformAdmin, hasRole } = useAuth();
   const [activeTab, setActiveTab] = useState('repledged');
   const [loading, setLoading] = useState(true);
   const [packets, setPackets] = useState<RepledgePacket[]>([]);
@@ -126,6 +139,19 @@ export default function GoldVault() {
   const [viewPacket, setViewPacket] = useState<RepledgePacket | null>(null);
   const [packetItems, setPacketItems] = useState<RepledgeItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
+
+  // Redeem packet dialog
+  const [redeemDialogOpen, setRedeemDialogOpen] = useState(false);
+  const [packetToRedeem, setPacketToRedeem] = useState<RepledgePacket | null>(null);
+  const [redeemSubmitting, setRedeemSubmitting] = useState(false);
+  const [bankPrincipalOutstanding, setBankPrincipalOutstanding] = useState('');
+  const [bankInterestDue, setBankInterestDue] = useState('');
+  const [bankPenalty, setBankPenalty] = useState('');
+  const [redeemPaymentMode, setRedeemPaymentMode] = useState('neft');
+  const [redeemPaymentReference, setRedeemPaymentReference] = useState('');
+  const [redeemRemarks, setRedeemRemarks] = useState('');
+  const [bankSettledConfirmed, setBankSettledConfirmed] = useState(false);
+  const sourceAccount = useSourceAccount();
 
   const canManage = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -187,15 +213,17 @@ export default function GoldVault() {
   const fetchInVaultLoans = async () => {
     if (!client) return;
     
-    // Get all loan IDs that are already in repledge_items (tracked)
+    // Get all loan IDs that are already in repledge_items with active packets
     const { data: repledgedItems } = await supabase
       .from('repledge_items')
-      .select('loan_id')
+      .select('loan_id, packet:repledge_packets(status)')
       .eq('client_id', client.id);
 
-    const repledgedLoanIds = repledgedItems?.map(i => i.loan_id) || [];
+    const activeLoanIds = repledgedItems
+      ?.filter(i => (i.packet as any)?.status === 'active')
+      .map(i => i.loan_id) || [];
 
-    // Fetch active loans NOT in repledge_items
+    // Fetch active loans NOT in active repledge packets
     let query = supabase
       .from('loans')
       .select('id, loan_number, loan_date, principal_amount, status, customer:customers(full_name), gold_items(net_weight_grams, appraised_value)')
@@ -203,8 +231,8 @@ export default function GoldVault() {
       .eq('status', 'active')
       .order('loan_date', { ascending: false });
 
-    if (repledgedLoanIds.length > 0) {
-      query = query.not('id', 'in', `(${repledgedLoanIds.join(',')})`);
+    if (activeLoanIds.length > 0) {
+      query = query.not('id', 'in', `(${activeLoanIds.join(',')})`);
     }
 
     const { data, error } = await query;
@@ -249,13 +277,15 @@ export default function GoldVault() {
   const fetchAvailableLoans = async () => {
     if (!client) return;
     
-    // Get loans that are active and not already in a repledge item
+    // Get loans that are active and not already in an active repledge packet
     const { data: existingItems } = await supabase
       .from('repledge_items')
-      .select('loan_id')
+      .select('loan_id, packet:repledge_packets(status)')
       .eq('client_id', client.id);
 
-    const existingLoanIds = existingItems?.map(i => i.loan_id) || [];
+    const activeLoanIds = existingItems
+      ?.filter(i => (i.packet as any)?.status === 'active')
+      .map(i => i.loan_id) || [];
 
     let query = supabase
       .from('loans')
@@ -264,8 +294,8 @@ export default function GoldVault() {
       .eq('status', 'active')
       .order('loan_date', { ascending: false });
 
-    if (existingLoanIds.length > 0) {
-      query = query.not('id', 'in', `(${existingLoanIds.join(',')})`);
+    if (activeLoanIds.length > 0) {
+      query = query.not('id', 'in', `(${activeLoanIds.join(',')})`);
     }
 
     const { data, error } = await query;
@@ -302,6 +332,17 @@ export default function GoldVault() {
     setPacketImages([]);
     setBankReceiptImages([]);
     setRemarks('');
+  };
+
+  const resetRedeemForm = () => {
+    setBankPrincipalOutstanding('');
+    setBankInterestDue('');
+    setBankPenalty('');
+    setRedeemPaymentMode('neft');
+    setRedeemPaymentReference('');
+    setRedeemRemarks('');
+    setBankSettledConfirmed(false);
+    sourceAccount.resetSourceAccount();
   };
 
   const handleLoyaltyChange = (loyaltyId: string) => {
@@ -437,6 +478,104 @@ export default function GoldVault() {
     }
   };
 
+  const openRedeemDialog = (packet: RepledgePacket) => {
+    setPacketToRedeem(packet);
+    setBankPrincipalOutstanding(String(packet.bank_loan_amount || 0));
+    
+    // Calculate interest due based on bank loan date
+    if (packet.bank_loan_date && packet.bank_loan_amount && packet.bank_interest_rate) {
+      const days = differenceInDays(new Date(), parseISO(packet.bank_loan_date));
+      const interest = (packet.bank_loan_amount * packet.bank_interest_rate * days) / (365 * 100);
+      setBankInterestDue(String(Math.round(interest)));
+    } else {
+      setBankInterestDue('0');
+    }
+    
+    setBankPenalty('0');
+    setRedeemDialogOpen(true);
+  };
+
+  const handleRedeemPacket = async () => {
+    if (!client || !currentBranch || !profile || !packetToRedeem) return;
+    
+    if (!bankSettledConfirmed) {
+      toast.error('Please confirm bank loan has been settled');
+      return;
+    }
+
+    const principalOutstanding = parseFloat(bankPrincipalOutstanding) || 0;
+    const interestDue = parseFloat(bankInterestDue) || 0;
+    const penalty = parseFloat(bankPenalty) || 0;
+    const totalSettlement = principalOutstanding + interestDue + penalty;
+
+    setRedeemSubmitting(true);
+    try {
+      // Generate redemption number
+      const { data: redemptionNumber, error: numError } = await supabase.rpc('generate_repledge_redemption_number', {
+        p_client_id: client.id
+      });
+      if (numError) throw numError;
+
+      const sourceData = sourceAccount.getSourceAccountData(redeemPaymentMode);
+
+      // Create repledge_redemption record
+      const { error: redemptionError } = await supabase
+        .from('repledge_redemptions')
+        .insert({
+          client_id: client.id,
+          branch_id: currentBranch.id,
+          packet_id: packetToRedeem.id,
+          redemption_number: redemptionNumber,
+          redemption_date: format(new Date(), 'yyyy-MM-dd'),
+          bank_principal_outstanding: principalOutstanding,
+          bank_interest_due: interestDue,
+          bank_penalty: penalty,
+          bank_total_settlement: totalSettlement,
+          payment_mode: redeemPaymentMode,
+          payment_reference: redeemPaymentReference || null,
+          source_type: sourceData.source_type,
+          source_bank_id: sourceData.source_bank_id,
+          source_account_id: sourceData.source_account_id,
+          processed_by: profile.id,
+          remarks: redeemRemarks || null,
+        });
+
+      if (redemptionError) throw redemptionError;
+
+      // Update packet status to released
+      const { error: packetError } = await supabase
+        .from('repledge_packets')
+        .update({
+          status: 'released',
+          released_date: format(new Date(), 'yyyy-MM-dd'),
+        })
+        .eq('id', packetToRedeem.id);
+
+      if (packetError) throw packetError;
+
+      // Update all repledge_items status to released
+      const { error: itemsError } = await supabase
+        .from('repledge_items')
+        .update({
+          status: 'released',
+          released_date: format(new Date(), 'yyyy-MM-dd'),
+        })
+        .eq('packet_id', packetToRedeem.id);
+
+      if (itemsError) throw itemsError;
+
+      toast.success(`Packet ${packetToRedeem.packet_number} redeemed successfully. Loans are now available for customer redemption/auction.`);
+      setRedeemDialogOpen(false);
+      setPacketToRedeem(null);
+      resetRedeemForm();
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to redeem packet');
+    } finally {
+      setRedeemSubmitting(false);
+    }
+  };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -468,10 +607,14 @@ export default function GoldVault() {
 
   const totalStats = {
     packetsActive: packets.filter(p => p.status === 'active').length,
-    totalRepledged: packets.reduce((sum, p) => sum + p.total_principal, 0),
+    totalRepledged: packets.filter(p => p.status === 'active').reduce((sum, p) => sum + p.total_principal, 0),
     inVaultCount: inVaultLoans.length,
     inVaultValue: inVaultLoans.reduce((sum, l) => sum + l.principal_amount, 0)
   };
+
+  const bankTotalSettlement = (parseFloat(bankPrincipalOutstanding) || 0) + 
+                               (parseFloat(bankInterestDue) || 0) + 
+                               (parseFloat(bankPenalty) || 0);
 
   return (
     <DashboardLayout>
@@ -614,7 +757,7 @@ export default function GoldVault() {
                                 {packet.status.replace('_', ' ')}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-right space-x-1">
                               <Button 
                                 size="sm" 
                                 variant="ghost"
@@ -625,6 +768,16 @@ export default function GoldVault() {
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
+                              {packet.status === 'active' && canManage && (
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  className="text-green-600 hover:text-green-700"
+                                  onClick={() => openRedeemDialog(packet)}
+                                >
+                                  <Unlock className="h-4 w-4" />
+                                </Button>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))
@@ -957,6 +1110,176 @@ export default function GoldVault() {
                       </TableBody>
                     </Table>
                   )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Redeem Packet Dialog */}
+        <Dialog open={redeemDialogOpen} onOpenChange={setRedeemDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Unlock className="h-5 w-5 text-green-600" />
+                Redeem Packet - {packetToRedeem?.packet_number}
+              </DialogTitle>
+            </DialogHeader>
+            {packetToRedeem && (
+              <div className="space-y-6">
+                {/* Packet Summary */}
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Bank/NBFC</p>
+                      <p className="font-medium">{packetToRedeem.bank?.bank_name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Bank Reference</p>
+                      <p className="font-medium">{packetToRedeem.bank_reference_number || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Loans</p>
+                      <p className="font-medium">{packetToRedeem.total_loans}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Principal</p>
+                      <p className="font-medium">{formatCurrency(packetToRedeem.total_principal)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bank Settlement Calculation */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Bank Loan Settlement</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Bank Principal Outstanding (₹)</Label>
+                      <Input
+                        type="number"
+                        value={bankPrincipalOutstanding}
+                        onChange={(e) => setBankPrincipalOutstanding(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Bank Interest Due (₹)</Label>
+                      <Input
+                        type="number"
+                        value={bankInterestDue}
+                        onChange={(e) => setBankInterestDue(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Bank Penalty (₹)</Label>
+                    <Input
+                      type="number"
+                      value={bankPenalty}
+                      onChange={(e) => setBankPenalty(e.target.value)}
+                    />
+                  </div>
+                  
+                  <div className="bg-green-100 dark:bg-green-900/30 p-4 rounded-lg">
+                    <div className="flex justify-between text-lg font-bold text-green-800 dark:text-green-300">
+                      <span>Total Bank Settlement</span>
+                      <span>{formatCurrency(bankTotalSettlement)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Payment Details */}
+                <div className="space-y-4">
+                  <h4 className="font-medium">Payment Details</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Payment Mode</Label>
+                      <Select value={redeemPaymentMode} onValueChange={setRedeemPaymentMode}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_MODES.map((mode) => (
+                            <SelectItem key={mode.value} value={mode.value}>
+                              {mode.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Payment Reference</Label>
+                      <Input
+                        value={redeemPaymentReference}
+                        onChange={(e) => setRedeemPaymentReference(e.target.value)}
+                        placeholder="Transaction reference"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Source Account Selection for non-cash payments */}
+                  <SourceAccountSelector
+                    clientId={client?.id || ''}
+                    paymentMode={redeemPaymentMode}
+                    sourceType={sourceAccount.sourceType}
+                    setSourceType={sourceAccount.setSourceType}
+                    sourceBankId={sourceAccount.sourceBankId}
+                    setSourceBankId={sourceAccount.setSourceBankId}
+                    sourceAccountId={sourceAccount.sourceAccountId}
+                    setSourceAccountId={sourceAccount.setSourceAccountId}
+                    selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
+                    setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
+                  />
+
+                  <div className="space-y-2">
+                    <Label>Remarks</Label>
+                    <Textarea
+                      value={redeemRemarks}
+                      onChange={(e) => setRedeemRemarks(e.target.value)}
+                      placeholder="Optional notes"
+                      rows={2}
+                    />
+                  </div>
+                </div>
+
+                <Separator />
+
+                {/* Confirmation */}
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 p-4 rounded-lg">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div className="space-y-2">
+                      <p className="text-sm text-amber-800 dark:text-amber-300">
+                        Upon redemption, all <strong>{packetToRedeem.total_loans} loans</strong> in this packet will be released from repledge tracking and will become available for customer redemption or auction.
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id="bankSettledConfirmed"
+                          checked={bankSettledConfirmed}
+                          onCheckedChange={(checked) => setBankSettledConfirmed(checked === true)}
+                        />
+                        <Label htmlFor="bankSettledConfirmed" className="cursor-pointer text-amber-800 dark:text-amber-300">
+                          I confirm bank loan has been settled
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t">
+                  <Button type="button" variant="outline" onClick={() => { setRedeemDialogOpen(false); resetRedeemForm(); }}>
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleRedeemPacket} 
+                    disabled={redeemSubmitting || !bankSettledConfirmed}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {redeemSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Unlock className="h-4 w-4 mr-2" />
+                    Redeem Packet
+                  </Button>
                 </div>
               </div>
             )}
