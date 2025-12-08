@@ -13,7 +13,7 @@ import {
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, Menu, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
   Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, Printer, RefreshCw, Layers,
-  Landmark, Gift, Vault, Receipt, Coins
+  Landmark, Gift, Vault, Receipt, Coins, Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -113,6 +113,7 @@ const menuGroups: MenuGroup[] = [
     items: [
       { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'], moduleKey: 'settings' },
       { title: 'Print Setup', icon: Printer, href: '/print-setup', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'] },
+      { title: 'Backfill Vouchers', icon: Database, href: '/backfill-vouchers', roles: ['super_admin', 'moderator', 'tenant_admin'] },
     ]
   }
 ];

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,17 @@ import { useFinancialReports, LedgerEntry } from '@/hooks/useFinancialReports';
 import { useAuth } from '@/hooks/useAuth';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { LedgerStatementPDF } from '@/components/reports/LedgerStatementPDF';
-import { FileText, RefreshCw, BookOpen } from 'lucide-react';
+import { FileText, RefreshCw, BookOpen, ExternalLink } from 'lucide-react';
+
+// Map reference types to their source pages
+const referenceSourceMap: Record<string, string> = {
+  loan: '/loans',
+  interest_payment: '/interest',
+  redemption: '/redemption',
+  auction: '/auction',
+  repledge_packet: '/gold-vault',
+  agent_commission_payment: '/agent-commissions',
+};
 
 interface Account {
   id: string;
@@ -21,6 +32,7 @@ interface Account {
 }
 
 export default function LedgerStatement() {
+  const navigate = useNavigate();
   const { profile, client } = useAuth();
   const { getLedgerStatement, getAccounts } = useFinancialReports();
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -32,6 +44,14 @@ export default function LedgerStatement() {
   const [closingBalance, setClosingBalance] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showPDF, setShowPDF] = useState(false);
+
+  const handleViewSource = (referenceType: string | undefined, referenceId: string | undefined) => {
+    if (!referenceType || !referenceId) return;
+    const path = referenceSourceMap[referenceType];
+    if (path) {
+      navigate(path);
+    }
+  };
 
   const fetchAccounts = async () => {
     const data = await getAccounts();
@@ -183,18 +203,19 @@ export default function LedgerStatement() {
                             <TableHead className="text-right">Debit (₹)</TableHead>
                             <TableHead className="text-right">Credit (₹)</TableHead>
                             <TableHead className="text-right">Balance (₹)</TableHead>
+                            <TableHead className="w-10"></TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {entries.map(entry => (
-                            <TableRow key={entry.id}>
+                            <TableRow key={entry.id} className="group">
                               <TableCell className="whitespace-nowrap">
                                 {format(new Date(entry.voucher_date), 'dd/MM/yyyy')}
                               </TableCell>
                               <TableCell className="font-mono text-sm">{entry.voucher_number}</TableCell>
                               <TableCell>
                                 <span className="capitalize text-xs px-2 py-0.5 bg-muted rounded">
-                                  {entry.voucher_type}
+                                  {entry.voucher_type.replace(/_/g, ' ')}
                                 </span>
                               </TableCell>
                               <TableCell className="max-w-xs truncate">{entry.narration}</TableCell>
@@ -207,13 +228,26 @@ export default function LedgerStatement() {
                               <TableCell className={`text-right font-mono font-medium ${entry.running_balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                                 {formatCurrency(Math.abs(entry.running_balance))} {entry.running_balance >= 0 ? 'Dr' : 'Cr'}
                               </TableCell>
+                              <TableCell>
+                                {entry.reference_type && entry.reference_id && referenceSourceMap[entry.reference_type] && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => handleViewSource(entry.reference_type, entry.reference_id)}
+                                    title="View Source"
+                                  >
+                                    <ExternalLink className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                           <TableRow className="bg-muted/50 font-bold">
                             <TableCell colSpan={4} className="text-right">Totals</TableCell>
                             <TableCell className="text-right font-mono">{formatCurrency(totalDebit)}</TableCell>
                             <TableCell className="text-right font-mono">{formatCurrency(totalCredit)}</TableCell>
-                            <TableCell />
+                            <TableCell colSpan={2} />
                           </TableRow>
                         </TableBody>
                       </Table>

@@ -32,6 +32,7 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import AgentCommissions from "./pages/AgentCommissions";
 import CommissionReports from "./pages/CommissionReports";
 import Vouchers from "./pages/Vouchers";
+import BackfillVouchers from "./pages/BackfillVouchers";
 import TrialBalance from "./pages/TrialBalance";
 import ProfitAndLoss from "./pages/ProfitAndLoss";
 import BalanceSheet from "./pages/BalanceSheet";
@@ -183,6 +184,11 @@ const App = () => (
             <Route path="/vouchers" element={
               <ProtectedRoute>
                 <Vouchers />
+              </ProtectedRoute>
+            } />
+            <Route path="/backfill-vouchers" element={
+              <ProtectedRoute>
+                <BackfillVouchers />
               </ProtectedRoute>
             } />
             <Route path="/notifications" element={

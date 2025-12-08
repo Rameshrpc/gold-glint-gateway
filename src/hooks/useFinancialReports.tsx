@@ -38,6 +38,8 @@ export interface LedgerEntry {
   debit_amount: number;
   credit_amount: number;
   running_balance: number;
+  reference_type?: string;
+  reference_id?: string;
 }
 
 export interface DayBookEntry {
@@ -386,7 +388,7 @@ export function useFinancialReports() {
         debit_amount,
         credit_amount,
         narration,
-        vouchers!inner(voucher_date, voucher_number, voucher_type, narration, is_posted, client_id)
+        vouchers!inner(voucher_date, voucher_number, voucher_type, narration, is_posted, client_id, reference_type, reference_id)
       `)
       .eq('account_id', accountId)
       .eq('vouchers.client_id', profile.client_id)
@@ -417,7 +419,9 @@ export function useFinancialReports() {
           narration: e.narration || (e.vouchers as any).narration,
           debit_amount: debit,
           credit_amount: credit,
-          running_balance: runningBalance
+          running_balance: runningBalance,
+          reference_type: (e.vouchers as any).reference_type,
+          reference_id: (e.vouchers as any).reference_id
         });
       });
     }

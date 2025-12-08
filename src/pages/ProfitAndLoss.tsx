@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,22 @@ import { useFinancialReports, ProfitLossEntry } from '@/hooks/useFinancialReport
 import { useAuth } from '@/hooks/useAuth';
 import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
 import { ProfitLossPDF } from '@/components/reports/ProfitLossPDF';
-import { FileText, RefreshCw, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { FileText, RefreshCw, TrendingUp, TrendingDown, DollarSign, ExternalLink } from 'lucide-react';
+
+// Map account codes to their source pages
+const accountSourceMap: Record<string, { label: string; href: string }> = {
+  'INT-INC-SHOWN': { label: 'View Interest Payments', href: '/interest' },
+  'INT-INC-DIFF': { label: 'View Interest Payments', href: '/interest' },
+  'PENALTY-INC': { label: 'View Interest Payments', href: '/interest' },
+  'PROC-FEE-INC': { label: 'View Loans', href: '/loans' },
+  'DOC-CHARGE-INC': { label: 'View Loans', href: '/loans' },
+  'AGENT-COMM-EXP': { label: 'View Agent Commissions', href: '/agent-commissions' },
+  'REBATE-EXP': { label: 'View Redemptions', href: '/redemption' },
+  'BANK-INT-EXP': { label: 'View Repledge Packets', href: '/gold-vault' },
+};
 
 export default function ProfitAndLoss() {
+  const navigate = useNavigate();
   const { profile, client } = useAuth();
   const { getProfitLoss } = useFinancialReports();
   const [fromDate, setFromDate] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -187,8 +201,21 @@ export default function ProfitAndLoss() {
                           <TableCell colSpan={2} className="font-medium">{groupName}</TableCell>
                         </TableRow>
                         {groupEntries.map(entry => (
-                          <TableRow key={entry.account_id}>
-                            <TableCell className="pl-6">{entry.account_name}</TableCell>
+                          <TableRow key={entry.account_id} className="group hover:bg-muted/50">
+                            <TableCell className="pl-6 flex items-center gap-2">
+                              {entry.account_name}
+                              {accountSourceMap[entry.account_code] && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => navigate(accountSourceMap[entry.account_code].href)}
+                                >
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  <span className="text-xs">{accountSourceMap[entry.account_code].label}</span>
+                                </Button>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right font-mono">{formatCurrency(entry.amount)}</TableCell>
                           </TableRow>
                         ))}
@@ -232,8 +259,21 @@ export default function ProfitAndLoss() {
                           <TableCell colSpan={2} className="font-medium">{groupName}</TableCell>
                         </TableRow>
                         {groupEntries.map(entry => (
-                          <TableRow key={entry.account_id}>
-                            <TableCell className="pl-6">{entry.account_name}</TableCell>
+                          <TableRow key={entry.account_id} className="group hover:bg-muted/50">
+                            <TableCell className="pl-6 flex items-center gap-2">
+                              {entry.account_name}
+                              {accountSourceMap[entry.account_code] && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  onClick={() => navigate(accountSourceMap[entry.account_code].href)}
+                                >
+                                  <ExternalLink className="h-3 w-3 mr-1" />
+                                  <span className="text-xs">{accountSourceMap[entry.account_code].label}</span>
+                                </Button>
+                              )}
+                            </TableCell>
                             <TableCell className="text-right font-mono">{formatCurrency(entry.amount)}</TableCell>
                           </TableRow>
                         ))}
