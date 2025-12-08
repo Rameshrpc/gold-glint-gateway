@@ -3,11 +3,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { pdf } from '@react-pdf/renderer';
-import { Download, Printer, FileText, Layout } from 'lucide-react';
+import { Download, Printer, FileText, Layout, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePrintTemplates } from '@/hooks/usePrintTemplates';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { resolveTemplate, getTemplateCodeByPaperSize, TemplateData } from '@/lib/templateResolver';
+import { HTMLPrintDialog } from './HTMLPrintDialog';
+import { TamilNaduPawnbrokerHTMLTemplateProps } from './html-templates/TamilNaduPawnbrokerHTMLTemplate';
 
 interface PDFViewerDialogProps {
   open: boolean;
@@ -18,6 +20,8 @@ interface PDFViewerDialogProps {
   // Optional: For dynamic template selection
   templateData?: TemplateData;
   receiptType?: 'loan' | 'interest' | 'redemption' | 'auction';
+  // Optional: HTML template data for bilingual support
+  htmlTemplateData?: TamilNaduPawnbrokerHTMLTemplateProps;
 }
 
 export function PDFViewerDialog({ 
@@ -27,11 +31,13 @@ export function PDFViewerDialog({
   document, 
   fileName,
   templateData,
-  receiptType = 'loan'
+  receiptType = 'loan',
+  htmlTemplateData
 }: PDFViewerDialogProps) {
   const [loading, setLoading] = useState(false);
   const [paperSize, setPaperSize] = useState<'a4' | 'a5' | 'thermal'>('a4');
   const [selectedTemplateCode, setSelectedTemplateCode] = useState<string>('');
+  const [printMode, setPrintMode] = useState<'pdf' | 'html'>('pdf');
   
   // Fetch available templates and client print settings
   const { data: templates = [] } = usePrintTemplates(receiptType);
@@ -51,6 +57,10 @@ export function PDFViewerDialog({
         } else {
           setPaperSize('a4');
         }
+        // Auto-switch to HTML mode for bilingual templates
+        if (defaultTemplate.language === 'bilingual' && htmlTemplateData) {
+          setPrintMode('html');
+        }
         return;
       }
     }
@@ -58,7 +68,13 @@ export function PDFViewerDialog({
     if (templates.length > 0) {
       setSelectedTemplateCode(templates[0].template_code);
     }
-  }, [templates, printSettings]);
+  }, [templates, printSettings, htmlTemplateData]);
+
+  // Check if selected template is bilingual
+  const selectedTemplate = templates.find(t => t.template_code === selectedTemplateCode);
+  const isBilingualTemplate = selectedTemplate?.language === 'bilingual' || 
+    selectedTemplateCode?.includes('BILINGUAL') || 
+    selectedTemplateCode?.includes('TN_PAWNBROKER');
 
   // Get the document to render
   const getDocumentToRender = () => {
@@ -111,8 +127,17 @@ export function PDFViewerDialog({
     }
   };
 
-  // Filter templates by paper size for quick access
-  const selectedTemplate = templates.find(t => t.template_code === selectedTemplateCode);
+  // If HTML mode is selected and we have htmlTemplateData, show HTMLPrintDialog
+  if (printMode === 'html' && htmlTemplateData) {
+    return (
+      <HTMLPrintDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        title={title}
+        templateData={htmlTemplateData}
+      />
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -125,6 +150,30 @@ export function PDFViewerDialog({
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Print Mode Toggle - Show only if htmlTemplateData is available */}
+          {htmlTemplateData && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Print Mode
+              </label>
+              <Select value={printMode} onValueChange={(v) => setPrintMode(v as 'pdf' | 'html')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pdf">PDF Mode (English only)</SelectItem>
+                  <SelectItem value="html">HTML Mode (Tamil/Bilingual)</SelectItem>
+                </SelectContent>
+              </Select>
+              {isBilingualTemplate && printMode === 'pdf' && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Tamil fonts may not render correctly in PDF mode. Use HTML mode for bilingual receipts.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Template Selection - Only show if templateData is provided */}
           {templateData && templates.length > 0 && (
             <div className="space-y-2">
@@ -144,6 +193,10 @@ export function PDFViewerDialog({
                     setPaperSize('a5');
                   } else {
                     setPaperSize('a4');
+                  }
+                  // Auto-switch to HTML for bilingual
+                  if (template?.language === 'bilingual' && htmlTemplateData) {
+                    setPrintMode('html');
                   }
                 }}
               >

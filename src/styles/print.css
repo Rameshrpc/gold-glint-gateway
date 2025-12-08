@@ -1,0 +1,77 @@
+/* Import Catamaran font for Tamil support */
+@import url('https://fonts.googleapis.com/css2?family=Catamaran:wght@400;500;600;700&display=swap');
+
+/* Print-specific styles */
+@media print {
+  /* Hide non-printable elements */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Remove shadows and backgrounds for cleaner print */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Page breaks */
+  .page-break {
+    page-break-after: always;
+  }
+
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* A4 page setup */
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+
+  /* Thermal 80mm page setup */
+  @page thermal {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+
+  .thermal-mode {
+    page: thermal;
+    width: 80mm;
+  }
+
+  /* Ensure images print */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* Force background colors to print */
+  .print-bg {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Preview styles */
+.print-preview {
+  font-family: 'Catamaran', sans-serif;
+  background: white;
+  color: black;
+}
+
+.print-preview-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 10mm;
+  margin: 0 auto;
+}
+
+.print-preview-thermal {
+  width: 80mm;
+  padding: 3mm;
+  margin: 0 auto;
+}
