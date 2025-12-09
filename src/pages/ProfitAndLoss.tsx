@@ -9,8 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinancialReports, ProfitLossEntry } from '@/hooks/useFinancialReports';
 import { useAuth } from '@/hooks/useAuth';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { ProfitLossPDF } from '@/components/reports/ProfitLossPDF';
+import { printElement } from '@/lib/print';
 import { FileText, RefreshCw, TrendingUp, TrendingDown, DollarSign, ExternalLink } from 'lucide-react';
 
 // Map account codes to their source pages

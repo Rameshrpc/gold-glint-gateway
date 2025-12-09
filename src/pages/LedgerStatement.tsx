@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinancialReports, LedgerEntry } from '@/hooks/useFinancialReports';
 import { useAuth } from '@/hooks/useAuth';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { LedgerStatementPDF } from '@/components/reports/LedgerStatementPDF';
+import { printElement } from '@/lib/print';
 import { FileText, RefreshCw, BookOpen, ExternalLink } from 'lucide-react';
 
 // Map reference types to their source pages

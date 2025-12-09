@@ -8,8 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinancialReports, TrialBalanceEntry } from '@/hooks/useFinancialReports';
 import { useAuth } from '@/hooks/useAuth';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { TrialBalancePDF } from '@/components/reports/TrialBalancePDF';
+import { printElement } from '@/lib/print';
 import { FileText, RefreshCw, Scale } from 'lucide-react';
 
 export default function TrialBalance() {
@@ -200,21 +199,7 @@ export default function TrialBalance() {
         </Card>
       </div>
 
-      <PDFViewerDialog
-        open={showPDF}
-        onOpenChange={setShowPDF}
-        title="Trial Balance"
-        fileName={`trial-balance-${asOfDate}.pdf`}
-        document={
-          <TrialBalancePDF
-            entries={entries}
-            asOfDate={asOfDate}
-            companyName={client?.company_name || ''}
-            totalDebit={totalDebit}
-            totalCredit={totalCredit}
-          />
-        }
-      />
+      {/* Print functionality - use browser print on the table above */}
     </DashboardLayout>
   );
 }

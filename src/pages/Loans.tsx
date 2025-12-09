@@ -24,8 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { LoanDisbursementPDF } from '@/components/receipts/LoanDisbursementPDF';
+import { PrintReceiptDialog, LoanReceipt } from '@/components/print';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
@@ -1989,92 +1988,32 @@ export default function Loans() {
           onSuccess={fetchLoans}
         />
 
-        {/* Loan Disbursement Receipt PDF Dialog */}
+        {/* Loan Receipt Dialog */}
         {createdLoanData && (
-          <PDFViewerDialog
+          <PrintReceiptDialog
             open={showReceiptDialog}
             onOpenChange={setShowReceiptDialog}
             title="Loan Disbursement Receipt"
-            fileName={`loan-disbursement-${createdLoanData.loanNumber}`}
-            receiptType="loan"
-            templateData={{
-              company: {
-                name: client?.company_name || 'Gold Finance',
-                address: '',
-                phone: '',
-                email: '',
-              },
-              loan: {
-                loan_number: createdLoanData.loanNumber,
-                loan_date: createdLoanData.loanDate,
-                principal_amount: createdLoanData.calculation.principalAmount,
-                interest_rate: createdLoanData.interestRate,
-                tenure_days: createdLoanData.tenureDays,
-                maturity_date: createdLoanData.maturityDate,
-                advance_interest: createdLoanData.calculation.advanceInterest,
-                net_disbursed: createdLoanData.calculation.netDisbursed,
-              },
-              customer: {
-                full_name: createdLoanData.customer.full_name,
-                customer_code: createdLoanData.customer.customer_code,
+          >
+            <LoanReceipt
+              company={{ name: client?.company_name || 'Gold Finance' }}
+              loan={{
+                number: createdLoanData.loanNumber,
+                date: createdLoanData.loanDate,
+                maturityDate: createdLoanData.maturityDate,
+                tenureDays: createdLoanData.tenureDays,
+                interestRate: createdLoanData.interestRate,
+              }}
+              customer={{
+                name: createdLoanData.customer.full_name,
+                code: createdLoanData.customer.customer_code,
                 phone: createdLoanData.customer.phone,
                 address: createdLoanData.customer.address,
-                city: createdLoanData.customer.city,
-                state: createdLoanData.customer.state,
-                pincode: createdLoanData.customer.pincode,
-                photo_url: createdLoanData.customer.photo_url,
-                aadhaar_front_url: createdLoanData.customer.aadhaar_front_url,
-                aadhaar_back_url: createdLoanData.customer.aadhaar_back_url,
-                pan_card_url: createdLoanData.customer.pan_card_url,
-              },
-              scheme: {
-                name: createdLoanData.scheme.scheme_name,
-                rate: createdLoanData.interestRate,
-                ltvPercentage: createdLoanData.scheme.ltv_percentage,
-              },
-              goldItems: createdLoanData.goldItems.map(item => ({
-                item_type: item.item_type,
-                description: item.description,
-                gross_weight_grams: item.gross_weight_grams,
-                net_weight_grams: item.net_weight_grams,
-                purity: item.purity,
-                purity_percentage: item.purity_percentage,
-                appraised_value: item.appraised_value,
-              })),
-              calculation: createdLoanData.calculation,
-              jewelPhotos: {
-                timestamp: createdLoanData.photoTimestamp,
-                appraiser_sheet_url: createdLoanData.appraiserSheetUrl || undefined,
-              },
-              rebateSchedule: calculateRebateSchedule(createdLoanData.calculation.advanceInterest).slots,
-            }}
-            document={
-              <LoanDisbursementPDF
-                company={{
-                  name: client?.company_name || 'Gold Finance',
-                }}
-                loan={{
-                  number: createdLoanData.loanNumber,
-                  date: createdLoanData.loanDate,
-                  maturityDate: createdLoanData.maturityDate,
-                  tenureDays: createdLoanData.tenureDays,
-                }}
-                customer={{
-                  name: createdLoanData.customer.full_name,
-                  code: createdLoanData.customer.customer_code,
-                  phone: createdLoanData.customer.phone,
-                }}
-                scheme={{
-                  name: createdLoanData.scheme.scheme_name,
-                  rate: createdLoanData.scheme.shown_rate || createdLoanData.scheme.interest_rate,
-                  ltvPercentage: createdLoanData.scheme.ltv_percentage,
-                }}
-                goldItems={createdLoanData.goldItems}
-                calculation={createdLoanData.calculation}
-                rebateSchedule={calculateRebateSchedule(createdLoanData.calculation.advanceInterest)}
-              />
-            }
-          />
+              }}
+              goldItems={createdLoanData.goldItems}
+              calculation={createdLoanData.calculation}
+            />
+          </PrintReceiptDialog>
         )}
       </div>
     </DashboardLayout>

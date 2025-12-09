@@ -25,8 +25,7 @@ import {
   formatIndianCurrency,
   calculateRebateAtRedemption,
 } from '@/lib/interestCalculations';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { RedemptionReceiptPDF } from '@/components/receipts/RedemptionReceiptPDF';
+import { PrintReceiptDialog, RedemptionReceipt } from '@/components/print';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
