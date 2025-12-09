@@ -10,8 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { CommissionReportPDF } from '@/components/reports/CommissionReportPDF';
+import { printElement } from '@/lib/print';
 import { RefreshCw, Download, FileText, Users, TrendingUp, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';

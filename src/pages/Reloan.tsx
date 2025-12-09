@@ -26,8 +26,7 @@ import {
   calculateAdvanceInterest,
   formatIndianCurrency,
 } from '@/lib/interestCalculations';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import { ReloanReceiptPDF } from '@/components/receipts/ReloanReceiptPDF';
+import { PrintReceiptDialog, ReloanReceipt } from '@/components/print';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';

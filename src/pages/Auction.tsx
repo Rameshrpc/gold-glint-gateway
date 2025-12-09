@@ -23,8 +23,7 @@ import {
   getDaysBetween, 
   formatIndianCurrency 
 } from '@/lib/interestCalculations';
-import { PDFViewerDialog } from '@/components/receipts/PDFViewerDialog';
-import AuctionReceiptPDF from '@/components/receipts/AuctionReceiptPDF';
+import { PrintReceiptDialog, AuctionReceipt } from '@/components/print';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
