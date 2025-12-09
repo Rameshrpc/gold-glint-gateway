@@ -209,17 +209,10 @@ export default function CommissionReports() {
               <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
               Refresh
             </Button>
-            <PDFDownloadLink
-              document={<CommissionReportPDF {...reportData} />}
-              fileName={`commission-report-${format(new Date(), 'yyyyMMdd')}.pdf`}
-            >
-              {({ loading: pdfLoading }) => (
-                <Button disabled={pdfLoading}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Export PDF
-                </Button>
-              )}
-            </PDFDownloadLink>
+            <Button onClick={() => printElement('commission-report-content')}>
+              <FileText className="h-4 w-4 mr-2" />
+              Print Report
+            </Button>
           </div>
         </div>
 

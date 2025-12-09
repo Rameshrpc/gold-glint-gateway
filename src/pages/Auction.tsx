@@ -946,15 +946,55 @@ const Auction = () => {
         </Tabs>
       </div>
 
-      {/* PDF Dialog */}
+      {/* Print Receipt Dialog */}
       {auctionForPdf && (
-        <PDFViewerDialog
+        <PrintReceiptDialog
           open={pdfDialogOpen}
           onOpenChange={setPdfDialogOpen}
           title="Auction Settlement Receipt"
-          document={<AuctionReceiptPDF data={auctionForPdf} />}
-          fileName={`Auction-${auctionForPdf.auction?.auction_lot_number || 'Receipt'}.pdf`}
-        />
+        >
+          <AuctionReceipt
+            company={{
+              name: auctionForPdf.company?.name || '',
+              address: auctionForPdf.company?.address || '',
+              phone: auctionForPdf.company?.phone || ''
+            }}
+            auction={{
+              lotNumber: auctionForPdf.auction?.auction_lot_number || '',
+              date: auctionForPdf.auction?.auction_date || '',
+              buyerName: auctionForPdf.auction?.buyer_name || '',
+              buyerContact: auctionForPdf.auction?.buyer_contact || '',
+              soldPrice: auctionForPdf.auction?.sold_price || 0,
+              paymentMode: auctionForPdf.auction?.payment_mode || 'cash'
+            }}
+            loan={{
+              number: auctionForPdf.loan?.loan_number || '',
+              date: auctionForPdf.loan?.loan_date || '',
+              maturityDate: auctionForPdf.loan?.maturity_date || ''
+            }}
+            customer={{
+              name: auctionForPdf.customer?.full_name || '',
+              code: auctionForPdf.customer?.customer_code || '',
+              phone: auctionForPdf.customer?.phone || ''
+            }}
+            outstanding={{
+              principal: auctionForPdf.auction?.outstanding_principal || 0,
+              interest: auctionForPdf.auction?.outstanding_interest || 0,
+              penalty: auctionForPdf.auction?.outstanding_penalty || 0,
+              total: auctionForPdf.auction?.total_outstanding || 0
+            }}
+            settlement={{
+              surplus: auctionForPdf.auction?.surplus_amount || 0,
+              shortfall: auctionForPdf.auction?.shortfall_amount || 0
+            }}
+            goldItems={(auctionForPdf.goldItems || []).map((item: any) => ({
+              item_type: item.item_type,
+              gross_weight_grams: item.gross_weight_grams || item.net_weight_grams,
+              purity: item.purity,
+              appraised_value: item.appraised_value
+            }))}
+          />
+        </PrintReceiptDialog>
       )}
     </DashboardLayout>
   );

@@ -290,24 +290,69 @@ export default function ProfitAndLoss() {
         </div>
       </div>
 
-      <PDFViewerDialog
-        open={showPDF}
-        onOpenChange={setShowPDF}
-        title="Profit & Loss Statement"
-        fileName={`profit-loss-${fromDate}-to-${toDate}.pdf`}
-        document={
-          <ProfitLossPDF
-            income={income}
-            expenses={expenses}
-            fromDate={fromDate}
-            toDate={toDate}
-            companyName={client?.company_name || ''}
-            totalIncome={totalIncome}
-            totalExpenses={totalExpenses}
-            netProfit={netProfit}
-          />
-        }
-      />
+      {/* Print Dialog */}
+      {showPDF && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Profit & Loss - Print Preview</h2>
+              <div className="flex gap-2">
+                <Button onClick={() => printElement('pnl-print')}>Print</Button>
+                <Button variant="outline" onClick={() => setShowPDF(false)}>Close</Button>
+              </div>
+            </div>
+            <div id="pnl-print" className="p-6 bg-white">
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold">{client?.company_name}</h1>
+                <h2 className="text-lg">Profit & Loss Statement</h2>
+                <p className="text-muted-foreground">{format(new Date(fromDate), 'dd MMM yyyy')} to {format(new Date(toDate), 'dd MMM yyyy')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-bold text-lg mb-2 border-b pb-1 text-green-700">Income</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {income.map((item, i) => (
+                        <tr key={i}>
+                          <td className="py-1">{item.account_name}</td>
+                          <td className="text-right font-mono">{formatCurrency(item.amount)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t">
+                        <td className="py-2">Total Income</td>
+                        <td className="text-right font-mono">{formatCurrency(totalIncome)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg mb-2 border-b pb-1 text-red-700">Expenses</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {expenses.map((item, i) => (
+                        <tr key={i}>
+                          <td className="py-1">{item.account_name}</td>
+                          <td className="text-right font-mono">{formatCurrency(item.amount)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t">
+                        <td className="py-2">Total Expenses</td>
+                        <td className="text-right font-mono">{formatCurrency(totalExpenses)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div className="mt-6 p-4 bg-gray-100 rounded-lg text-center">
+                <span className="font-bold text-lg">Net Profit: </span>
+                <span className={`font-bold text-lg font-mono ${netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {formatCurrency(netProfit)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

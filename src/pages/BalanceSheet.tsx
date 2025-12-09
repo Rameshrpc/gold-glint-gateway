@@ -322,25 +322,78 @@ export default function BalanceSheet() {
         </div>
       </div>
 
-      <PDFViewerDialog
-        open={showPDF}
-        onOpenChange={setShowPDF}
-        title="Balance Sheet"
-        fileName={`balance-sheet-${asOfDate}.pdf`}
-        document={
-          <BalanceSheetPDF
-            assets={assets}
-            liabilities={liabilities}
-            equity={equity}
-            asOfDate={asOfDate}
-            companyName={client?.company_name || ''}
-            totalAssets={totals.assets}
-            totalLiabilities={totals.liabilities}
-            totalEquity={totals.equity}
-            retainedEarnings={totals.retainedEarnings}
-          />
-        }
-      />
+      {/* Print Dialog */}
+      {showPDF && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Balance Sheet - Print Preview</h2>
+              <div className="flex gap-2">
+                <Button onClick={() => printElement('balance-sheet-print')}>Print</Button>
+                <Button variant="outline" onClick={() => setShowPDF(false)}>Close</Button>
+              </div>
+            </div>
+            <div id="balance-sheet-print" className="p-6 bg-white">
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold">{client?.company_name}</h1>
+                <h2 className="text-lg">Balance Sheet</h2>
+                <p className="text-muted-foreground">As of {format(new Date(asOfDate), 'dd MMM yyyy')}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <h3 className="font-bold text-lg mb-2 border-b pb-1">Assets</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {assets.map((item, i) => (
+                        <tr key={i}>
+                          <td className="py-1">{item.account_name}</td>
+                          <td className="text-right font-mono">{formatCurrency(item.balance)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t">
+                        <td className="py-2">Total Assets</td>
+                        <td className="text-right font-mono">{formatCurrency(totals.assets)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg mb-2 border-b pb-1">Liabilities</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {liabilities.map((item, i) => (
+                        <tr key={i}>
+                          <td className="py-1">{item.account_name}</td>
+                          <td className="text-right font-mono">{formatCurrency(item.balance)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t">
+                        <td className="py-2">Total Liabilities</td>
+                        <td className="text-right font-mono">{formatCurrency(totals.liabilities)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <h3 className="font-bold text-lg mb-2 border-b pb-1 mt-4">Equity</h3>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {equity.map((item, i) => (
+                        <tr key={i}>
+                          <td className="py-1">{item.account_name}</td>
+                          <td className="text-right font-mono">{formatCurrency(item.balance)}</td>
+                        </tr>
+                      ))}
+                      <tr className="font-bold border-t">
+                        <td className="py-2">Total Equity</td>
+                        <td className="text-right font-mono">{formatCurrency(totals.equity)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }

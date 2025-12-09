@@ -1287,15 +1287,47 @@ export default function Reloan() {
           </Card>
         )}
 
-        {/* PDF Dialog */}
+        {/* Print Receipt Dialog */}
         {reloanForPdf && (
-          <PDFViewerDialog
+          <PrintReceiptDialog
             open={pdfDialogOpen}
             onOpenChange={setPdfDialogOpen}
             title="Reloan Receipt"
-            fileName={`reloan-${reloanForPdf.newLoan.number}.pdf`}
-            document={<ReloanReceiptPDF {...reloanForPdf} />}
-          />
+          >
+            <ReloanReceipt
+              company={{
+                name: reloanForPdf.company?.name || '',
+                address: reloanForPdf.company?.address || '',
+                phone: reloanForPdf.company?.phone || ''
+              }}
+              customer={{
+                name: reloanForPdf.customer?.name || '',
+                code: reloanForPdf.customer?.code || '',
+                phone: reloanForPdf.customer?.phone || ''
+              }}
+              oldLoan={{
+                number: reloanForPdf.oldLoan?.number || '',
+                date: reloanForPdf.oldLoan?.date || '',
+                principal: reloanForPdf.oldLoan?.principal || 0,
+                settlementAmount: reloanForPdf.oldLoan?.totalDue || reloanForPdf.oldLoan?.settlementAmount || 0
+              }}
+              newLoan={{
+                number: reloanForPdf.newLoan?.number || '',
+                date: reloanForPdf.newLoan?.date || '',
+                maturityDate: reloanForPdf.newLoan?.maturityDate || '',
+                tenureDays: reloanForPdf.newLoan?.tenureDays || 0,
+                principal: reloanForPdf.newLoan?.principal || 0,
+                advanceInterest: reloanForPdf.newLoan?.advanceInterest || 0,
+                processingFee: reloanForPdf.newLoan?.processingFee || 0,
+                documentCharges: reloanForPdf.newLoan?.documentCharges || 0,
+                netDisbursed: reloanForPdf.newLoan?.netDisbursement || reloanForPdf.newLoan?.netDisbursed || 0
+              }}
+              netSettlement={{
+                amount: reloanForPdf.netSettlement?.amount || 0,
+                direction: reloanForPdf.netSettlement?.direction || 'to_customer'
+              }}
+            />
+          </PrintReceiptDialog>
         )}
       </div>
     </DashboardLayout>
