@@ -63,7 +63,7 @@ const menuGroups = [
     title: 'Settings',
     items: [
       { icon: Settings, label: 'Settings', path: '/settings', color: 'from-gray-500 to-slate-500' },
-      { icon: Printer, label: 'Print Setup', path: '/print-setup', color: 'from-zinc-500 to-gray-500' },
+      { icon: Printer, label: 'Print Setup', path: '/settings/print', color: 'from-zinc-500 to-gray-500' },
     ],
   },
 ];

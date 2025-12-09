@@ -39,6 +39,7 @@ import ProfitAndLoss from "./pages/ProfitAndLoss";
 import BalanceSheet from "./pages/BalanceSheet";
 import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
+import PrintSettings from "./pages/settings/PrintSettings";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
@@ -238,7 +239,11 @@ const App = () => (
                 <Settings />
               </ProtectedRoute>
             } />
-            {/* Print Setup removed - using simple HTML printing */}
+            <Route path="/settings/print" element={
+              <ProtectedRoute>
+                <PrintSettings />
+              </ProtectedRoute>
+            } />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
