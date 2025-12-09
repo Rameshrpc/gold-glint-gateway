@@ -810,15 +810,52 @@ export default function Redemption() {
         </Card>
       </div>
 
-      {/* PDF Dialog */}
+      {/* Print Receipt Dialog */}
       {redemptionForPdf && (
-        <PDFViewerDialog
+        <PrintReceiptDialog
           open={pdfDialogOpen}
           onOpenChange={setPdfDialogOpen}
           title="Redemption Receipt"
-          document={<RedemptionReceiptPDF {...redemptionForPdf} />}
-          fileName={`redemption-${redemptionForPdf.redemption.number}`}
-        />
+        >
+          <RedemptionReceipt
+            company={{
+              name: redemptionForPdf.company?.name || '',
+              address: redemptionForPdf.company?.address || '',
+              phone: redemptionForPdf.company?.phone || ''
+            }}
+            redemption={{
+              number: redemptionForPdf.redemption?.number || '',
+              date: redemptionForPdf.redemption?.date || '',
+              paymentMode: redemptionForPdf.redemption?.paymentMode || 'cash',
+              paymentReference: redemptionForPdf.redemption?.paymentReference
+            }}
+            customer={{
+              name: redemptionForPdf.customer?.name || '',
+              code: redemptionForPdf.customer?.code || '',
+              phone: redemptionForPdf.customer?.phone || ''
+            }}
+            loan={{
+              number: redemptionForPdf.loan?.number || '',
+              date: redemptionForPdf.loan?.date || '',
+              originalPrincipal: redemptionForPdf.loan?.principal || 0,
+              tenureDays: redemptionForPdf.loan?.tenureDays || 0,
+              daysSinceLoan: redemptionForPdf.loan?.daysSinceLoan || 0
+            }}
+            settlement={{
+              outstandingPrincipal: redemptionForPdf.settlement?.principal || 0,
+              interestDue: redemptionForPdf.settlement?.interest || 0,
+              penalty: redemptionForPdf.settlement?.penalty || 0,
+              rebateAmount: redemptionForPdf.settlement?.rebate || 0,
+              totalSettlement: redemptionForPdf.settlement?.total || 0,
+              amountReceived: redemptionForPdf.settlement?.amountReceived || 0
+            }}
+            goldRelease={{
+              releasedTo: redemptionForPdf.goldRelease?.releasedTo || '',
+              releaseDate: redemptionForPdf.goldRelease?.releaseDate || redemptionForPdf.redemption?.date || '',
+              identityVerified: redemptionForPdf.goldRelease?.identityVerified || false
+            }}
+          />
+        </PrintReceiptDialog>
       )}
     </DashboardLayout>
   );

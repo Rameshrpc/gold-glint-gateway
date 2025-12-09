@@ -267,24 +267,62 @@ export default function LedgerStatement() {
         )}
       </div>
 
-      <PDFViewerDialog
-        open={showPDF}
-        onOpenChange={setShowPDF}
-        title="Ledger Statement"
-        fileName={`ledger-${selectedAccountDetails?.account_code || 'statement'}-${fromDate}-to-${toDate}.pdf`}
-        document={
-          <LedgerStatementPDF
-            accountCode={selectedAccountDetails?.account_code || ''}
-            accountName={selectedAccountDetails?.account_name || ''}
-            entries={entries}
-            fromDate={fromDate}
-            toDate={toDate}
-            companyName={client?.company_name || ''}
-            openingBalance={openingBalance}
-            closingBalance={closingBalance}
-          />
-        }
-      />
+      {/* Print Dialog */}
+      {showPDF && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-5xl w-full max-h-[90vh] overflow-auto p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">Ledger Statement - Print Preview</h2>
+              <div className="flex gap-2">
+                <Button onClick={() => printElement('ledger-print')}>Print</Button>
+                <Button variant="outline" onClick={() => setShowPDF(false)}>Close</Button>
+              </div>
+            </div>
+            <div id="ledger-print" className="p-6 bg-white">
+              <div className="text-center mb-6">
+                <h1 className="text-2xl font-bold">{client?.company_name}</h1>
+                <h2 className="text-lg">Ledger Statement</h2>
+                <p className="font-medium">{selectedAccountDetails?.account_name} ({selectedAccountDetails?.account_code})</p>
+                <p className="text-muted-foreground">{format(new Date(fromDate), 'dd MMM yyyy')} to {format(new Date(toDate), 'dd MMM yyyy')}</p>
+              </div>
+              <div className="mb-4 p-3 bg-gray-100 rounded">
+                <span className="font-bold">Opening Balance: </span>
+                <span className={`font-mono ${openingBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {formatCurrency(Math.abs(openingBalance))} {openingBalance >= 0 ? 'Dr' : 'Cr'}
+                </span>
+              </div>
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b-2">
+                    <th className="text-left py-2">Date</th>
+                    <th className="text-left py-2">Description</th>
+                    <th className="text-right py-2">Debit</th>
+                    <th className="text-right py-2">Credit</th>
+                    <th className="text-right py-2">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((entry, i) => (
+                    <tr key={i} className="border-b">
+                      <td className="py-2">{format(new Date(entry.voucher_date), 'dd/MM/yyyy')}</td>
+                      <td className="py-2">{entry.narration}</td>
+                      <td className="text-right font-mono">{entry.debit_amount ? formatCurrency(entry.debit_amount) : '-'}</td>
+                      <td className="text-right font-mono">{entry.credit_amount ? formatCurrency(entry.credit_amount) : '-'}</td>
+                      <td className="text-right font-mono">{formatCurrency(Math.abs(entry.running_balance))} {entry.running_balance >= 0 ? 'Dr' : 'Cr'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="mt-4 p-3 bg-gray-100 rounded">
+                <span className="font-bold">Closing Balance: </span>
+                <span className={`font-mono ${closingBalance >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {formatCurrency(Math.abs(closingBalance))} {closingBalance >= 0 ? 'Dr' : 'Cr'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
