@@ -16,7 +16,8 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Printer
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
@@ -62,6 +63,7 @@ const menuGroups = [
     title: 'Settings',
     items: [
       { icon: Settings, label: 'Settings', path: '/settings', color: 'from-gray-500 to-slate-500' },
+      { icon: Printer, label: 'Print Manager', path: '/print-manager', color: 'from-amber-500 to-orange-500' },
     ],
   },
 ];
