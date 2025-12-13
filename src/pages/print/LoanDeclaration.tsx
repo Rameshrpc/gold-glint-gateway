@@ -11,14 +11,14 @@ import {
 
 const LoanDeclaration: React.FC = () => {
   return (
-    <PrintPageWrapper title="Loan Declaration">
+    <PrintPageWrapper title="Gold Declaration">
       <div className="print-preview font-sans text-black">
         <PrintHeader />
 
         {/* Title */}
         <div className="text-center mb-6">
-          <div className="text-tamil text-lg font-bold">கடன் அறிவிப்பு</div>
-          <div className="text-english text-xl font-bold">LOAN DECLARATION</div>
+          <div className="text-tamil text-lg font-bold">தங்க அறிவிப்பு</div>
+          <div className="text-english text-xl font-bold">GOLD DECLARATION</div>
         </div>
 
         {/* Customer Details Section */}
