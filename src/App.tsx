@@ -42,6 +42,15 @@ import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
+// Print Pages
+import LoanReceiptCustomer from "./pages/print/LoanReceiptCustomer";
+import LoanReceiptOffice from "./pages/print/LoanReceiptOffice";
+import LoanDeclaration from "./pages/print/LoanDeclaration";
+import JewelDetails from "./pages/print/JewelDetails";
+import KycDocuments from "./pages/print/KycDocuments";
+import InterestReceiptPrint from "./pages/print/InterestReceiptPrint";
+import AuctionNoticePrint from "./pages/print/AuctionNoticePrint";
+
 // Mobile Components
 import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
 import MobileDashboard from "./components/mobile/MobileDashboard";
