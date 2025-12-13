@@ -258,6 +258,62 @@ const KycDocuments: React.FC = () => {
           </tbody>
         </table>
 
+        {/* KYC Document Image Placeholders */}
+        <SectionTitle tamil="KYC ஆவண படங்கள்" english="KYC Document Images" />
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          {/* Aadhaar Front */}
+          <div className="border-2 border-black p-2">
+            <div className="text-[9px] text-center font-bold mb-2">
+              <BilingualLabel tamil="ஆதார் முன்புறம்" english="Aadhaar Front" />
+            </div>
+            <div className="h-[140px] border border-dashed border-gray-500 flex items-center justify-center bg-gray-50">
+              <div className="text-[10px] text-gray-400 text-center">
+                <div className="text-tamil">ஆவண நகலை இங்கே ஒட்டவும்</div>
+                <div className="text-english">Paste document copy here</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Aadhaar Back */}
+          <div className="border-2 border-black p-2">
+            <div className="text-[9px] text-center font-bold mb-2">
+              <BilingualLabel tamil="ஆதார் பின்புறம்" english="Aadhaar Back" />
+            </div>
+            <div className="h-[140px] border border-dashed border-gray-500 flex items-center justify-center bg-gray-50">
+              <div className="text-[10px] text-gray-400 text-center">
+                <div className="text-tamil">ஆவண நகலை இங்கே ஒட்டவும்</div>
+                <div className="text-english">Paste document copy here</div>
+              </div>
+            </div>
+          </div>
+
+          {/* PAN Card */}
+          <div className="border-2 border-black p-2">
+            <div className="text-[9px] text-center font-bold mb-2">
+              <BilingualLabel tamil="பான் அட்டை" english="PAN Card" />
+            </div>
+            <div className="h-[140px] border border-dashed border-gray-500 flex items-center justify-center bg-gray-50">
+              <div className="text-[10px] text-gray-400 text-center">
+                <div className="text-tamil">ஆவண நகலை இங்கே ஒட்டவும்</div>
+                <div className="text-english">Paste document copy here</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Address Proof */}
+          <div className="border-2 border-black p-2">
+            <div className="text-[9px] text-center font-bold mb-2">
+              <BilingualLabel tamil="முகவரி ஆதாரம்" english="Address Proof" />
+            </div>
+            <div className="h-[140px] border border-dashed border-gray-500 flex items-center justify-center bg-gray-50">
+              <div className="text-[10px] text-gray-400 text-center">
+                <div className="text-tamil">ஆவண நகலை இங்கே ஒட்டவும்</div>
+                <div className="text-english">Paste document copy here</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Verification Statement */}
         <div className="border border-black p-3 mb-6">
           <div className="text-[10px]">
