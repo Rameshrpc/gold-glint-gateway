@@ -40,7 +40,6 @@ import BalanceSheet from "./pages/BalanceSheet";
 import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
-import PrintManager from "./pages/PrintManager";
 import NotFound from "./pages/NotFound";
 
 // Mobile Components
@@ -237,11 +236,6 @@ const App = () => (
             <Route path="/settings" element={
               <ProtectedRoute>
                 <Settings />
-              </ProtectedRoute>
-            } />
-            <Route path="/print-manager" element={
-              <ProtectedRoute>
-                <PrintManager />
               </ProtectedRoute>
             } />
             
