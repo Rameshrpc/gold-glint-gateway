@@ -12,7 +12,7 @@ import { NavLink } from '@/components/NavLink';
 import { 
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, Menu, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
-  Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, Printer, RefreshCw, Layers,
+  Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, RefreshCw, Layers,
   Landmark, Gift, Vault, Receipt, Coins, Database, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -113,7 +113,6 @@ const menuGroups: MenuGroup[] = [
     roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'],
     items: [
       { title: 'Settings', icon: Settings, href: '/settings', roles: ['super_admin', 'moderator', 'tenant_admin'], moduleKey: 'settings' },
-      { title: 'Print Setup', icon: Printer, href: '/settings/print', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager'] },
       { title: 'Backfill Vouchers', icon: Database, href: '/backfill-vouchers', roles: ['super_admin', 'moderator', 'tenant_admin'] },
     ]
   }
