@@ -64,6 +64,7 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
   copyType = 'original' 
 }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: '2-digit',
@@ -76,11 +77,13 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
 
-  const totalWeight = data.goldItems.reduce((sum, item) => sum + item.netWeight, 0);
-  const totalValue = data.goldItems.reduce((sum, item) => sum + item.appraisedValue, 0);
+  // Defensive null checks
+  const goldItems = data?.goldItems || [];
+  const totalWeight = goldItems.reduce((sum, item) => sum + (item?.netWeight || 0), 0);
+  const totalValue = goldItems.reduce((sum, item) => sum + (item?.appraisedValue || 0), 0);
 
   return (
     <PrintWrapper 
@@ -88,18 +91,18 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
       id="gold-pledge-certificate"
     >
       <BilingualHeader
-        companyName={data.company.name}
-        companyNameTamil={data.company.nameTamil}
-        address={data.company.address}
-        phone={data.company.phone}
-        email={data.company.email}
-        logoUrl={data.company.logoUrl}
-        branchName={data.branch.name}
-        branchNameTamil={data.branch.nameTamil}
+        companyName={data?.company?.name || 'Company'}
+        companyNameTamil={data?.company?.nameTamil}
+        address={data?.company?.address}
+        phone={data?.company?.phone}
+        email={data?.company?.email}
+        logoUrl={data?.company?.logoUrl}
+        branchName={data?.branch?.name}
+        branchNameTamil={data?.branch?.nameTamil}
         documentTitle="Gold Pledge Certificate"
         documentTitleTamil="தங்க அடமான சான்றிதழ்"
-        documentNumber={data.certificateNumber}
-        documentDate={formatDate(data.loanDate)}
+        documentNumber={data?.certificateNumber || data?.loanNumber || 'N/A'}
+        documentDate={formatDate(data?.loanDate)}
       />
 
       {/* Certificate Type Badge */}
@@ -119,10 +122,10 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
         titleTamil="அடமானக்காரர் விவரங்கள்"
         columns={2}
         items={[
-          { label: 'Name', labelTamil: 'பெயர்', value: data.customer.name, valueTamil: data.customer.nameTamil },
-          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data.customer.code },
-          { label: 'Phone', labelTamil: 'தொலைபேசி', value: data.customer.phone },
-          { label: 'Address', labelTamil: 'முகவரி', value: data.customer.address || '-', fullWidth: true },
+          { label: 'Name', labelTamil: 'பெயர்', value: data?.customer?.name || 'N/A', valueTamil: data?.customer?.nameTamil },
+          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data?.customer?.code || 'N/A' },
+          { label: 'Phone', labelTamil: 'தொலைபேசி', value: data?.customer?.phone || 'N/A' },
+          { label: 'Address', labelTamil: 'முகவரி', value: data?.customer?.address || '-', fullWidth: true },
         ]}
       />
 
@@ -132,18 +135,18 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
         titleTamil="அடமான விவரங்கள்"
         columns={4}
         items={[
-          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data.loanNumber, highlight: true },
-          { label: 'Certificate No.', labelTamil: 'சான்றிதழ் எண்', value: data.certificateNumber },
-          { label: 'Pledge Date', labelTamil: 'அடமான தேதி', value: formatDate(data.loanDate) },
-          { label: 'Valid Until', labelTamil: 'செல்லுபடியாகும் வரை', value: formatDate(data.maturityDate) },
+          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data?.loanNumber || 'N/A', highlight: true },
+          { label: 'Certificate No.', labelTamil: 'சான்றிதழ் எண்', value: data?.certificateNumber || 'N/A' },
+          { label: 'Pledge Date', labelTamil: 'அடமான தேதி', value: formatDate(data?.loanDate) },
+          { label: 'Valid Until', labelTamil: 'செல்லுபடியாகும் வரை', value: formatDate(data?.maturityDate) },
         ]}
       />
 
       {/* Gold Items Inventory */}
       <GoldItemsTable 
-        items={data.goldItems} 
+        items={goldItems} 
         showSerials 
-        showImages 
+        showImages
         showMarketValue 
       />
 
@@ -153,7 +156,7 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
           <div>
             <div className="text-xs text-gray-600 text-english">Total Items</div>
             <div className="text-xs text-gray-500 text-tamil">மொத்த பொருட்கள்</div>
-            <div className="text-xl font-bold text-amber-800">{data.goldItems.length}</div>
+            <div className="text-xl font-bold text-amber-800">{goldItems.length}</div>
           </div>
           <div>
             <div className="text-xs text-gray-600 text-english">Total Gold Weight</div>
@@ -174,8 +177,8 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
         titleTamil="காவல் தகவல்"
         columns={2}
         items={[
-          { label: 'Custody Location', labelTamil: 'காவல் இடம்', value: data.custodyLocation },
-          { label: 'Location Code', labelTamil: 'இடக் குறியீடு', value: data.custodyLocationCode },
+          { label: 'Custody Location', labelTamil: 'காவல் இடம்', value: data?.custodyLocation || data?.branch?.name || 'Main Branch' },
+          { label: 'Location Code', labelTamil: 'இடக் குறியீடு', value: data?.custodyLocationCode || 'MB001' },
         ]}
       />
 
@@ -227,7 +230,7 @@ export const GoldPledgeCertificate: React.FC<GoldPledgeCertificateProps> = ({
       <BilingualFooter
         footerText="This certificate must be presented at the time of gold release"
         footerTextTamil="தங்கம் வெளியிடும் போது இந்த சான்றிதழ் சமர்ப்பிக்கப்பட வேண்டும்"
-        companyName={data.company.name}
+        companyName={data?.company?.name}
         printDate={new Date().toLocaleDateString('en-IN')}
       />
     </PrintWrapper>
