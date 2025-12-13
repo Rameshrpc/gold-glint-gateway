@@ -99,6 +99,16 @@
   margin: 0 auto;
 }
 
+.print-page-a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm 20mm;
+  background: white;
+  color: black;
+  font-family: 'Noto Sans', 'Noto Sans Tamil', sans-serif;
+  position: relative;
+}
+
 .print-preview-a6 {
   width: 105mm;
   min-height: 148mm;
@@ -110,6 +120,34 @@
   width: 80mm;
   padding: 3mm;
   margin: 0 auto;
+}
+
+/* Print table black & white */
+.print-table-bw th,
+.print-table-bw td {
+  border: 1px solid black;
+  padding: 6px 8px;
+  text-align: left;
+}
+
+.print-table-bw th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+}
+
+@media print {
+  .print-page-a4 {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+  }
+  
+  .print-table-bw th {
+    background-color: transparent !important;
+    -webkit-print-color-adjust: exact;
+  }
 }
 
 /* Watermark styles */

@@ -238,6 +238,15 @@ const App = () => (
                 <Settings />
               </ProtectedRoute>
             } />
+
+            {/* Print Routes - Public */}
+            <Route path="/print/loan-receipt-customer" element={<LoanReceiptCustomer />} />
+            <Route path="/print/loan-receipt-office" element={<LoanReceiptOffice />} />
+            <Route path="/print/loan-declaration" element={<LoanDeclaration />} />
+            <Route path="/print/jewel-details" element={<JewelDetails />} />
+            <Route path="/print/kyc-docs" element={<KycDocuments />} />
+            <Route path="/print/interest-receipt" element={<InterestReceiptPrint />} />
+            <Route path="/print/auction-notice" element={<AuctionNoticePrint />} />
             
             <Route path="*" element={<NotFound />} />
           </Routes>
