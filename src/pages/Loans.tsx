@@ -24,7 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-import { PrintReceiptDialog, LoanReceipt } from '@/components/print';
+import { PrintReceiptDialog } from '@/components/print';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
@@ -1988,33 +1988,6 @@ export default function Loans() {
           onSuccess={fetchLoans}
         />
 
-        {/* Loan Receipt Dialog */}
-        {createdLoanData && (
-          <PrintReceiptDialog
-            open={showReceiptDialog}
-            onOpenChange={setShowReceiptDialog}
-            title="Loan Disbursement Receipt"
-          >
-            <LoanReceipt
-              company={{ name: client?.company_name || 'Gold Finance' }}
-              loan={{
-                number: createdLoanData.loanNumber,
-                date: createdLoanData.loanDate,
-                maturityDate: createdLoanData.maturityDate,
-                tenureDays: createdLoanData.tenureDays,
-                interestRate: createdLoanData.interestRate,
-              }}
-              customer={{
-                name: createdLoanData.customer.full_name,
-                code: createdLoanData.customer.customer_code,
-                phone: createdLoanData.customer.phone,
-                address: createdLoanData.customer.address,
-              }}
-              goldItems={createdLoanData.goldItems}
-              calculation={createdLoanData.calculation}
-            />
-          </PrintReceiptDialog>
-        )}
       </div>
     </DashboardLayout>
   );

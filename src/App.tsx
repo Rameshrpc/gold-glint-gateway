@@ -43,8 +43,6 @@ import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
 // Print Pages
-import LoanReceiptCustomer from "./pages/print/LoanReceiptCustomer";
-import LoanReceiptOffice from "./pages/print/LoanReceiptOffice";
 import LoanDeclaration from "./pages/print/LoanDeclaration";
 import JewelDetails from "./pages/print/JewelDetails";
 import KycDocuments from "./pages/print/KycDocuments";
@@ -249,8 +247,6 @@ const App = () => (
             } />
 
             {/* Print Routes - Public */}
-            <Route path="/print/loan-receipt-customer" element={<LoanReceiptCustomer />} />
-            <Route path="/print/loan-receipt-office" element={<LoanReceiptOffice />} />
             <Route path="/print/loan-declaration" element={<LoanDeclaration />} />
             <Route path="/print/jewel-details" element={<JewelDetails />} />
             <Route path="/print/kyc-docs" element={<KycDocuments />} />
