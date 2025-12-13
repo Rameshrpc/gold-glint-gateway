@@ -47,6 +47,8 @@ interface MultiloanSummaryProps {
 }
 
 export const MultiloanSummary: React.FC<MultiloanSummaryProps> = ({ data, watermark }) => {
+  const loans = data?.loans || [];
+  
   const formatDate = (dateStr: string) => {
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: '2-digit',
@@ -60,18 +62,18 @@ export const MultiloanSummary: React.FC<MultiloanSummaryProps> = ({ data, waterm
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
 
-  const totals = data.loans.reduce((acc, loan) => ({
-    principal: acc.principal + loan.principal,
-    goldWeight: acc.goldWeight + loan.totalGoldWeight,
-    itemCount: acc.itemCount + loan.itemCount,
-    interestDue: acc.interestDue + loan.interestDue,
+  const totals = loans.reduce((acc, loan) => ({
+    principal: acc.principal + (loan.principal || 0),
+    goldWeight: acc.goldWeight + (loan.totalGoldWeight || 0),
+    itemCount: acc.itemCount + (loan.itemCount || 0),
+    interestDue: acc.interestDue + (loan.interestDue || 0),
   }), { principal: 0, goldWeight: 0, itemCount: 0, interestDue: 0 });
 
-  const activeLoans = data.loans.filter(l => l.status === 'active').length;
-  const overdueLoans = data.loans.filter(l => l.status === 'overdue').length;
+  const activeLoans = loans.filter(l => l.status === 'active').length;
+  const overdueLoans = loans.filter(l => l.status === 'overdue').length;
 
   return (
     <PrintWrapper watermark={watermark} id="multiloan-summary">
@@ -106,7 +108,7 @@ export const MultiloanSummary: React.FC<MultiloanSummaryProps> = ({ data, waterm
           </div>
           <div>
             <div className="text-xs text-gray-500">Total Loans / மொத்த கடன்கள்</div>
-            <div className="font-bold text-lg">{data.loans.length}</div>
+            <div className="font-bold text-lg">{loans.length}</div>
           </div>
         </div>
       </div>
@@ -186,7 +188,7 @@ export const MultiloanSummary: React.FC<MultiloanSummaryProps> = ({ data, waterm
             </tr>
           </thead>
           <tbody>
-            {data.loans.map((loan, index) => (
+            {loans.map((loan, index) => (
               <tr key={loan.loanNumber} className={loan.status === 'overdue' ? 'bg-red-50' : ''}>
                 <td className="text-center">{index + 1}</td>
                 <td className="font-mono font-medium">{loan.loanNumber}</td>
@@ -194,12 +196,12 @@ export const MultiloanSummary: React.FC<MultiloanSummaryProps> = ({ data, waterm
                 <td>
                   {formatDate(loan.maturityDate)}
                   <div className="text-xs text-gray-500">
-                    {loan.daysRemaining > 0 ? `${loan.daysRemaining} days left` : `${Math.abs(loan.daysRemaining)} days overdue`}
+                    {(loan.daysRemaining || 0) > 0 ? `${loan.daysRemaining} days left` : `${Math.abs(loan.daysRemaining || 0)} days overdue`}
                   </div>
                 </td>
                 <td className="text-right font-mono">{formatCurrency(loan.principal)}</td>
-                <td className="text-center">{loan.totalGoldWeight.toFixed(2)}</td>
-                <td className="text-center">{loan.interestRate}%</td>
+                <td className="text-center">{(loan.totalGoldWeight || 0).toFixed(2)}</td>
+                <td className="text-center">{loan.interestRate || 0}%</td>
                 <td className="text-right font-mono">{formatCurrency(loan.interestDue)}</td>
                 <td>
                   <span className={`status-badge ${
