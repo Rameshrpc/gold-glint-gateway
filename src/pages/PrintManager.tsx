@@ -87,6 +87,7 @@ const transformGoldItems = (goldItems: any[] = []) => {
 // Transform loan data for templates
 const transformLoanData = (loan: any, client: any, branch: any) => {
   const goldItems = transformGoldItems(loan?.gold_items || []);
+  const totalGoldWeight = goldItems.reduce((sum, item) => sum + (item.netWeight || 0), 0);
   return {
     loanNumber: loan?.loan_number || 'N/A',
     loanDate: loan?.loan_date || new Date().toISOString(),
@@ -110,8 +111,12 @@ const transformLoanData = (loan: any, client: any, branch: any) => {
     documentCharges: loan?.document_charges || 0,
     advanceInterest: loan?.advance_interest_shown || 0,
     netDisbursed: loan?.net_disbursed || loan?.principal_amount || 0,
-    disbursementMode: loan?.disbursement_mode || 'Cash',
+    disbursementMode: loan?.disbursement_mode || 'cash',
+    transactionDate: loan?.loan_date || new Date().toISOString(),
     goldItems,
+    totalGoldWeight,
+    itemCount: goldItems.length,
+    interestRate: loan?.interest_rate || loan?.scheme?.interest_rate || 1.5,
     custodyLocation: branch?.branch_name || 'Main Branch',
     custodyLocationCode: branch?.branch_code || 'MB001',
     branch: {

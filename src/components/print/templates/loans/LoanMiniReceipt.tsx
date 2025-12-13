@@ -112,15 +112,15 @@ export const LoanMiniReceipt: React.FC<LoanMiniReceiptProps> = ({ data, watermar
       <div className="grid grid-cols-3 gap-2 text-xs text-center mb-3">
         <div className="bg-gray-50 p-1 rounded">
           <div className="text-gray-500">Items</div>
-          <div className="font-bold">{data.itemCount}</div>
+          <div className="font-bold">{data?.itemCount || 0}</div>
         </div>
         <div className="bg-gray-50 p-1 rounded">
           <div className="text-gray-500">Weight</div>
-          <div className="font-bold">{data.totalGoldWeight.toFixed(2)}g</div>
+          <div className="font-bold">{(data?.totalGoldWeight || 0).toFixed(2)}g</div>
         </div>
         <div className="bg-gray-50 p-1 rounded">
           <div className="text-gray-500">Rate</div>
-          <div className="font-bold">{data.interestRate}%</div>
+          <div className="font-bold">{data?.interestRate || 0}%</div>
         </div>
       </div>
 
