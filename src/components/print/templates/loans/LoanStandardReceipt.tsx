@@ -61,6 +61,7 @@ interface LoanStandardReceiptProps {
 
 export const LoanStandardReceipt: React.FC<LoanStandardReceiptProps> = ({ data, watermark = 'original' }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: '2-digit',
@@ -73,24 +74,27 @@ export const LoanStandardReceipt: React.FC<LoanStandardReceiptProps> = ({ data, 
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
+
+  // Defensive null checks
+  const goldItems = data?.goldItems || [];
 
   return (
     <PrintWrapper watermark={watermark} id="loan-standard-receipt">
       <BilingualHeader
-        companyName={data.company.name}
-        companyNameTamil={data.company.nameTamil}
-        address={data.company.address}
-        phone={data.company.phone}
-        email={data.company.email}
-        logoUrl={data.company.logoUrl}
-        branchName={data.branch.name}
-        branchNameTamil={data.branch.nameTamil}
+        companyName={data?.company?.name || 'Company'}
+        companyNameTamil={data?.company?.nameTamil}
+        address={data?.company?.address}
+        phone={data?.company?.phone}
+        email={data?.company?.email}
+        logoUrl={data?.company?.logoUrl}
+        branchName={data?.branch?.name}
+        branchNameTamil={data?.branch?.nameTamil}
         documentTitle="Gold Loan Receipt"
         documentTitleTamil="தங்க கடன் ரசீது"
-        documentNumber={data.loanNumber}
-        documentDate={formatDate(data.loanDate)}
+        documentNumber={data?.loanNumber || 'N/A'}
+        documentDate={formatDate(data?.loanDate)}
       />
 
       {/* Customer Details */}
@@ -99,10 +103,10 @@ export const LoanStandardReceipt: React.FC<LoanStandardReceiptProps> = ({ data, 
         titleTamil="கடன் பெறுபவர் விவரங்கள்"
         columns={2}
         items={[
-          { label: 'Customer Name', labelTamil: 'வாடிக்கையாளர் பெயர்', value: data.customer.name, valueTamil: data.customer.nameTamil },
-          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data.customer.code },
-          { label: 'Phone Number', labelTamil: 'தொலைபேசி எண்', value: data.customer.phone },
-          { label: 'Address', labelTamil: 'முகவரி', value: data.customer.address || '-', fullWidth: true },
+          { label: 'Customer Name', labelTamil: 'வாடிக்கையாளர் பெயர்', value: data?.customer?.name || 'N/A', valueTamil: data?.customer?.nameTamil },
+          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data?.customer?.code || 'N/A' },
+          { label: 'Phone Number', labelTamil: 'தொலைபேசி எண்', value: data?.customer?.phone || 'N/A' },
+          { label: 'Address', labelTamil: 'முகவரி', value: data?.customer?.address || '-', fullWidth: true },
         ]}
       />
 
@@ -112,33 +116,33 @@ export const LoanStandardReceipt: React.FC<LoanStandardReceiptProps> = ({ data, 
         titleTamil="கடன் விவரங்கள்"
         columns={3}
         items={[
-          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data.loanNumber, highlight: true },
-          { label: 'Loan Date', labelTamil: 'கடன் தேதி', value: formatDate(data.loanDate) },
-          { label: 'Maturity Date', labelTamil: 'முதிர்வு தேதி', value: formatDate(data.maturityDate) },
-          { label: 'Scheme', labelTamil: 'திட்டம்', value: data.scheme.name },
-          { label: 'Interest Rate', labelTamil: 'வட்டி விகிதம்', value: `${data.scheme.interestRate}% p.m.` },
-          { label: 'Tenure', labelTamil: 'கால அளவு', value: `${data.scheme.tenure} days` },
+          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data?.loanNumber || 'N/A', highlight: true },
+          { label: 'Loan Date', labelTamil: 'கடன் தேதி', value: formatDate(data?.loanDate) },
+          { label: 'Maturity Date', labelTamil: 'முதிர்வு தேதி', value: formatDate(data?.maturityDate) },
+          { label: 'Scheme', labelTamil: 'திட்டம்', value: data?.scheme?.name || 'Standard' },
+          { label: 'Interest Rate', labelTamil: 'வட்டி விகிதம்', value: `${data?.scheme?.interestRate || 0}% p.m.` },
+          { label: 'Tenure', labelTamil: 'கால அளவு', value: `${data?.scheme?.tenure || 0} days` },
         ]}
       />
 
       {/* Gold Items */}
-      <GoldItemsTable items={data.goldItems} showSerials />
+      <GoldItemsTable items={goldItems} showSerials />
 
       {/* Amount Summary */}
       <AmountSummary
         title="Disbursement Summary"
         titleTamil="வழங்கல் சுருக்கம்"
         lines={[
-          { label: 'Principal Amount', labelTamil: 'அசல் தொகை', amount: data.principal },
-          { label: 'Processing Fee', labelTamil: 'செயலாக்க கட்டணம்', amount: data.processingFee, isDeduction: true },
-          { label: 'Document Charges', labelTamil: 'ஆவண கட்டணங்கள்', amount: data.documentCharges, isDeduction: true },
-          { label: 'Advance Interest', labelTamil: 'முன்கூட்டி வட்டி', amount: data.advanceInterest, isDeduction: true },
-          { label: 'Net Disbursed Amount', labelTamil: 'நிகர வழங்கப்பட்ட தொகை', amount: data.netDisbursed, isTotal: true },
+          { label: 'Principal Amount', labelTamil: 'அசல் தொகை', amount: data?.principal || 0 },
+          { label: 'Processing Fee', labelTamil: 'செயலாக்க கட்டணம்', amount: data?.processingFee || 0, isDeduction: true },
+          { label: 'Document Charges', labelTamil: 'ஆவண கட்டணங்கள்', amount: data?.documentCharges || 0, isDeduction: true },
+          { label: 'Advance Interest', labelTamil: 'முன்கூட்டி வட்டி', amount: data?.advanceInterest || 0, isDeduction: true },
+          { label: 'Net Disbursed Amount', labelTamil: 'நிகர வழங்கப்பட்ட தொகை', amount: data?.netDisbursed || 0, isTotal: true },
         ]}
       />
 
       <div className="text-xs text-gray-600 mt-2">
-        <span className="font-medium text-english">Payment Mode: </span>{data.disbursementMode}
+        <span className="font-medium text-english">Payment Mode: </span>{data?.disbursementMode || 'Cash'}
         <span className="text-tamil ml-2">(கட்டண முறை)</span>
       </div>
 
@@ -164,7 +168,7 @@ export const LoanStandardReceipt: React.FC<LoanStandardReceiptProps> = ({ data, 
       <BilingualFooter
         footerText="This is a computer generated receipt"
         footerTextTamil="இது கணினியால் உருவாக்கப்பட்ட ரசீது"
-        companyName={data.company.name}
+        companyName={data?.company?.name}
         printDate={new Date().toLocaleDateString('en-IN')}
       />
     </PrintWrapper>

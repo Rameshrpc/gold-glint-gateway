@@ -7,14 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Printer, FileText, Download, Mail, Search, Eye, 
+  Printer, FileText, Download, Search, Eye, 
   CreditCard, Wallet, Gavel, Settings2, RefreshCw 
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -67,17 +64,195 @@ const templateComponents: Record<string, React.ComponentType<any>> = {
   'auction-clearance-certificate': AuctionTemplates.AuctionClearanceCertificate,
 };
 
+// Transform gold items from database format to template format
+const transformGoldItems = (goldItems: any[] = []) => {
+  return goldItems.map((item, index) => ({
+    id: item.id || `item-${index}`,
+    serialNumber: `GI${String(index + 1).padStart(3, '0')}`,
+    itemType: item.item_type || 'Gold Item',
+    itemTypeTamil: '',
+    description: item.description || '',
+    grossWeight: item.gross_weight_grams || 0,
+    stoneWeight: item.stone_weight_grams || 0,
+    netWeight: item.net_weight_grams || 0,
+    purity: item.purity || '22KT',
+    purityPercentage: item.purity_percentage || 91.6,
+    marketRate: item.market_rate_per_gram || 0,
+    marketValue: item.market_value || 0,
+    appraisedValue: item.appraised_value || 0,
+    imageUrl: item.image_url,
+  }));
+};
+
+// Transform loan data for templates
+const transformLoanData = (loan: any, client: any, branch: any) => {
+  const goldItems = transformGoldItems(loan?.gold_items || []);
+  return {
+    loanNumber: loan?.loan_number || 'N/A',
+    loanDate: loan?.loan_date || new Date().toISOString(),
+    maturityDate: loan?.maturity_date || new Date().toISOString(),
+    certificateNumber: `CERT-${loan?.loan_number || 'N/A'}`,
+    customer: {
+      name: loan?.customer?.full_name || 'Customer Name',
+      nameTamil: '',
+      code: loan?.customer?.customer_code || 'N/A',
+      phone: loan?.customer?.phone || 'N/A',
+      address: loan?.customer?.address || '',
+    },
+    scheme: {
+      name: loan?.scheme?.scheme_name || 'Standard Scheme',
+      interestRate: loan?.interest_rate || loan?.scheme?.interest_rate || 1.5,
+      tenure: loan?.tenure_days || loan?.scheme?.tenure_days || 365,
+    },
+    schemeCode: loan?.scheme?.scheme_code,
+    principal: loan?.principal_amount || 0,
+    processingFee: loan?.processing_fee || 0,
+    documentCharges: loan?.document_charges || 0,
+    advanceInterest: loan?.advance_interest_shown || 0,
+    netDisbursed: loan?.net_disbursed || loan?.principal_amount || 0,
+    disbursementMode: loan?.disbursement_mode || 'Cash',
+    goldItems,
+    custodyLocation: branch?.branch_name || 'Main Branch',
+    custodyLocationCode: branch?.branch_code || 'MB001',
+    branch: {
+      name: branch?.branch_name || 'Main Branch',
+      nameTamil: '',
+      address: branch?.address || '',
+      phone: branch?.phone || '',
+    },
+    company: {
+      name: client?.company_name || 'Company',
+      nameTamil: '',
+      address: client?.address || '',
+      phone: client?.phone || '',
+      email: client?.email || '',
+      logoUrl: client?.logo_url || '',
+    },
+    appraiser: loan?.appraised_by ? { name: 'Appraiser', code: 'APP001' } : undefined,
+    approvedBy: loan?.approved_by ? { name: 'Approver', designation: 'Manager' } : undefined,
+    createdBy: loan?.created_by ? { name: 'Loan Officer' } : undefined,
+  };
+};
+
+// Transform interest payment data for templates
+const transformInterestData = (payment: any, client: any, branch: any) => {
+  return {
+    receiptNumber: payment?.receipt_number || 'N/A',
+    paymentDate: payment?.payment_date || new Date().toISOString(),
+    loanNumber: payment?.loan?.loan_number || 'N/A',
+    customer: {
+      name: payment?.loan?.customer?.full_name || 'Customer Name',
+      nameTamil: '',
+      code: payment?.loan?.customer?.customer_code || 'N/A',
+      phone: payment?.loan?.customer?.phone || 'N/A',
+    },
+    periodFrom: payment?.period_from || new Date().toISOString(),
+    periodTo: payment?.period_to || new Date().toISOString(),
+    daysCovered: payment?.days_covered || 30,
+    principal: payment?.loan?.principal_amount || 0,
+    interestRate: payment?.loan?.interest_rate || 1.5,
+    interestAmount: payment?.shown_interest || payment?.actual_interest || 0,
+    penaltyAmount: payment?.penalty_amount || 0,
+    totalPaid: payment?.amount_paid || 0,
+    paymentMode: payment?.payment_mode || 'Cash',
+    reference: payment?.payment_reference,
+    nextDueDate: payment?.loan?.next_interest_due_date || new Date().toISOString(),
+    branch: {
+      name: branch?.branch_name || 'Main Branch',
+      nameTamil: '',
+    },
+    company: {
+      name: client?.company_name || 'Company',
+      nameTamil: '',
+      address: client?.address || '',
+      phone: client?.phone || '',
+      logoUrl: client?.logo_url || '',
+    },
+  };
+};
+
+// Transform redemption data for templates
+const transformRedemptionData = (redemption: any, client: any, branch: any) => {
+  const goldItems = transformGoldItems(redemption?.loan?.gold_items || []);
+  return {
+    redemptionNumber: redemption?.redemption_number || 'N/A',
+    redemptionDate: redemption?.redemption_date || new Date().toISOString(),
+    loanNumber: redemption?.loan?.loan_number || 'N/A',
+    customer: {
+      name: redemption?.loan?.customer?.full_name || 'Customer Name',
+      code: redemption?.loan?.customer?.customer_code || 'N/A',
+      phone: redemption?.loan?.customer?.phone || 'N/A',
+    },
+    principalOutstanding: redemption?.outstanding_principal || 0,
+    interestDue: redemption?.interest_due || 0,
+    penaltyAmount: redemption?.penalty_amount || 0,
+    rebateAmount: redemption?.rebate_amount || 0,
+    totalSettlement: redemption?.total_settlement || 0,
+    amountReceived: redemption?.amount_received || 0,
+    paymentMode: redemption?.payment_mode || 'Cash',
+    goldItems,
+    branch: {
+      name: branch?.branch_name || 'Main Branch',
+      nameTamil: '',
+    },
+    company: {
+      name: client?.company_name || 'Company',
+      nameTamil: '',
+      address: client?.address || '',
+      logoUrl: client?.logo_url || '',
+    },
+  };
+};
+
+// Transform auction data for templates
+const transformAuctionData = (auction: any, client: any, branch: any) => {
+  const goldItems = transformGoldItems(auction?.loan?.gold_items || []);
+  return {
+    auctionLotNumber: auction?.auction_lot_number || 'N/A',
+    auctionDate: auction?.auction_date || new Date().toISOString(),
+    noticeDate: new Date().toISOString(),
+    auctionTime: '10:00 AM',
+    venue: branch?.branch_name || 'Main Branch',
+    loanNumber: auction?.loan?.loan_number || 'N/A',
+    customer: {
+      name: auction?.loan?.customer?.full_name || 'Customer Name',
+      code: auction?.loan?.customer?.customer_code || 'N/A',
+      phone: auction?.loan?.customer?.phone || 'N/A',
+    },
+    outstandingPrincipal: auction?.outstanding_principal || 0,
+    outstandingInterest: auction?.outstanding_interest || 0,
+    totalOutstanding: auction?.total_outstanding || 0,
+    reservePrice: auction?.reserve_price || 0,
+    soldPrice: auction?.sold_price || 0,
+    totalGoldWeight: auction?.total_gold_weight_grams || 0,
+    totalAppraisedValue: auction?.total_appraised_value || 0,
+    goldItems,
+    status: auction?.status || 'scheduled',
+    branch: {
+      name: branch?.branch_name || 'Main Branch',
+      nameTamil: '',
+      address: branch?.address || '',
+    },
+    company: {
+      name: client?.company_name || 'Company',
+      nameTamil: '',
+      address: client?.address || '',
+      phone: client?.phone || '',
+      logoUrl: client?.logo_url || '',
+    },
+  };
+};
+
 export default function PrintManager() {
   const { client, currentBranch } = useAuth();
   const [selectedModule, setSelectedModule] = useState<ModuleType>('loans');
   const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTransactionId, setSelectedTransactionId] = useState<string>('');
-  const [showPreview, setShowPreview] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [watermarkType, setWatermarkType] = useState<'original' | 'duplicate' | 'draft' | 'none'>('none');
 
-  // Fetch transactions based on selected module
+  // Fetch transactions based on selected module with related data
   const { data: transactions, isLoading } = useQuery({
     queryKey: ['print-transactions', selectedModule, client?.id, currentBranch?.id, searchQuery],
     queryFn: async () => {
@@ -88,7 +263,12 @@ export default function PrintManager() {
         case 'loans':
           query = supabase
             .from('loans')
-            .select('id, loan_number, principal_amount, loan_date, customer:customers(full_name)')
+            .select(`
+              *,
+              customer:customers(*),
+              scheme:schemes(*),
+              gold_items:gold_items(*)
+            `)
             .eq('client_id', client.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -96,7 +276,10 @@ export default function PrintManager() {
         case 'interest':
           query = supabase
             .from('interest_payments')
-            .select('id, receipt_number, amount_paid, payment_date, loan:loans(loan_number, customer:customers(full_name))')
+            .select(`
+              *,
+              loan:loans(*, customer:customers(*), gold_items:gold_items(*))
+            `)
             .eq('client_id', client.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -104,7 +287,10 @@ export default function PrintManager() {
         case 'redemption':
           query = supabase
             .from('redemptions')
-            .select('id, redemption_number, total_settlement, redemption_date, loan:loans(loan_number, customer:customers(full_name))')
+            .select(`
+              *,
+              loan:loans(*, customer:customers(*), gold_items:gold_items(*))
+            `)
             .eq('client_id', client.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -112,7 +298,10 @@ export default function PrintManager() {
         case 'auction':
           query = supabase
             .from('auctions')
-            .select('id, auction_lot_number, sold_price, auction_date, loan:loans(loan_number, customer:customers(full_name))')
+            .select(`
+              *,
+              loan:loans(*, customer:customers(*), gold_items:gold_items(*))
+            `)
             .eq('client_id', client.id)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -155,16 +344,26 @@ export default function PrintManager() {
     toast.info('Use "Save as PDF" in the print dialog');
   };
 
-  // Get preview data
+  // Get preview data with proper transformation
   const getPreviewData = () => {
     const transaction = transactions?.find((t: any) => t.id === selectedTransactionId);
-    return {
-      company: client,
-      branch: currentBranch,
-      transaction,
-      loan: transaction,
-      customer: transaction?.customer || transaction?.loan?.customer,
-    };
+    if (!transaction) {
+      // Return default empty data structure
+      return transformLoanData({}, client, currentBranch);
+    }
+
+    switch (selectedModule) {
+      case 'loans':
+        return transformLoanData(transaction, client, currentBranch);
+      case 'interest':
+        return transformInterestData(transaction, client, currentBranch);
+      case 'redemption':
+        return transformRedemptionData(transaction, client, currentBranch);
+      case 'auction':
+        return transformAuctionData(transaction, client, currentBranch);
+      default:
+        return transformLoanData(transaction, client, currentBranch);
+    }
   };
 
   const TemplateComponent = selectedTemplate ? templateComponents[selectedTemplate] : null;
@@ -322,19 +521,13 @@ export default function PrintManager() {
             {/* Action Buttons */}
             <div className="flex gap-2">
               <Button
-                className="flex-1"
-                onClick={() => setShowPreview(true)}
-                disabled={!selectedTemplate || !selectedTransactionId}
-              >
-                <Eye className="h-4 w-4 mr-2" />
-                Preview
-              </Button>
-              <Button
                 variant="outline"
                 onClick={handlePrint}
                 disabled={!selectedTemplate || !selectedTransactionId}
+                className="flex-1"
               >
-                <Printer className="h-4 w-4" />
+                <Printer className="h-4 w-4 mr-2" />
+                Print
               </Button>
               <Button
                 variant="outline"
@@ -370,7 +563,7 @@ export default function PrintManager() {
                   <div className="print-preview scale-75 origin-top-left">
                     <TemplateComponent 
                       data={getPreviewData()} 
-                      watermark={watermarkType !== 'none' ? { type: watermarkType } : undefined}
+                      watermark={watermarkType !== 'none' ? watermarkType : undefined}
                     />
                   </div>
                 ) : (
@@ -408,15 +601,15 @@ export default function PrintManager() {
                           setSelectedModule(module);
                           setSelectedTemplate(template.id);
                         }}
-                        className={`p-4 rounded-lg border text-left transition-all hover:border-primary hover:shadow-md ${
+                        className={`p-4 border rounded-lg text-left hover:border-primary hover:bg-primary/5 transition-colors ${
                           selectedTemplate === template.id ? 'border-primary bg-primary/5' : ''
                         }`}
                       >
                         <div className="aspect-[3/4] bg-muted rounded mb-2 flex items-center justify-center">
-                          <FileText className="h-8 w-8 text-muted-foreground/50" />
+                          <FileText className="h-8 w-8 text-muted-foreground" />
                         </div>
-                        <p className="text-xs font-medium line-clamp-2">{template.name}</p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{template.nameTamil}</p>
+                        <div className="text-xs font-medium truncate">{template.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{template.nameTamil}</div>
                       </button>
                     ))}
                   </div>
@@ -427,33 +620,6 @@ export default function PrintManager() {
         </Card>
       </div>
 
-      {/* Full Preview Dialog */}
-      <Dialog open={showPreview} onOpenChange={setShowPreview}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-          <DialogHeader>
-            <DialogTitle>Document Preview</DialogTitle>
-          </DialogHeader>
-          <div className="bg-white p-4">
-            {TemplateComponent && (
-              <TemplateComponent 
-                data={getPreviewData()} 
-                watermark={watermarkType !== 'none' ? { type: watermarkType } : undefined}
-              />
-            )}
-          </div>
-          <div className="flex justify-end gap-2 mt-4">
-            <Button variant="outline" onClick={() => setShowPreview(false)}>
-              Close
-            </Button>
-            <Button onClick={handlePrint}>
-              <Printer className="h-4 w-4 mr-2" />
-              Print
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Settings Panel */}
       <PrintSettingsPanel open={showSettings} onOpenChange={setShowSettings} />
     </DashboardLayout>
   );

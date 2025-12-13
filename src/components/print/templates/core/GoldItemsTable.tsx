@@ -29,18 +29,20 @@ interface GoldItemsTableProps {
 }
 
 export const GoldItemsTable: React.FC<GoldItemsTableProps> = ({
-  items,
+  items = [],
   showImages = false,
   showSerials = true,
   showMarketValue = false,
   compact = false,
   className
 }) => {
-  const totalGrossWeight = items.reduce((sum, item) => sum + item.grossWeight, 0);
-  const totalNetWeight = items.reduce((sum, item) => sum + item.netWeight, 0);
-  const totalAppraisedValue = items.reduce((sum, item) => sum + item.appraisedValue, 0);
-  const totalMarketValue = items.reduce((sum, item) => sum + (item.marketValue || 0), 0);
-
+  // Defensive: ensure items is always an array
+  const safeItems = Array.isArray(items) ? items : [];
+  
+  const totalGrossWeight = safeItems.reduce((sum, item) => sum + (item?.grossWeight || 0), 0);
+  const totalNetWeight = safeItems.reduce((sum, item) => sum + (item?.netWeight || 0), 0);
+  const totalAppraisedValue = safeItems.reduce((sum, item) => sum + (item?.appraisedValue || 0), 0);
+  const totalMarketValue = safeItems.reduce((sum, item) => sum + (item?.marketValue || 0), 0);
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -114,45 +116,51 @@ export const GoldItemsTable: React.FC<GoldItemsTableProps> = ({
           </tr>
         </thead>
         <tbody>
-          {items.map((item, index) => (
-            <tr key={item.id}>
-              <td className="text-center">{index + 1}</td>
-              {showSerials && <td className="font-mono text-xs">{item.serialNumber || '-'}</td>}
-              {showImages && (
-                <td>
-                  {item.imageUrl ? (
-                    <img src={item.imageUrl} alt={item.itemType} className="w-12 h-12 object-cover rounded" />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
-                      N/A
-                    </div>
-                  )}
-                </td>
-              )}
-              <td>
-                <div className="bilingual-text">
-                  <span className="text-english">{item.itemType}</span>
-                  {item.itemTypeTamil && (
-                    <span className="text-tamil text-xs text-gray-500">{item.itemTypeTamil}</span>
-                  )}
-                  {item.description && (
-                    <span className="text-xs text-gray-500 block">{item.description}</span>
-                  )}
-                </div>
-              </td>
-              <td className="text-right font-mono">{formatWeight(item.grossWeight)}</td>
-              <td className="text-right font-mono">{formatWeight(item.netWeight)}</td>
-              <td className="text-center">
-                <span className="text-xs">{item.purity}</span>
-                <span className="text-xs text-gray-500 block">({item.purityPercentage}%)</span>
-              </td>
-              <td className="text-right font-mono text-xs">{formatCurrency(item.marketRate)}</td>
-              {showMarketValue && (
-                <td className="text-right font-mono">{formatCurrency(item.marketValue || 0)}</td>
-              )}
-              <td className="text-right font-mono font-semibold">{formatCurrency(item.appraisedValue)}</td>
+          {safeItems.length === 0 ? (
+            <tr>
+              <td colSpan={10} className="text-center text-gray-500 py-4">No gold items</td>
             </tr>
-          ))}
+          ) : (
+            safeItems.map((item, index) => (
+              <tr key={item?.id || index}>
+                <td className="text-center">{index + 1}</td>
+                {showSerials && <td className="font-mono text-xs">{item?.serialNumber || '-'}</td>}
+                {showImages && (
+                  <td>
+                    {item?.imageUrl ? (
+                      <img src={item.imageUrl} alt={item?.itemType || 'Gold'} className="w-12 h-12 object-cover rounded" />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+                        N/A
+                      </div>
+                    )}
+                  </td>
+                )}
+                <td>
+                  <div className="bilingual-text">
+                    <span className="text-english">{item?.itemType || 'Gold Item'}</span>
+                    {item?.itemTypeTamil && (
+                      <span className="text-tamil text-xs text-gray-500">{item.itemTypeTamil}</span>
+                    )}
+                    {item?.description && (
+                      <span className="text-xs text-gray-500 block">{item.description}</span>
+                    )}
+                  </div>
+                </td>
+                <td className="text-right font-mono">{formatWeight(item?.grossWeight || 0)}</td>
+                <td className="text-right font-mono">{formatWeight(item?.netWeight || 0)}</td>
+                <td className="text-center">
+                  <span className="text-xs">{item?.purity || '-'}</span>
+                  <span className="text-xs text-gray-500 block">({item?.purityPercentage || 0}%)</span>
+                </td>
+                <td className="text-right font-mono text-xs">{formatCurrency(item?.marketRate || 0)}</td>
+                {showMarketValue && (
+                  <td className="text-right font-mono">{formatCurrency(item?.marketValue || 0)}</td>
+                )}
+                <td className="text-right font-mono font-semibold">{formatCurrency(item?.appraisedValue || 0)}</td>
+              </tr>
+            ))
+          )}
         </tbody>
         <tfoot>
           <tr className="bg-gray-50 font-semibold">

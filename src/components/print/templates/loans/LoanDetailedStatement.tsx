@@ -17,6 +17,7 @@ interface LoanDetailedStatementProps {
 
 export const LoanDetailedStatement: React.FC<LoanDetailedStatementProps> = ({ data, watermark = 'original' }) => {
   const formatDate = (dateStr: string) => {
+    if (!dateStr) return '-';
     return new Date(dateStr).toLocaleDateString('en-IN', {
       day: '2-digit',
       month: '2-digit',
@@ -29,24 +30,27 @@ export const LoanDetailedStatement: React.FC<LoanDetailedStatementProps> = ({ da
       style: 'currency',
       currency: 'INR',
       minimumFractionDigits: 0
-    }).format(amount);
+    }).format(amount || 0);
   };
+
+  // Defensive null checks
+  const goldItems = data?.goldItems || [];
 
   return (
     <PrintWrapper watermark={watermark} id="loan-detailed-statement">
       <BilingualHeader
-        companyName={data.company.name}
-        companyNameTamil={data.company.nameTamil}
-        address={data.company.address}
-        phone={data.company.phone}
-        email={data.company.email}
-        logoUrl={data.company.logoUrl}
-        branchName={data.branch.name}
-        branchNameTamil={data.branch.nameTamil}
+        companyName={data?.company?.name || 'Company'}
+        companyNameTamil={data?.company?.nameTamil}
+        address={data?.company?.address}
+        phone={data?.company?.phone}
+        email={data?.company?.email}
+        logoUrl={data?.company?.logoUrl}
+        branchName={data?.branch?.name}
+        branchNameTamil={data?.branch?.nameTamil}
         documentTitle="Loan Statement - Office Copy"
         documentTitleTamil="கடன் அறிக்கை - அலுவலக நகல்"
-        documentNumber={data.loanNumber}
-        documentDate={formatDate(data.loanDate)}
+        documentNumber={data?.loanNumber || 'N/A'}
+        documentDate={formatDate(data?.loanDate)}
       />
 
       {/* Customer Details */}
@@ -55,10 +59,10 @@ export const LoanDetailedStatement: React.FC<LoanDetailedStatementProps> = ({ da
         titleTamil="கடன் பெறுபவர் தகவல்"
         columns={3}
         items={[
-          { label: 'Customer Name', labelTamil: 'வாடிக்கையாளர் பெயர்', value: data.customer.name },
-          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data.customer.code },
-          { label: 'Phone', labelTamil: 'தொலைபேசி', value: data.customer.phone },
-          { label: 'Address', labelTamil: 'முகவரி', value: data.customer.address || '-', fullWidth: true },
+          { label: 'Customer Name', labelTamil: 'வாடிக்கையாளர் பெயர்', value: data?.customer?.name || 'N/A' },
+          { label: 'Customer Code', labelTamil: 'வாடிக்கையாளர் குறியீடு', value: data?.customer?.code || 'N/A' },
+          { label: 'Phone', labelTamil: 'தொலைபேசி', value: data?.customer?.phone || 'N/A' },
+          { label: 'Address', labelTamil: 'முகவரி', value: data?.customer?.address || '-', fullWidth: true },
         ]}
       />
 
@@ -68,30 +72,30 @@ export const LoanDetailedStatement: React.FC<LoanDetailedStatementProps> = ({ da
         titleTamil="கடன் மற்றும் திட்ட விவரங்கள்"
         columns={4}
         items={[
-          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data.loanNumber, highlight: true },
-          { label: 'Scheme Code', labelTamil: 'திட்ட குறியீடு', value: data.schemeCode || data.scheme.name },
-          { label: 'Loan Date', labelTamil: 'கடன் தேதி', value: formatDate(data.loanDate) },
-          { label: 'Maturity Date', labelTamil: 'முதிர்வு தேதி', value: formatDate(data.maturityDate) },
-          { label: 'Scheme Name', labelTamil: 'திட்டப் பெயர்', value: data.scheme.name },
-          { label: 'Interest Rate', labelTamil: 'வட்டி விகிதம்', value: `${data.scheme.interestRate}% p.m.` },
-          { label: 'Tenure', labelTamil: 'கால அளவு', value: `${data.scheme.tenure} days` },
-          { label: 'Disbursement Mode', labelTamil: 'வழங்கல் முறை', value: data.disbursementMode },
+          { label: 'Loan Number', labelTamil: 'கடன் எண்', value: data?.loanNumber || 'N/A', highlight: true },
+          { label: 'Scheme Code', labelTamil: 'திட்ட குறியீடு', value: data?.schemeCode || data?.scheme?.name || 'Standard' },
+          { label: 'Loan Date', labelTamil: 'கடன் தேதி', value: formatDate(data?.loanDate) },
+          { label: 'Maturity Date', labelTamil: 'முதிர்வு தேதி', value: formatDate(data?.maturityDate) },
+          { label: 'Scheme Name', labelTamil: 'திட்டப் பெயர்', value: data?.scheme?.name || 'Standard' },
+          { label: 'Interest Rate', labelTamil: 'வட்டி விகிதம்', value: `${data?.scheme?.interestRate || 0}% p.m.` },
+          { label: 'Tenure', labelTamil: 'கால அளவு', value: `${data?.scheme?.tenure || 0} days` },
+          { label: 'Disbursement Mode', labelTamil: 'வழங்கல் முறை', value: data?.disbursementMode || 'Cash' },
         ]}
       />
 
       {/* Gold Items with Images */}
-      <GoldItemsTable items={data.goldItems} showSerials showMarketValue />
+      <GoldItemsTable items={goldItems} showSerials showMarketValue />
 
       {/* Disbursement Summary */}
       <AmountSummary
         title="Financial Summary"
         titleTamil="நிதி சுருக்கம்"
         lines={[
-          { label: 'Principal Amount', labelTamil: 'அசல் தொகை', amount: data.principal },
-          { label: 'Processing Fee', labelTamil: 'செயலாக்க கட்டணம்', amount: data.processingFee, isDeduction: true },
-          { label: 'Document Charges', labelTamil: 'ஆவண கட்டணங்கள்', amount: data.documentCharges, isDeduction: true },
-          { label: 'Advance Interest', labelTamil: 'முன்கூட்டி வட்டி', amount: data.advanceInterest, isDeduction: true },
-          { label: 'Net Disbursed', labelTamil: 'நிகர வழங்கல்', amount: data.netDisbursed, isTotal: true },
+          { label: 'Principal Amount', labelTamil: 'அசல் தொகை', amount: data?.principal || 0 },
+          { label: 'Processing Fee', labelTamil: 'செயலாக்க கட்டணம்', amount: data?.processingFee || 0, isDeduction: true },
+          { label: 'Document Charges', labelTamil: 'ஆவண கட்டணங்கள்', amount: data?.documentCharges || 0, isDeduction: true },
+          { label: 'Advance Interest', labelTamil: 'முன்கூட்டி வட்டி', amount: data?.advanceInterest || 0, isDeduction: true },
+          { label: 'Net Disbursed', labelTamil: 'நிகர வழங்கல்', amount: data?.netDisbursed || 0, isTotal: true },
         ]}
       />
 
@@ -177,7 +181,7 @@ export const LoanDetailedStatement: React.FC<LoanDetailedStatementProps> = ({ da
       <BilingualFooter
         footerText="For Office Use Only - Confidential"
         footerTextTamil="அலுவலக பயன்பாட்டிற்கு மட்டும் - ரகசியம்"
-        companyName={data.company.name}
+        companyName={data?.company?.name}
         printDate={new Date().toLocaleDateString('en-IN')}
       />
     </PrintWrapper>
