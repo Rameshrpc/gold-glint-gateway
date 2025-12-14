@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   IndianRupee, Calendar, Clock, AlertTriangle, 
-  Search, Receipt, Calculator, FileText, Printer,
+  Search, Receipt, Calculator, FileText,
   TrendingUp
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -427,9 +427,6 @@ export default function Interest() {
     }
   };
 
-  const printReceipt = () => {
-    window.print();
-  };
 
   return (
     <DashboardLayout>
@@ -926,10 +923,6 @@ export default function Interest() {
                 <div className="flex justify-end gap-2 pt-4 print:hidden">
                   <Button variant="outline" onClick={() => setReceiptDialogOpen(false)}>
                     Close
-                  </Button>
-                  <Button onClick={printReceipt}>
-                    <Printer className="h-4 w-4 mr-2" />
-                    Print
                   </Button>
                 </div>
               </div>
