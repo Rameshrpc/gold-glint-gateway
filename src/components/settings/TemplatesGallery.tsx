@@ -7,6 +7,7 @@ import { Loader2, FileText, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { RECEIPT_TYPES, FONT_OPTIONS } from '@/lib/print-utils';
+import TemplatePreviewDialog from './TemplatePreviewDialog';
 
 interface PrintTemplate {
   id: string;
@@ -26,6 +27,13 @@ export default function TemplatesGallery() {
   const [templates, setTemplates] = useState<PrintTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<PrintTemplate | null>(null);
+
+  const handlePreviewClick = (template: PrintTemplate) => {
+    setSelectedTemplate(template);
+    setPreviewOpen(true);
+  };
 
   useEffect(() => {
     fetchTemplates();
@@ -151,7 +159,12 @@ export default function TemplatesGallery() {
                 <span className="text-xs text-muted-foreground ml-1">Color scheme</span>
               </div>
 
-              <Button variant="outline" size="sm" className="w-full gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full gap-2"
+                onClick={() => handlePreviewClick(template)}
+              >
                 <Eye className="h-4 w-4" />
                 Preview
               </Button>
@@ -165,6 +178,12 @@ export default function TemplatesGallery() {
           </div>
         )}
       </div>
+
+      <TemplatePreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        template={selectedTemplate}
+      />
     </div>
   );
 }
