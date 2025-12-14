@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -65,6 +65,9 @@ export default function PrintDocumentsDialog({
             <Printer className="h-5 w-5" />
             Print Loan Documents
           </DialogTitle>
+          <DialogDescription>
+            Select documents to print for this loan
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -91,9 +94,10 @@ export default function PrintDocumentsDialog({
                   id={doc.id}
                   checked={selectedDocs.includes(doc.id)}
                   onCheckedChange={() => handleToggle(doc.id)}
+                  onClick={(e) => e.stopPropagation()}
                 />
-                <doc.icon className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
+                <doc.icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
                   <Label htmlFor={doc.id} className="font-medium cursor-pointer">
                     {doc.label}
                   </Label>

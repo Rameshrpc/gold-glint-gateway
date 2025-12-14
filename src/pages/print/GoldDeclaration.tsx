@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
 import { numberToWords, printElement, formatPrintDate } from '@/lib/print';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
-import { useClientTerms } from '@/hooks/useClientTerms';
 import {
   PrintPageWrapper,
   PrintHeader,
@@ -74,12 +72,21 @@ const DEFAULT_TERMS = [
   },
 ];
 
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+}
+
 interface LoanData {
   id: string;
   loan_number: string;
   loan_date: string;
   principal_amount: number;
   shown_principal: number | null;
+  client_id: string;
   customer: {
     id: string;
     customer_code: string;
@@ -93,23 +100,23 @@ interface LoanData {
 
 export default function GoldDeclaration() {
   const { loanId } = useParams<{ loanId: string }>();
-  const { client } = useAuth();
   const [loan, setLoan] = useState<LoanData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
+  const [customTerms, setCustomTerms] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { data: customTerms } = useClientTerms('loan');
 
   useEffect(() => {
-    if (loanId && client) {
+    if (loanId) {
       fetchLoanData();
     }
-  }, [loanId, client]);
+  }, [loanId]);
 
   const fetchLoanData = async () => {
     try {
       const { data, error } = await supabase
         .from('loans')
         .select(`
-          id, loan_number, loan_date, principal_amount, shown_principal,
+          id, loan_number, loan_date, principal_amount, shown_principal, client_id,
           customer:customers(id, customer_code, full_name, phone, address, nominee_name, nominee_relation)
         `)
         .eq('id', loanId)
@@ -117,6 +124,28 @@ export default function GoldDeclaration() {
 
       if (error) throw error;
       setLoan(data);
+
+      // Fetch client data
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+
+        // Fetch custom terms
+        const { data: termsData } = await supabase
+          .from('client_terms_conditions')
+          .select('*')
+          .eq('client_id', data.client_id)
+          .eq('term_type', 'loan')
+          .eq('is_active', true)
+          .order('display_order');
+
+        setCustomTerms(termsData || []);
+      }
     } catch (error) {
       console.error('Error fetching loan:', error);
     } finally {
@@ -163,9 +192,9 @@ export default function GoldDeclaration() {
       <PrintPageWrapper>
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="LOAN DECLARATION"
           documentTitleTamil="கடன் உறுதிமொழி"
           documentNumber={loan.loan_number}

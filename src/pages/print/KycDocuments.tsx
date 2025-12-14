@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { printElement, formatPrintDate } from '@/lib/print';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
@@ -13,6 +12,14 @@ import {
   SectionTitle,
   SignatureBlock,
 } from '@/components/print/shared';
+
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+}
 
 interface CustomerData {
   id: string;
@@ -33,27 +40,28 @@ interface LoanData {
   id: string;
   loan_number: string;
   loan_date: string;
+  client_id: string;
   customer: CustomerData;
 }
 
 export default function KycDocuments() {
   const { loanId } = useParams<{ loanId: string }>();
-  const { client } = useAuth();
   const [loan, setLoan] = useState<LoanData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (loanId && client) {
+    if (loanId) {
       fetchLoanData();
     }
-  }, [loanId, client]);
+  }, [loanId]);
 
   const fetchLoanData = async () => {
     try {
       const { data, error } = await supabase
         .from('loans')
         .select(`
-          id, loan_number, loan_date,
+          id, loan_number, loan_date, client_id,
           customer:customers(id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url)
         `)
         .eq('id', loanId)
@@ -61,6 +69,17 @@ export default function KycDocuments() {
 
       if (error) throw error;
       setLoan(data);
+
+      // Fetch client data
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+      }
     } catch (error) {
       console.error('Error fetching loan:', error);
     } finally {
@@ -109,9 +128,9 @@ export default function KycDocuments() {
       <PrintPageWrapper>
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="KYC DOCUMENTS"
           documentTitleTamil="KYC ஆவணங்கள்"
           documentNumber={loan.loan_number}

@@ -239,14 +239,13 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Print Routes */}
-            <Route path="/print/loan-receipt/:loanId" element={<ProtectedRoute><LoanReceipt /></ProtectedRoute>} />
-            <Route path="/print/gold-declaration/:loanId" element={<ProtectedRoute><GoldDeclaration /></ProtectedRoute>} />
-            <Route path="/print/jewel-details/:loanId" element={<ProtectedRoute><JewelDetails /></ProtectedRoute>} />
-            <Route path="/print/kyc-docs/:loanId" element={<ProtectedRoute><KycDocuments /></ProtectedRoute>} />
-            <Route path="/print/interest-receipt/:paymentId" element={<ProtectedRoute><InterestReceipt /></ProtectedRoute>} />
-            <Route path="/print/auction-notice/:auctionId" element={<ProtectedRoute><AuctionNotice /></ProtectedRoute>
-            } />
+            {/* Print Routes - Public (data fetching handles auth) */}
+            <Route path="/print/loan-receipt/:loanId" element={<LoanReceipt />} />
+            <Route path="/print/gold-declaration/:loanId" element={<GoldDeclaration />} />
+            <Route path="/print/jewel-details/:loanId" element={<JewelDetails />} />
+            <Route path="/print/kyc-docs/:loanId" element={<KycDocuments />} />
+            <Route path="/print/interest-receipt/:paymentId" element={<InterestReceipt />} />
+            <Route path="/print/auction-notice/:auctionId" element={<AuctionNotice />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

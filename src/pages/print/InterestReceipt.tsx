@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
-import { numberToWords, printElement, formatPrintDate, daysBetween } from '@/lib/print';
+import { numberToWords, printElement, formatPrintDate } from '@/lib/print';
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
 import {
@@ -14,6 +13,14 @@ import {
   SectionTitle,
   SignatureBlock,
 } from '@/components/print/shared';
+
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+}
 
 interface PaymentData {
   id: string;
@@ -30,6 +37,7 @@ interface PaymentData {
   overdue_days: number | null;
   payment_mode: string;
   remarks: string | null;
+  client_id: string;
   loan: {
     id: string;
     loan_number: string;
@@ -57,15 +65,15 @@ interface PaymentData {
 
 export default function InterestReceipt() {
   const { paymentId } = useParams<{ paymentId: string }>();
-  const { client } = useAuth();
   const [payment, setPayment] = useState<PaymentData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (paymentId && client) {
+    if (paymentId) {
       fetchPaymentData();
     }
-  }, [paymentId, client]);
+  }, [paymentId]);
 
   const fetchPaymentData = async () => {
     try {
@@ -86,6 +94,17 @@ export default function InterestReceipt() {
 
       if (error) throw error;
       setPayment(data);
+
+      // Fetch client data
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+      }
     } catch (error) {
       console.error('Error fetching payment:', error);
     } finally {
@@ -116,9 +135,9 @@ export default function InterestReceipt() {
       <PrintPageWrapper>
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="INTEREST RECEIPT"
           documentTitleTamil="வட்டி ரசீது"
           documentNumber={payment.receipt_number}

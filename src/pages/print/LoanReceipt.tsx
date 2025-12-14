@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
 import { numberToWords, formatPrintDate, printElement } from '@/lib/print';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,15 @@ import {
   BlankField,
   JewelTable,
 } from '@/components/print/shared';
+
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  logo_url: string | null;
+}
 
 interface LoanData {
   id: string;
@@ -32,6 +40,7 @@ interface LoanData {
   advance_interest_actual: number | null;
   processing_fee: number | null;
   document_charges: number | null;
+  client_id: string;
   customer: {
     id: string;
     customer_code: string;
@@ -74,15 +83,15 @@ interface LoanData {
 
 export default function LoanReceipt() {
   const { loanId } = useParams<{ loanId: string }>();
-  const { client } = useAuth();
   const [loan, setLoan] = useState<LoanData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (loanId && client) {
+    if (loanId) {
       fetchLoanData();
     }
-  }, [loanId, client]);
+  }, [loanId]);
 
   const fetchLoanData = async () => {
     try {
@@ -100,6 +109,17 @@ export default function LoanReceipt() {
 
       if (error) throw error;
       setLoan(data);
+
+      // Fetch client data using client_id from loan
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, email, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+      }
     } catch (error) {
       console.error('Error fetching loan:', error);
     } finally {
@@ -228,10 +248,10 @@ export default function LoanReceipt() {
         {/* Header */}
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          companyEmail={(client as any)?.email || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          companyEmail={client?.email || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="LOAN RECEIPT"
           documentTitleTamil="கடன் ரசீது"
           documentNumber={loan.loan_number}
