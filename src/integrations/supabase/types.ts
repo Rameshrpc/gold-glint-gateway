@@ -538,8 +538,11 @@ export type Database = {
           assigned_by: string | null
           branch_id: string
           client_id: string
+          effective_from: string | null
+          effective_to: string | null
           id: string
           is_locked: boolean | null
+          priority: number | null
           receipt_type: string
           template_id: string
         }
@@ -548,8 +551,11 @@ export type Database = {
           assigned_by?: string | null
           branch_id: string
           client_id: string
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           is_locked?: boolean | null
+          priority?: number | null
           receipt_type: string
           template_id: string
         }
@@ -558,8 +564,11 @@ export type Database = {
           assigned_by?: string | null
           branch_id?: string
           client_id?: string
+          effective_from?: string | null
+          effective_to?: string | null
           id?: string
           is_locked?: boolean | null
+          priority?: number | null
           receipt_type?: string
           template_id?: string
         }
@@ -768,6 +777,74 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "print_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_print_templates: {
+        Row: {
+          client_id: string
+          color_scheme: Json | null
+          created_at: string | null
+          custom_css: string | null
+          font_family: string | null
+          font_size: number | null
+          footer_content: Json | null
+          header_content: Json | null
+          id: string
+          is_active: boolean | null
+          language: string | null
+          layout_style: string | null
+          paper_size: string | null
+          receipt_type: string
+          template_code: string
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          color_scheme?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          font_family?: string | null
+          font_size?: number | null
+          footer_content?: Json | null
+          header_content?: Json | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          layout_style?: string | null
+          paper_size?: string | null
+          receipt_type: string
+          template_code: string
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          color_scheme?: Json | null
+          created_at?: string | null
+          custom_css?: string | null
+          font_family?: string | null
+          font_size?: number | null
+          footer_content?: Json | null
+          header_content?: Json | null
+          id?: string
+          is_active?: boolean | null
+          language?: string | null
+          layout_style?: string | null
+          paper_size?: string | null
+          receipt_type?: string
+          template_code?: string
+          template_name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_print_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1796,6 +1873,8 @@ export type Database = {
         Row: {
           color_scheme: Json | null
           created_at: string | null
+          custom_css: string | null
+          font_family: string | null
           id: string
           is_active: boolean | null
           language: string | null
@@ -1809,6 +1888,8 @@ export type Database = {
         Insert: {
           color_scheme?: Json | null
           created_at?: string | null
+          custom_css?: string | null
+          font_family?: string | null
           id?: string
           is_active?: boolean | null
           language?: string | null
@@ -1822,6 +1903,8 @@ export type Database = {
         Update: {
           color_scheme?: Json | null
           created_at?: string | null
+          custom_css?: string | null
+          font_family?: string | null
           id?: string
           is_active?: boolean | null
           language?: string | null

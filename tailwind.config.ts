@@ -13,6 +13,14 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Noto Sans', 'sans-serif'],
+        tamil: ['Noto Sans Tamil', 'sans-serif'],
+        roboto: ['Roboto', 'sans-serif'],
+        opensans: ['Open Sans', 'sans-serif'],
+        lato: ['Lato', 'sans-serif'],
+        poppins: ['Poppins', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
