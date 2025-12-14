@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -24,6 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
+import PrintDocumentDialog from '@/components/print/PrintDocumentDialog';
 
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
@@ -237,7 +238,10 @@ export default function Loans() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
-  
+  // Print loan dialog
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printingLoan, setPrintingLoan] = useState<Loan | null>(null);
+  const [printingGoldItems, setPrintingGoldItems] = useState<GoldItem[]>([]);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -774,6 +778,18 @@ export default function Loans() {
     if (!attemptEdit()) return;
     setEditingLoan(loan);
     setEditDialogOpen(true);
+  };
+
+  const handlePrintLoan = async (loan: Loan) => {
+    // Fetch gold items for this loan
+    const { data: items } = await supabase
+      .from('gold_items')
+      .select('*')
+      .eq('loan_id', loan.id);
+    
+    setPrintingLoan(loan);
+    setPrintingGoldItems(items || []);
+    setPrintDialogOpen(true);
   };
 
   const filteredLoans = loans.filter(loan => {
@@ -1774,6 +1790,14 @@ export default function Loans() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
+                              onClick={() => handlePrintLoan(loan)}
+                              title="Print loan receipt"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
                               onClick={() => handleEditLoan(loan)}
                               disabled={!canEdit}
                               title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
@@ -1927,6 +1951,23 @@ export default function Loans() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Print Loan Dialog */}
+        {printingLoan && (
+          <PrintDocumentDialog
+            open={printDialogOpen}
+            onOpenChange={setPrintDialogOpen}
+            documentType="loan"
+            branchId={printingLoan.branch_id}
+            data={{
+              ...printingLoan,
+              gold_items: printingGoldItems,
+              client: client,
+              branch: branches.find(b => b.id === printingLoan?.branch_id),
+            }}
+            title="Print Loan Receipt"
+          />
+        )}
 
       </div>
     </DashboardLayout>

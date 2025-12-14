@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Loader2, Printer, Download, FileText } from 'lucide-react';
-import { usePrintTemplates } from '@/hooks/usePrintTemplate';
+import { usePrintTemplates, usePrintTemplate } from '@/hooks/usePrintTemplate';
 import { RECEIPT_TYPES } from '@/lib/print-utils';
 import { pdf } from '@react-pdf/renderer';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ interface PrintDocumentDialogProps {
   documentType: string;
   data: any;
   title?: string;
+  branchId?: string;
 }
 
 export default function PrintDocumentDialog({
@@ -29,11 +30,20 @@ export default function PrintDocumentDialog({
   documentType,
   data,
   title,
+  branchId,
 }: PrintDocumentDialogProps) {
   const { templates, loading: templatesLoading } = usePrintTemplates();
+  const { template: branchTemplate } = usePrintTemplate(documentType, branchId);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
   const [copies, setCopies] = useState<number>(1);
   const [generating, setGenerating] = useState(false);
+
+  // Auto-select branch template when available
+  React.useEffect(() => {
+    if (branchTemplate && !selectedTemplateId) {
+      setSelectedTemplateId(branchTemplate.id);
+    }
+  }, [branchTemplate, selectedTemplateId]);
 
   const availableTemplates = templates.filter(t => t.receipt_type === documentType);
   const selectedTemplate = availableTemplates.find(t => t.id === selectedTemplateId);
@@ -46,10 +56,13 @@ export default function PrintDocumentDialog({
     } : undefined;
 
     switch (documentType) {
+      case 'loan':
       case 'loan_receipt':
         return <LoanReceiptPDF data={data} config={templateConfig} />;
+      case 'interest':
       case 'interest_receipt':
         return <InterestReceiptPDF data={data} config={templateConfig} />;
+      case 'redemption':
       case 'redemption_receipt':
         return <RedemptionReceiptPDF data={data} config={templateConfig} />;
       default:
