@@ -1,14 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Printer, Download, FileText } from 'lucide-react';
+import { Loader2, Printer, Download, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
-import { useDefaultPrintProfile, PrintProfileDocument } from '@/hooks/usePrintProfiles';
+import { useDefaultPrintProfile } from '@/hooks/usePrintProfiles';
 
 // PDF Components
 import LoanReceiptPDF from './documents/LoanReceiptPDF';
@@ -22,7 +22,7 @@ import DeclarationPDF from './documents/DeclarationPDF';
 interface PrintProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  profileType: string; // 'loan', 'interest', 'redemption', etc.
+  profileType: string;
   data: any;
   title?: string;
 }
@@ -46,7 +46,6 @@ const DOCUMENT_LABELS: Record<string, string> = {
   'auction_notice': 'Auction Notice',
 };
 
-// Default documents if no profile is configured
 const DEFAULT_DOCUMENTS: Record<string, string[]> = {
   'loan': ['loan_receipt', 'kyc', 'gold_declaration', 'summary', 'declaration'],
   'interest': ['interest_receipt'],
@@ -54,6 +53,14 @@ const DEFAULT_DOCUMENTS: Record<string, string[]> = {
   'reloan': ['loan_receipt', 'kyc', 'gold_declaration'],
   'auction': ['auction_notice'],
 };
+
+interface PrintQueueItem {
+  document_type: string;
+  blob: Blob;
+  url: string;
+  copies: number;
+  currentCopy: number;
+}
 
 export default function PrintProfileDialog({
   open,
@@ -66,11 +73,16 @@ export default function PrintProfileDialog({
   const [documents, setDocuments] = useState<DocumentSelection[]>([]);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  
+  // Sequential printing state
+  const [printQueue, setPrintQueue] = useState<PrintQueueItem[]>([]);
+  const [currentPrintIndex, setCurrentPrintIndex] = useState(0);
+  const [isPrinting, setIsPrinting] = useState(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Initialize documents based on profile or defaults
   useEffect(() => {
     if (profile && profile.documents.length > 0) {
-      // Use profile documents
       setDocuments(
         profile.documents.map((doc) => ({
           document_type: doc.document_type,
@@ -80,18 +92,28 @@ export default function PrintProfileDialog({
         }))
       );
     } else {
-      // Use default documents for profile type
       const defaultDocs = DEFAULT_DOCUMENTS[profileType] || [];
       setDocuments(
         defaultDocs.map((docType, index) => ({
           document_type: docType,
           copies: 1,
           selected: true,
-          is_required: index === 0, // First document is required
+          is_required: index === 0,
         }))
       );
     }
   }, [profile, profileType]);
+
+  // Reset print queue when dialog closes
+  useEffect(() => {
+    if (!open) {
+      setPrintQueue([]);
+      setCurrentPrintIndex(0);
+      setIsPrinting(false);
+      // Clean up URLs
+      printQueue.forEach(item => URL.revokeObjectURL(item.url));
+    }
+  }, [open]);
 
   const toggleDocument = (docType: string) => {
     setDocuments((prev) =>
@@ -143,42 +165,99 @@ export default function PrintProfileDialog({
     setProgress(0);
 
     try {
-      const totalDocs = selectedDocs.reduce((sum, doc) => sum + doc.copies, 0);
-      let processedDocs = 0;
+      const queue: PrintQueueItem[] = [];
+      const totalDocs = selectedDocs.length;
+      let processed = 0;
 
-      // Generate and print each document
+      // Generate all document blobs first
       for (const doc of selectedDocs) {
         const component = getDocumentComponent(doc.document_type);
         if (!component) continue;
 
         const blob = await pdf(component).toBlob();
         const url = URL.createObjectURL(blob);
+        
+        queue.push({
+          document_type: doc.document_type,
+          blob,
+          url,
+          copies: doc.copies,
+          currentCopy: 1,
+        });
 
-        // Print the specified number of copies
-        for (let i = 0; i < doc.copies; i++) {
-          const printWindow = window.open(url, '_blank');
-          if (printWindow) {
-            printWindow.addEventListener('load', () => {
-              printWindow.print();
-            });
-          }
-          processedDocs++;
-          setProgress((processedDocs / totalDocs) * 100);
-        }
-
-        // Small delay between documents
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        processed++;
+        setProgress((processed / totalDocs) * 100);
       }
 
-      toast.success('Documents sent to print');
-      onOpenChange(false);
+      if (queue.length === 0) {
+        toast.error('No documents to print');
+        setGenerating(false);
+        return;
+      }
+
+      // Set up the print queue and start printing
+      setPrintQueue(queue);
+      setCurrentPrintIndex(0);
+      setIsPrinting(true);
+      setGenerating(false);
+      
+      // Start printing the first document
+      printDocument(queue[0]);
     } catch (error) {
       console.error('Print error:', error);
       toast.error('Failed to generate documents');
-    } finally {
       setGenerating(false);
-      setProgress(0);
     }
+  };
+
+  const printDocument = (item: PrintQueueItem) => {
+    if (!iframeRef.current) return;
+    
+    iframeRef.current.src = item.url;
+  };
+
+  const handleIframeLoad = () => {
+    if (!isPrinting || !iframeRef.current) return;
+    
+    try {
+      // Trigger print dialog for the iframe content
+      iframeRef.current.contentWindow?.print();
+    } catch (error) {
+      console.error('Print trigger error:', error);
+    }
+  };
+
+  const handlePrintNext = () => {
+    const currentItem = printQueue[currentPrintIndex];
+    
+    if (currentItem.currentCopy < currentItem.copies) {
+      // Print another copy of the same document
+      const updatedQueue = [...printQueue];
+      updatedQueue[currentPrintIndex] = {
+        ...currentItem,
+        currentCopy: currentItem.currentCopy + 1,
+      };
+      setPrintQueue(updatedQueue);
+      printDocument(updatedQueue[currentPrintIndex]);
+    } else if (currentPrintIndex < printQueue.length - 1) {
+      // Move to next document
+      const nextIndex = currentPrintIndex + 1;
+      setCurrentPrintIndex(nextIndex);
+      printDocument(printQueue[nextIndex]);
+    } else {
+      // All documents printed
+      handleFinishPrinting();
+    }
+  };
+
+  const handleFinishPrinting = () => {
+    // Clean up URLs
+    printQueue.forEach(item => URL.revokeObjectURL(item.url));
+    setPrintQueue([]);
+    setCurrentPrintIndex(0);
+    setIsPrinting(false);
+    toast.success('All documents printed');
+    onOpenChange(false);
   };
 
   const handleDownload = async () => {
@@ -191,7 +270,6 @@ export default function PrintProfileDialog({
     setGenerating(true);
 
     try {
-      // Download each selected document
       for (const doc of selectedDocs) {
         const component = getDocumentComponent(doc.document_type);
         if (!component) continue;
@@ -207,7 +285,6 @@ export default function PrintProfileDialog({
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        // Small delay between downloads
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
@@ -222,6 +299,14 @@ export default function PrintProfileDialog({
 
   const selectedCount = documents.filter((d) => d.selected).length;
   const totalCopies = documents.filter((d) => d.selected).reduce((sum, d) => sum + d.copies, 0);
+  
+  const currentItem = printQueue[currentPrintIndex];
+  const remainingDocs = isPrinting 
+    ? printQueue.slice(currentPrintIndex).reduce((sum, item, idx) => {
+        if (idx === 0) return sum + (item.copies - item.currentCopy + 1);
+        return sum + item.copies;
+      }, 0)
+    : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -233,115 +318,180 @@ export default function PrintProfileDialog({
           </DialogTitle>
         </DialogHeader>
 
+        {/* Hidden iframe for printing */}
+        <iframe
+          ref={iframeRef}
+          className="hidden"
+          onLoad={handleIframeLoad}
+          title="Print Frame"
+        />
+
         <div className="py-4">
-          {/* Profile Info */}
-          {profile && (
-            <div className="mb-4 p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">{profile.profile_name}</p>
-              {profile.description && (
-                <p className="text-xs text-muted-foreground">{profile.description}</p>
-              )}
-            </div>
-          )}
-
-          {/* Document Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Select Documents</Label>
-            <ScrollArea className="h-[280px] pr-4">
-              <div className="space-y-3">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.document_type}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        id={doc.document_type}
-                        checked={doc.selected}
-                        onCheckedChange={() => toggleDocument(doc.document_type)}
-                        disabled={doc.is_required}
-                      />
-                      <div>
-                        <Label
-                          htmlFor={doc.document_type}
-                          className="cursor-pointer font-medium"
-                        >
-                          {DOCUMENT_LABELS[doc.document_type] || doc.document_type}
-                        </Label>
-                        {doc.is_required && (
-                          <p className="text-xs text-muted-foreground">Required</p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs text-muted-foreground">Copies:</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={10}
-                        value={doc.copies}
-                        onChange={(e) =>
-                          updateCopies(doc.document_type, parseInt(e.target.value) || 1)
-                        }
-                        className="w-14 h-8 text-center"
-                        disabled={!doc.selected}
-                      />
-                    </div>
-                  </div>
-                ))}
+          {/* Printing Mode UI */}
+          {isPrinting && currentItem ? (
+            <div className="space-y-4">
+              <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+                <h3 className="font-semibold text-lg mb-2">Printing in Progress</h3>
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Current:</span>{' '}
+                    <span className="font-medium">
+                      {DOCUMENT_LABELS[currentItem.document_type] || currentItem.document_type}
+                    </span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Copy:</span>{' '}
+                    <span className="font-medium">
+                      {currentItem.currentCopy} of {currentItem.copies}
+                    </span>
+                  </p>
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Remaining:</span>{' '}
+                    <span className="font-medium">{remainingDocs} page(s)</span>
+                  </p>
+                </div>
               </div>
-            </ScrollArea>
-          </div>
-
-          {/* Summary */}
-          <div className="mt-4 p-3 bg-muted rounded-lg">
-            <div className="flex justify-between text-sm">
-              <span>Selected Documents:</span>
-              <span className="font-medium">{selectedCount}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span>Total Pages:</span>
-              <span className="font-medium">{totalCopies}</span>
-            </div>
-          </div>
-
-          {/* Progress */}
-          {generating && progress > 0 && (
-            <div className="mt-4">
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-xs text-center text-muted-foreground mt-1">
-                Generating documents...
+              
+              <p className="text-sm text-muted-foreground text-center">
+                After the print dialog closes, click the button below to continue.
               </p>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleFinishPrinting}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePrintNext}
+                  className="flex-1"
+                >
+                  {remainingDocs > 1 ? (
+                    <>
+                      Print Next <ChevronRight className="h-4 w-4 ml-1" />
+                    </>
+                  ) : (
+                    'Finish'
+                  )}
+                </Button>
+              </div>
             </div>
+          ) : (
+            <>
+              {/* Profile Info */}
+              {profile && (
+                <div className="mb-4 p-3 bg-muted rounded-lg">
+                  <p className="text-sm font-medium">{profile.profile_name}</p>
+                  {profile.description && (
+                    <p className="text-xs text-muted-foreground">{profile.description}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Document Selection */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Select Documents</Label>
+                <ScrollArea className="h-[280px] pr-4">
+                  <div className="space-y-3">
+                    {documents.map((doc) => (
+                      <div
+                        key={doc.document_type}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            id={doc.document_type}
+                            checked={doc.selected}
+                            onCheckedChange={() => toggleDocument(doc.document_type)}
+                            disabled={doc.is_required}
+                          />
+                          <div>
+                            <Label
+                              htmlFor={doc.document_type}
+                              className="cursor-pointer font-medium"
+                            >
+                              {DOCUMENT_LABELS[doc.document_type] || doc.document_type}
+                            </Label>
+                            {doc.is_required && (
+                              <p className="text-xs text-muted-foreground">Required</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-muted-foreground">Copies:</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={10}
+                            value={doc.copies}
+                            onChange={(e) =>
+                              updateCopies(doc.document_type, parseInt(e.target.value) || 1)
+                            }
+                            className="w-14 h-8 text-center"
+                            disabled={!doc.selected}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Summary */}
+              <div className="mt-4 p-3 bg-muted rounded-lg">
+                <div className="flex justify-between text-sm">
+                  <span>Selected Documents:</span>
+                  <span className="font-medium">{selectedCount}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Total Pages:</span>
+                  <span className="font-medium">{totalCopies}</span>
+                </div>
+              </div>
+
+              {/* Progress */}
+              {generating && progress > 0 && (
+                <div className="mt-4">
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-center text-muted-foreground mt-1">
+                    Generating documents...
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={generating}>
-            Cancel
-          </Button>
-          <Button variant="outline" onClick={handleDownload} disabled={generating}>
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            Download
-          </Button>
-          <Button onClick={handlePrint} disabled={generating}>
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : (
-              <Printer className="h-4 w-4 mr-2" />
-            )}
-            Print All
-          </Button>
-        </DialogFooter>
+        {!isPrinting && (
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={generating}>
+              Cancel
+            </Button>
+            <Button variant="outline" onClick={handleDownload} disabled={generating}>
+              {generating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Download className="h-4 w-4 mr-2" />
+              )}
+              Download
+            </Button>
+            <Button onClick={handlePrint} disabled={generating}>
+              {generating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Printer className="h-4 w-4 mr-2" />
+              )}
+              Print All
+            </Button>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
