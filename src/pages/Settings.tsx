@@ -9,10 +9,11 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Users, Building2, ChevronRight, Loader2 } from 'lucide-react';
+import { Search, Users, Building2, ChevronRight, Loader2, Printer } from 'lucide-react';
 import { UserRightsSheet } from '@/components/settings/UserRightsSheet';
 import { ClientRightsSheet } from '@/components/settings/ClientRightsSheet';
 import { PermissionMatrix } from '@/components/settings/PermissionMatrix';
+import { PrintSetupTab } from '@/components/settings/PrintSetupTab';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -51,6 +52,7 @@ export default function Settings() {
 
   const canManageUserRights = isPlatformAdmin() || hasRole('super_admin') || hasRole('tenant_admin');
   const canManageClientRights = isPlatformAdmin() || hasRole('super_admin');
+  const canManagePrintSetup = isPlatformAdmin() || hasRole('super_admin') || hasRole('tenant_admin');
 
   useEffect(() => {
     if (canManageUserRights) {
@@ -197,6 +199,12 @@ export default function Settings() {
               <TabsTrigger value="client-rights" className="gap-2">
                 <Building2 className="h-4 w-4" />
                 Client Rights
+              </TabsTrigger>
+            )}
+            {canManagePrintSetup && (
+              <TabsTrigger value="print-setup" className="gap-2">
+                <Printer className="h-4 w-4" />
+                Print Setup
               </TabsTrigger>
             )}
           </TabsList>
@@ -392,6 +400,12 @@ export default function Settings() {
                   )}
                 </CardContent>
               </Card>
+            </TabsContent>
+          )}
+
+          {canManagePrintSetup && (
+            <TabsContent value="print-setup" className="space-y-4">
+              <PrintSetupTab />
             </TabsContent>
           )}
         </Tabs>
