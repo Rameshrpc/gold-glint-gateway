@@ -25,6 +25,7 @@ import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
 import PrintDocumentDialog from '@/components/print/PrintDocumentDialog';
+import PrintProfileDialog from '@/components/print/PrintProfileDialog';
 
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
@@ -238,10 +239,9 @@ export default function Loans() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
-  // Print loan dialog
-  const [printDialogOpen, setPrintDialogOpen] = useState(false);
-  const [printingLoan, setPrintingLoan] = useState<Loan | null>(null);
-  const [printingGoldItems, setPrintingGoldItems] = useState<GoldItem[]>([]);
+  // Print loan dialog - using print profiles
+  const [printProfileDialogOpen, setPrintProfileDialogOpen] = useState(false);
+  const [printingLoanData, setPrintingLoanData] = useState<any>(null);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -787,9 +787,15 @@ export default function Loans() {
       .select('*')
       .eq('loan_id', loan.id);
     
-    setPrintingLoan(loan);
-    setPrintingGoldItems(items || []);
-    setPrintDialogOpen(true);
+    setPrintingLoanData({
+      ...loan,
+      gold_items: items || [],
+      customer: loan.customer,
+      scheme: loan.scheme,
+      client: client,
+      branch: branches.find(b => b.id === loan.branch_id),
+    });
+    setPrintProfileDialogOpen(true);
   };
 
   const filteredLoans = loans.filter(loan => {
@@ -1952,20 +1958,14 @@ export default function Loans() {
           </DialogContent>
         </Dialog>
 
-        {/* Print Loan Dialog */}
-        {printingLoan && (
-          <PrintDocumentDialog
-            open={printDialogOpen}
-            onOpenChange={setPrintDialogOpen}
-            documentType="loan"
-            branchId={printingLoan.branch_id}
-            data={{
-              ...printingLoan,
-              gold_items: printingGoldItems,
-              client: client,
-              branch: branches.find(b => b.id === printingLoan?.branch_id),
-            }}
-            title="Print Loan Receipt"
+        {/* Print Profile Dialog */}
+        {printingLoanData && (
+          <PrintProfileDialog
+            open={printProfileDialogOpen}
+            onOpenChange={setPrintProfileDialogOpen}
+            profileType="loan"
+            data={printingLoanData}
+            title="Print Loan Documents"
           />
         )}
 
