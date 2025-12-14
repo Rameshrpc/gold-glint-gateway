@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   signatureBox: {
-    width: '45%',
+    width: '30%',
     textAlign: 'center',
   },
   signatureLine: {
@@ -149,6 +149,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#000',
     marginTop: 40,
     paddingTop: 5,
+  },
+  signatureLabel: {
+    fontSize: 7,
+    color: '#666',
+    marginTop: 2,
   },
   declaration: {
     fontSize: 8,
@@ -282,6 +287,11 @@ export default function LoanReceiptPDF({ data, config }: LoanReceiptPDFProps) {
         <View style={styles.signatureSection}>
           <View style={styles.signatureBox}>
             <Text style={styles.signatureLine}>Customer Signature</Text>
+            <Text style={styles.signatureLabel}>(At Loan Creation)</Text>
+          </View>
+          <View style={styles.signatureBox}>
+            <Text style={styles.signatureLine}>Redemption Signature</Text>
+            <Text style={styles.signatureLabel}>(At Gold Release)</Text>
           </View>
           <View style={styles.signatureBox}>
             <Text style={styles.signatureLine}>Authorized Signatory</Text>
