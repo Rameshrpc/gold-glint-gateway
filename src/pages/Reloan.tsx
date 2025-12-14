@@ -26,7 +26,7 @@ import {
   calculateAdvanceInterest,
   formatIndianCurrency,
 } from '@/lib/interestCalculations';
-import { PrintReceiptDialog, ReloanReceipt } from '@/components/print';
+
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
@@ -162,10 +162,6 @@ export default function Reloan() {
   
   // Recent reloans
   const [recentReloans, setRecentReloans] = useState<any[]>([]);
-  
-  // PDF Dialog
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-  const [reloanForPdf, setReloanForPdf] = useState<any>(null);
 
   // Image captures
   const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
@@ -641,63 +637,6 @@ export default function Reloan() {
       }
 
       toast.success(`Reloan processed: ${selectedLoan.loan_number} → ${newLoanNumber}`);
-
-      // Prepare PDF data
-      const pdfData = {
-        company: {
-          name: client.company_name,
-          address: (client as any).address || '',
-          phone: (client as any).phone || '',
-          email: (client as any).email || '',
-        },
-        transaction: {
-          date: today,
-          paymentMode: paymentMode,
-          paymentReference: paymentReference || undefined,
-        },
-        customer: {
-          name: selectedLoan.customer.full_name,
-          code: selectedLoan.customer.customer_code,
-          phone: selectedLoan.customer.phone,
-        },
-        oldLoan: {
-          number: selectedLoan.loan_number,
-          date: selectedLoan.loan_date,
-          originalPrincipal: selectedLoan.principal_amount,
-          daysSinceLoan: oldLoanCalc.daysSinceLoan,
-          outstandingPrincipal: oldLoanCalc.breakdown.principal,
-          interestDue: oldLoanCalc.breakdown.interest,
-          penalty: oldLoanCalc.breakdown.penalty,
-          rebateAmount: oldLoanCalc.breakdown.rebate,
-          totalSettlement: oldLoanCalc.breakdown.total,
-        },
-        newLoan: {
-          number: newLoanNumber,
-          date: today,
-          principalAmount: newLoanCalc.finalApprovedAmount,
-          advanceInterest: newLoanCalc.advanceCalc.shownInterest,
-          processingFee: newLoanCalc.processingFee,
-          documentCharges: newLoanCalc.documentCharges,
-          netDisbursement: newLoanCalc.netCashToCustomer,
-          tenureDays: newLoanCalc.tenure,
-          maturityDate: format(maturityDate, 'yyyy-MM-dd'),
-          schemeName: newLoanCalc.scheme.scheme_name,
-        },
-        netSettlement: {
-          amount: netSettlement.netAmount,
-          direction: netSettlement.direction,
-        },
-        goldItems: goldItems.map(item => ({
-          item_type: item.item_type,
-          gross_weight_grams: item.gross_weight_grams,
-          net_weight_grams: item.net_weight_grams,
-          purity: item.purity,
-          appraised_value: item.appraised_value,
-        })),
-      };
-
-      setReloanForPdf(pdfData);
-      setPdfDialogOpen(true);
 
       // Reset form
       setSelectedLoan(null);
@@ -1287,48 +1226,6 @@ export default function Reloan() {
           </Card>
         )}
 
-        {/* Print Receipt Dialog */}
-        {reloanForPdf && (
-          <PrintReceiptDialog
-            open={pdfDialogOpen}
-            onOpenChange={setPdfDialogOpen}
-            title="Reloan Receipt"
-          >
-            <ReloanReceipt
-              company={{
-                name: reloanForPdf.company?.name || '',
-                address: reloanForPdf.company?.address || '',
-                phone: reloanForPdf.company?.phone || ''
-              }}
-              customer={{
-                name: reloanForPdf.customer?.name || '',
-                code: reloanForPdf.customer?.code || '',
-                phone: reloanForPdf.customer?.phone || ''
-              }}
-              oldLoan={{
-                number: reloanForPdf.oldLoan?.number || '',
-                date: reloanForPdf.oldLoan?.date || '',
-                principal: reloanForPdf.oldLoan?.principal || 0,
-                settlementAmount: reloanForPdf.oldLoan?.totalDue || reloanForPdf.oldLoan?.settlementAmount || 0
-              }}
-              newLoan={{
-                number: reloanForPdf.newLoan?.number || '',
-                date: reloanForPdf.newLoan?.date || '',
-                maturityDate: reloanForPdf.newLoan?.maturityDate || '',
-                tenureDays: reloanForPdf.newLoan?.tenureDays || 0,
-                principal: reloanForPdf.newLoan?.principal || 0,
-                advanceInterest: reloanForPdf.newLoan?.advanceInterest || 0,
-                processingFee: reloanForPdf.newLoan?.processingFee || 0,
-                documentCharges: reloanForPdf.newLoan?.documentCharges || 0,
-                netDisbursed: reloanForPdf.newLoan?.netDisbursement || reloanForPdf.newLoan?.netDisbursed || 0
-              }}
-              netSettlement={{
-                amount: reloanForPdf.netSettlement?.amount || 0,
-                direction: reloanForPdf.netSettlement?.direction || 'to_customer'
-              }}
-            />
-          </PrintReceiptDialog>
-        )}
       </div>
     </DashboardLayout>
   );

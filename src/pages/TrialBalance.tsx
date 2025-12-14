@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useFinancialReports, TrialBalanceEntry } from '@/hooks/useFinancialReports';
 import { useAuth } from '@/hooks/useAuth';
-import { printElement } from '@/lib/print';
+
 import { FileText, RefreshCw, Scale } from 'lucide-react';
 
 export default function TrialBalance() {
@@ -17,7 +17,7 @@ export default function TrialBalance() {
   const [asOfDate, setAsOfDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [entries, setEntries] = useState<TrialBalanceEntry[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showPDF, setShowPDF] = useState(false);
+  
 
   const fetchData = async () => {
     setLoading(true);
@@ -78,9 +78,9 @@ export default function TrialBalance() {
               <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
-            <Button onClick={() => setShowPDF(true)} disabled={entries.length === 0}>
+            <Button onClick={() => window.print()} disabled={entries.length === 0}>
               <FileText className="h-4 w-4 mr-2" />
-              Export PDF
+              Print
             </Button>
           </div>
         </div>

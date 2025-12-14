@@ -41,20 +41,11 @@ import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
-
-// Print Pages
-import LoanDeclaration from "./pages/print/LoanDeclaration";
-import JewelDetails from "./pages/print/JewelDetails";
-import KycDocuments from "./pages/print/KycDocuments";
-import InterestReceiptPrint from "./pages/print/InterestReceiptPrint";
-import AuctionNoticePrint from "./pages/print/AuctionNoticePrint";
-
 // Mobile Components
 import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
 import MobileDashboard from "./components/mobile/MobileDashboard";
 import MobileLoans from "./components/mobile/MobileLoans";
 import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -246,13 +237,6 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Print Routes - Public */}
-            <Route path="/print/loan-declaration" element={<LoanDeclaration />} />
-            <Route path="/print/jewel-details" element={<JewelDetails />} />
-            <Route path="/print/kyc-docs" element={<KycDocuments />} />
-            <Route path="/print/interest-receipt" element={<InterestReceiptPrint />} />
-            <Route path="/print/auction-notice" element={<AuctionNoticePrint />} />
-            
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
