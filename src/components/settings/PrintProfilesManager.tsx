@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Plus, Edit2, Trash2, FileText, GripVertical } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Edit2, Trash2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -38,6 +39,19 @@ interface PrintTemplate {
   receipt_type: string;
 }
 
+// Map document types to receipt types for template matching
+const DOCUMENT_TO_RECEIPT_TYPE: Record<string, string> = {
+  'loan_receipt': 'loan',
+  'interest_receipt': 'interest',
+  'redemption_receipt': 'redemption',
+  'reloan_receipt': 'reloan',
+  'auction_notice': 'auction',
+  'gold_declaration': 'gold_declaration',
+  'kyc': 'kyc',
+  'summary': 'summary',
+  'declaration': 'declaration',
+};
+
 export default function PrintProfilesManager() {
   const { profile } = useAuth();
   const [profiles, setProfiles] = useState<PrintProfile[]>([]);
@@ -46,13 +60,13 @@ export default function PrintProfilesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProfile, setEditingProfile] = useState<PrintProfile | null>(null);
   
-  // Form state
+  // Form state with template support
   const [formData, setFormData] = useState({
     profile_name: '',
     profile_type: 'loan',
     description: '',
     is_default: false,
-    documents: [] as { document_type: string; copies: number; is_required: boolean }[]
+    documents: [] as { document_type: string; copies: number; is_required: boolean; template_id: string | null }[]
   });
 
   useEffect(() => {
@@ -109,27 +123,35 @@ export default function PrintProfilesManager() {
 
   const handleCreateNew = () => {
     setEditingProfile(null);
+    // Pre-select all default documents for the profile type
+    const defaultDocs = PROFILE_TYPES.find(p => p.value === 'loan')?.documents || [];
     setFormData({
       profile_name: '',
       profile_type: 'loan',
       description: '',
       is_default: false,
-      documents: []
+      documents: defaultDocs.map(docType => ({
+        document_type: docType,
+        copies: 1,
+        is_required: docType === 'loan_receipt',
+        template_id: null
+      }))
     });
     setDialogOpen(true);
   };
 
-  const handleEdit = (profile: PrintProfile) => {
-    setEditingProfile(profile);
+  const handleEdit = (profileData: PrintProfile) => {
+    setEditingProfile(profileData);
     setFormData({
-      profile_name: profile.profile_name,
-      profile_type: profile.profile_type,
-      description: profile.description || '',
-      is_default: profile.is_default || false,
-      documents: profile.documents?.map(d => ({
+      profile_name: profileData.profile_name,
+      profile_type: profileData.profile_type,
+      description: profileData.description || '',
+      is_default: profileData.is_default || false,
+      documents: profileData.documents?.map(d => ({
         document_type: d.document_type,
         copies: d.copies || 1,
-        is_required: d.is_required || true
+        is_required: d.is_required || false,
+        template_id: d.template_id
       })) || []
     });
     setDialogOpen(true);
@@ -188,6 +210,7 @@ export default function PrintProfilesManager() {
               formData.documents.map((d, index) => ({
                 profile_id: editingProfile.id,
                 document_type: d.document_type,
+                template_id: d.template_id,
                 print_order: index + 1,
                 copies: d.copies,
                 is_required: d.is_required
@@ -222,6 +245,7 @@ export default function PrintProfilesManager() {
               formData.documents.map((d, index) => ({
                 profile_id: newProfile.id,
                 document_type: d.document_type,
+                template_id: d.template_id,
                 print_order: index + 1,
                 copies: d.copies,
                 is_required: d.is_required
@@ -252,7 +276,7 @@ export default function PrintProfilesManager() {
     } else {
       setFormData({
         ...formData,
-        documents: [...formData.documents, { document_type: docType, copies: 1, is_required: true }]
+        documents: [...formData.documents, { document_type: docType, copies: 1, is_required: false, template_id: null }]
       });
     }
   };
@@ -262,6 +286,15 @@ export default function PrintProfilesManager() {
       ...formData,
       documents: formData.documents.map(d =>
         d.document_type === docType ? { ...d, copies } : d
+      )
+    });
+  };
+
+  const updateDocumentTemplate = (docType: string, templateId: string | null) => {
+    setFormData({
+      ...formData,
+      documents: formData.documents.map(d =>
+        d.document_type === docType ? { ...d, template_id: templateId } : d
       )
     });
   };
@@ -277,6 +310,31 @@ export default function PrintProfilesManager() {
     return profileType?.documents || [];
   };
 
+  const getTemplatesForDocument = (docType: string) => {
+    const receiptType = DOCUMENT_TO_RECEIPT_TYPE[docType];
+    return templates.filter(t => t.receipt_type === receiptType || t.receipt_type === docType);
+  };
+
+  const getTemplateName = (templateId: string | null) => {
+    if (!templateId) return 'Default';
+    const template = templates.find(t => t.id === templateId);
+    return template?.template_name || 'Default';
+  };
+
+  const handleProfileTypeChange = (value: string) => {
+    const defaultDocs = PROFILE_TYPES.find(p => p.value === value)?.documents || [];
+    setFormData({
+      ...formData,
+      profile_type: value,
+      documents: defaultDocs.map(docType => ({
+        document_type: docType,
+        copies: 1,
+        is_required: docType.includes('receipt'),
+        template_id: null
+      }))
+    });
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center p-8">Loading...</div>;
   }
@@ -285,14 +343,14 @@ export default function PrintProfilesManager() {
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h3 className="text-lg font-medium">Print Profiles</h3>
+          <h3 className="text-lg font-medium">Print Sets</h3>
           <p className="text-sm text-muted-foreground">
-            Create profiles that combine multiple documents into a single print action
+            Configure which documents to print together and assign templates
           </p>
         </div>
         <Button onClick={handleCreateNew}>
           <Plus className="h-4 w-4 mr-2" />
-          Create Profile
+          Create Print Set
         </Button>
       </div>
 
@@ -300,9 +358,9 @@ export default function PrintProfilesManager() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">No print profiles created yet</p>
+            <p className="text-muted-foreground">No print sets created yet</p>
             <Button variant="link" onClick={handleCreateNew}>
-              Create your first profile
+              Create your first print set
             </Button>
           </CardContent>
         </Card>
@@ -338,6 +396,9 @@ export default function PrintProfilesManager() {
                     <Badge key={doc.id} variant="outline" className="text-xs">
                       {getDocumentLabel(doc.document_type)}
                       {doc.copies && doc.copies > 1 && ` ×${doc.copies}`}
+                      {doc.template_id && (
+                        <span className="ml-1 text-primary">• {getTemplateName(doc.template_id)}</span>
+                      )}
                     </Badge>
                   ))}
                 </div>
@@ -349,16 +410,16 @@ export default function PrintProfilesManager() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingProfile ? 'Edit Print Profile' : 'Create Print Profile'}
+              {editingProfile ? 'Edit Print Set' : 'Create Print Set'}
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="profile_name">Profile Name</Label>
+              <Label htmlFor="profile_name">Print Set Name</Label>
               <Input
                 id="profile_name"
                 value={formData.profile_name}
@@ -368,10 +429,10 @@ export default function PrintProfilesManager() {
             </div>
 
             <div>
-              <Label htmlFor="profile_type">Profile Type</Label>
+              <Label htmlFor="profile_type">Type</Label>
               <Select
                 value={formData.profile_type}
-                onValueChange={(value) => setFormData({ ...formData, profile_type: value, documents: [] })}
+                onValueChange={handleProfileTypeChange}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -392,7 +453,7 @@ export default function PrintProfilesManager() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Brief description of this profile"
+                placeholder="Brief description of this print set"
               />
             </div>
 
@@ -409,37 +470,64 @@ export default function PrintProfilesManager() {
 
             <div>
               <Label className="mb-2 block">Documents to Include</Label>
-              <div className="space-y-2 border rounded-md p-3">
-                {getAvailableDocuments().map((docType) => {
-                  const isSelected = formData.documents.some(d => d.document_type === docType);
-                  const doc = formData.documents.find(d => d.document_type === docType);
-                  
-                  return (
-                    <div key={docType} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={isSelected}
-                          onCheckedChange={() => toggleDocument(docType)}
-                        />
-                        <span className="text-sm">{getDocumentLabel(docType)}</span>
-                      </div>
-                      {isSelected && (
-                        <div className="flex items-center gap-1">
-                          <Label className="text-xs text-muted-foreground">Copies:</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={5}
-                            value={doc?.copies || 1}
-                            onChange={(e) => updateDocumentCopies(docType, parseInt(e.target.value) || 1)}
-                            className="w-14 h-7 text-xs"
-                          />
+              <ScrollArea className="h-[250px]">
+                <div className="space-y-3 border rounded-md p-3">
+                  {getAvailableDocuments().map((docType) => {
+                    const isSelected = formData.documents.some(d => d.document_type === docType);
+                    const doc = formData.documents.find(d => d.document_type === docType);
+                    const availableTemplates = getTemplatesForDocument(docType);
+                    
+                    return (
+                      <div key={docType} className="space-y-2 pb-3 border-b last:border-0">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleDocument(docType)}
+                            />
+                            <span className="text-sm font-medium">{getDocumentLabel(docType)}</span>
+                          </div>
+                          {isSelected && (
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground">Copies:</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                max={5}
+                                value={doc?.copies || 1}
+                                onChange={(e) => updateDocumentCopies(docType, parseInt(e.target.value) || 1)}
+                                className="w-14 h-7 text-xs"
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        
+                        {isSelected && availableTemplates.length > 0 && (
+                          <div className="ml-6">
+                            <Label className="text-xs text-muted-foreground">Template:</Label>
+                            <Select
+                              value={doc?.template_id || 'default'}
+                              onValueChange={(value) => updateDocumentTemplate(docType, value === 'default' ? null : value)}
+                            >
+                              <SelectTrigger className="h-8 text-xs mt-1">
+                                <SelectValue placeholder="Select template" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="default">Default Template</SelectItem>
+                                {availableTemplates.map((template) => (
+                                  <SelectItem key={template.id} value={template.id}>
+                                    {template.template_name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
             </div>
           </div>
 

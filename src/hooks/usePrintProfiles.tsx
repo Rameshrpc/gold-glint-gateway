@@ -10,6 +10,11 @@ export interface PrintProfileDocument {
   print_order: number;
   copies: number;
   is_required: boolean;
+  template?: {
+    id: string;
+    template_name: string;
+    receipt_type: string;
+  } | null;
 }
 
 export interface PrintProfile {
