@@ -1869,6 +1869,98 @@ export type Database = {
           },
         ]
       }
+      print_profile_documents: {
+        Row: {
+          copies: number | null
+          created_at: string | null
+          document_type: string
+          id: string
+          is_required: boolean | null
+          print_order: number
+          profile_id: string
+          template_id: string | null
+        }
+        Insert: {
+          copies?: number | null
+          created_at?: string | null
+          document_type: string
+          id?: string
+          is_required?: boolean | null
+          print_order?: number
+          profile_id: string
+          template_id?: string | null
+        }
+        Update: {
+          copies?: number | null
+          created_at?: string | null
+          document_type?: string
+          id?: string
+          is_required?: boolean | null
+          print_order?: number
+          profile_id?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_profile_documents_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "print_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "print_profile_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "print_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_profiles: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_default: boolean | null
+          profile_name: string
+          profile_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name: string
+          profile_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_default?: boolean | null
+          profile_name?: string
+          profile_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_profiles_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       print_templates: {
         Row: {
           color_scheme: Json | null

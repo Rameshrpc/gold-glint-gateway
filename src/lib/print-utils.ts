@@ -16,12 +16,35 @@ export const PAPER_SIZES = [
 ];
 
 export const RECEIPT_TYPES = [
+  { value: 'loan', label: 'Loan Receipt' },
+  { value: 'interest', label: 'Interest Receipt' },
+  { value: 'redemption', label: 'Redemption Receipt' },
+  { value: 'reloan', label: 'Reloan Receipt' },
+  { value: 'auction', label: 'Auction Notice' },
+  { value: 'gold_declaration', label: 'Gold Declaration' },
+  { value: 'kyc', label: 'KYC Documents' },
+  { value: 'summary', label: 'Loan Summary' },
+  { value: 'declaration', label: 'Declaration' },
+];
+
+export const DOCUMENT_TYPES = [
   { value: 'loan_receipt', label: 'Loan Receipt' },
   { value: 'interest_receipt', label: 'Interest Receipt' },
   { value: 'redemption_receipt', label: 'Redemption Receipt' },
   { value: 'reloan_receipt', label: 'Reloan Receipt' },
   { value: 'auction_notice', label: 'Auction Notice' },
   { value: 'gold_declaration', label: 'Gold Declaration' },
+  { value: 'kyc', label: 'KYC Documents' },
+  { value: 'summary', label: 'Loan Summary' },
+  { value: 'declaration', label: 'Declaration' },
+];
+
+export const PROFILE_TYPES = [
+  { value: 'loan', label: 'Loan', documents: ['loan_receipt', 'kyc', 'gold_declaration', 'summary', 'declaration'] },
+  { value: 'interest', label: 'Interest Payment', documents: ['interest_receipt'] },
+  { value: 'redemption', label: 'Redemption', documents: ['redemption_receipt', 'gold_declaration'] },
+  { value: 'reloan', label: 'Reloan', documents: ['reloan_receipt', 'kyc', 'gold_declaration'] },
+  { value: 'auction', label: 'Auction', documents: ['auction_notice'] },
 ];
 
 export const LANGUAGE_OPTIONS = [
