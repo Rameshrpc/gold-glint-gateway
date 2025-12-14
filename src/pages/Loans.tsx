@@ -754,6 +754,22 @@ export default function Loans() {
       }
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);
+      
+      // Prepare print data and auto-trigger print dialog
+      const selectedCustomerData = customers.find(c => c.id === selectedCustomerId);
+      const selectedSchemeData = schemes.find(s => s.id === selectedSchemeId);
+      const selectedBranchData = branches.find(b => b.id === selectedBranchId);
+      
+      setPrintingLoanData({
+        ...loanResult,
+        gold_items: goldItemsData,
+        customer: selectedCustomerData,
+        scheme: selectedSchemeData,
+        branch: selectedBranchData,
+        client: client,
+      });
+      setPrintProfileDialogOpen(true);
+      
       setIsFormOpen(false);
       resetForm();
       fetchLoans();
