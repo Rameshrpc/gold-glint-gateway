@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
 import { printElement, formatPrintDate } from '@/lib/print';
 import { Button } from '@/components/ui/button';
@@ -16,6 +15,14 @@ import {
   JewelTable,
 } from '@/components/print/shared';
 
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+}
+
 interface LoanData {
   id: string;
   loan_number: string;
@@ -23,6 +30,7 @@ interface LoanData {
   jewel_photo_url: string | null;
   appraiser_sheet_url: string | null;
   remarks: string | null;
+  client_id: string;
   customer: {
     full_name: string;
     customer_code: string;
@@ -47,22 +55,22 @@ interface LoanData {
 
 export default function JewelDetails() {
   const { loanId } = useParams<{ loanId: string }>();
-  const { client } = useAuth();
   const [loan, setLoan] = useState<LoanData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (loanId && client) {
+    if (loanId) {
       fetchLoanData();
     }
-  }, [loanId, client]);
+  }, [loanId]);
 
   const fetchLoanData = async () => {
     try {
       const { data, error } = await supabase
         .from('loans')
         .select(`
-          id, loan_number, loan_date, jewel_photo_url, appraiser_sheet_url, remarks,
+          id, loan_number, loan_date, jewel_photo_url, appraiser_sheet_url, remarks, client_id,
           customer:customers(full_name, customer_code),
           gold_items(id, item_type, description, gross_weight_grams, stone_weight_grams, net_weight_grams, purity, purity_percentage, appraised_value, market_value, market_rate_per_gram),
           appraised_by_profile:profiles!loans_appraised_by_fkey(full_name)
@@ -72,6 +80,17 @@ export default function JewelDetails() {
 
       if (error) throw error;
       setLoan(data);
+
+      // Fetch client data
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+      }
     } catch (error) {
       console.error('Error fetching loan:', error);
     } finally {
@@ -106,9 +125,9 @@ export default function JewelDetails() {
       <PrintPageWrapper>
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="JEWEL VERIFICATION SHEET"
           documentTitleTamil="நகை சரிபார்ப்பு தாள்"
           documentNumber={loan.loan_number}

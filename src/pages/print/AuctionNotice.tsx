@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
 import { printElement, formatPrintDate, daysBetween } from '@/lib/print';
 import { Button } from '@/components/ui/button';
@@ -15,6 +14,14 @@ import {
   SectionTitle,
   SignatureBlock,
 } from '@/components/print/shared';
+
+interface ClientData {
+  id: string;
+  company_name: string;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+}
 
 interface AuctionData {
   id: string;
@@ -30,6 +37,7 @@ interface AuctionData {
   status: string;
   customer_notified_date: string | null;
   remarks: string | null;
+  client_id: string;
   loan: {
     id: string;
     loan_number: string;
@@ -53,15 +61,15 @@ interface AuctionData {
 
 export default function AuctionNotice() {
   const { auctionId } = useParams<{ auctionId: string }>();
-  const { client } = useAuth();
   const [auction, setAuction] = useState<AuctionData | null>(null);
+  const [client, setClient] = useState<ClientData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (auctionId && client) {
+    if (auctionId) {
       fetchAuctionData();
     }
-  }, [auctionId, client]);
+  }, [auctionId]);
 
   const fetchAuctionData = async () => {
     try {
@@ -80,6 +88,17 @@ export default function AuctionNotice() {
 
       if (error) throw error;
       setAuction(data);
+
+      // Fetch client data
+      if (data?.client_id) {
+        const { data: clientData } = await supabase
+          .from('clients')
+          .select('id, company_name, address, phone, logo_url')
+          .eq('id', data.client_id)
+          .single();
+        
+        setClient(clientData);
+      }
     } catch (error) {
       console.error('Error fetching auction:', error);
     } finally {
@@ -120,9 +139,9 @@ export default function AuctionNotice() {
       <PrintPageWrapper>
         <PrintHeader
           companyName={client?.company_name || 'Gold Loan Company'}
-          companyAddress={(client as any)?.address || ''}
-          companyPhone={(client as any)?.phone || ''}
-          logoUrl={(client as any)?.logo_url || undefined}
+          companyAddress={client?.address || ''}
+          companyPhone={client?.phone || ''}
+          logoUrl={client?.logo_url || undefined}
           documentTitle="AUCTION NOTICE"
           documentTitleTamil="ஏல அறிவிப்பு"
           documentNumber={auction.auction_lot_number}
