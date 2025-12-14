@@ -24,7 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-import { PrintReceiptDialog } from '@/components/print';
+
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
@@ -237,29 +237,6 @@ export default function Loans() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
-  // PDF receipt dialog
-  const [showReceiptDialog, setShowReceiptDialog] = useState(false);
-  const [createdLoanData, setCreatedLoanData] = useState<{
-    loanNumber: string;
-    loanDate: string;
-    maturityDate: string;
-    tenureDays: number;
-    interestRate: number;
-    customer: Customer;
-    scheme: Scheme;
-    goldItems: GoldItem[];
-    calculation: {
-      totalAppraisedValue: number;
-      principalAmount: number;
-      advanceInterest: number;
-      processingFee: number;
-      documentCharges: number;
-      netDisbursed: number;
-    };
-    jewelPhotoUrl?: string | null;
-    appraiserSheetUrl?: string | null;
-    photoTimestamp?: string;
-  } | null>(null);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -769,36 +746,6 @@ export default function Loans() {
             console.warn('Commission accrual voucher failed:', commissionVoucherResult.error);
           }
         }
-      }
-
-      // Get selected customer and scheme for PDF
-      const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
-      const selectedScheme = schemes.find(s => s.id === selectedSchemeId);
-      
-      if (selectedCustomer && selectedScheme) {
-        // Store data for PDF receipt
-        setCreatedLoanData({
-          loanNumber: loanResult.loan_number,
-          loanDate: format(loanDate, 'yyyy-MM-dd'),
-          maturityDate: format(maturityDate, 'yyyy-MM-dd'),
-          tenureDays: parseInt(tenureDays),
-          interestRate: selectedScheme.shown_rate || selectedScheme.interest_rate,
-          customer: selectedCustomer,
-          scheme: selectedScheme,
-          goldItems: [...goldItems],
-          calculation: {
-            totalAppraisedValue: loanCalculation.totalAppraisedValue,
-            principalAmount: loanCalculation.finalApprovedAmount,
-            advanceInterest: loanCalculation.advanceCalc.shownInterest,
-            processingFee: loanCalculation.processingFee,
-            documentCharges: loanCalculation.documentCharges,
-            netDisbursed: loanCalculation.netCashToCustomer,
-          },
-          jewelPhotoUrl,
-          appraiserSheetUrl,
-          photoTimestamp: new Date().toISOString(),
-        });
-        setShowReceiptDialog(true);
       }
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);

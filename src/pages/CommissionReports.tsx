@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { printElement } from '@/lib/print';
+
 import { RefreshCw, Download, FileText, Users, TrendingUp, IndianRupee } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
@@ -209,7 +209,7 @@ export default function CommissionReports() {
               <RefreshCw className={cn('h-4 w-4 mr-2', loading && 'animate-spin')} />
               Refresh
             </Button>
-            <Button onClick={() => printElement('commission-report-content')}>
+            <Button onClick={() => window.print()}>
               <FileText className="h-4 w-4 mr-2" />
               Print Report
             </Button>

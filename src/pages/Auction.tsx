@@ -23,7 +23,7 @@ import {
   getDaysBetween, 
   formatIndianCurrency 
 } from '@/lib/interestCalculations';
-import { PrintReceiptDialog, AuctionReceipt } from '@/components/print';
+
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
@@ -125,10 +125,6 @@ const Auction = () => {
   
   // Processing state
   const [processing, setProcessing] = useState(false);
-  
-  // PDF state
-  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
-  const [auctionForPdf, setAuctionForPdf] = useState<any>(null);
 
   const canProcessAuction = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -380,19 +376,6 @@ const Auction = () => {
       toast.success(`Auction completed! Lot #${lotNumber}`);
       
       // Prepare PDF data
-      setAuctionForPdf({
-        auction: auctionResult,
-        loan: selectedLoan,
-        customer: selectedLoan.customer,
-        goldItems: selectedLoan.gold_items,
-        surplus,
-        shortfall,
-        company: {
-          name: 'Your Company Name',
-          address: 'Company Address',
-        },
-      });
-      setPdfDialogOpen(true);
       
       // Reset and refresh
       setSelectedLoan(null);
@@ -946,56 +929,6 @@ const Auction = () => {
         </Tabs>
       </div>
 
-      {/* Print Receipt Dialog */}
-      {auctionForPdf && (
-        <PrintReceiptDialog
-          open={pdfDialogOpen}
-          onOpenChange={setPdfDialogOpen}
-          title="Auction Settlement Receipt"
-        >
-          <AuctionReceipt
-            company={{
-              name: auctionForPdf.company?.name || '',
-              address: auctionForPdf.company?.address || '',
-              phone: auctionForPdf.company?.phone || ''
-            }}
-            auction={{
-              lotNumber: auctionForPdf.auction?.auction_lot_number || '',
-              date: auctionForPdf.auction?.auction_date || '',
-              buyerName: auctionForPdf.auction?.buyer_name || '',
-              buyerContact: auctionForPdf.auction?.buyer_contact || '',
-              soldPrice: auctionForPdf.auction?.sold_price || 0,
-              paymentMode: auctionForPdf.auction?.payment_mode || 'cash'
-            }}
-            loan={{
-              number: auctionForPdf.loan?.loan_number || '',
-              date: auctionForPdf.loan?.loan_date || '',
-              maturityDate: auctionForPdf.loan?.maturity_date || ''
-            }}
-            customer={{
-              name: auctionForPdf.customer?.full_name || '',
-              code: auctionForPdf.customer?.customer_code || '',
-              phone: auctionForPdf.customer?.phone || ''
-            }}
-            outstanding={{
-              principal: auctionForPdf.auction?.outstanding_principal || 0,
-              interest: auctionForPdf.auction?.outstanding_interest || 0,
-              penalty: auctionForPdf.auction?.outstanding_penalty || 0,
-              total: auctionForPdf.auction?.total_outstanding || 0
-            }}
-            settlement={{
-              surplus: auctionForPdf.auction?.surplus_amount || 0,
-              shortfall: auctionForPdf.auction?.shortfall_amount || 0
-            }}
-            goldItems={(auctionForPdf.goldItems || []).map((item: any) => ({
-              item_type: item.item_type,
-              gross_weight_grams: item.gross_weight_grams || item.net_weight_grams,
-              purity: item.purity,
-              appraised_value: item.appraised_value
-            }))}
-          />
-        </PrintReceiptDialog>
-      )}
     </DashboardLayout>
   );
 };
