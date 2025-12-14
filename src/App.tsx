@@ -46,8 +46,6 @@ import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
 import MobileDashboard from "./components/mobile/MobileDashboard";
 import MobileLoans from "./components/mobile/MobileLoans";
 import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
-// Print Pages
-import { LoanReceipt, GoldDeclaration, JewelDetails, KycDocuments, InterestReceipt, AuctionNotice } from "./pages/print";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -239,13 +237,6 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            {/* Print Routes - Public (data fetching handles auth) */}
-            <Route path="/print/loan-receipt/:loanId" element={<LoanReceipt />} />
-            <Route path="/print/gold-declaration/:loanId" element={<GoldDeclaration />} />
-            <Route path="/print/jewel-details/:loanId" element={<JewelDetails />} />
-            <Route path="/print/kyc-docs/:loanId" element={<KycDocuments />} />
-            <Route path="/print/interest-receipt/:paymentId" element={<InterestReceipt />} />
-            <Route path="/print/auction-notice/:auctionId" element={<AuctionNotice />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
