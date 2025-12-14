@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer } from 'lucide-react';
+import PrintDocumentsDialog from '@/components/loans/PrintDocumentsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -236,6 +237,10 @@ export default function Loans() {
   // Edit loan dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
+  
+  // Print dialog state
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printingLoan, setPrintingLoan] = useState<{ id: string; loan_number: string; customer_name: string } | null>(null);
   
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
@@ -752,6 +757,11 @@ export default function Loans() {
       setIsFormOpen(false);
       resetForm();
       fetchLoans();
+      
+      // Open print dialog for newly created loan
+      const customerName = customers.find(c => c.id === selectedCustomerId)?.full_name || 'Customer';
+      setPrintingLoan({ id: loanResult.id, loan_number: loanResult.loan_number, customer_name: customerName });
+      setPrintDialogOpen(true);
     } catch (error: any) {
       toast.error(error.message || 'Failed to create loan');
     } finally {
@@ -1773,6 +1783,17 @@ export default function Loans() {
                             <Button 
                               variant="ghost" 
                               size="sm" 
+                              onClick={() => {
+                                setPrintingLoan({ id: loan.id, loan_number: loan.loan_number, customer_name: loan.customer.full_name });
+                                setPrintDialogOpen(true);
+                              }}
+                              title="Print documents"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
                               onClick={() => handleEditLoan(loan)}
                               disabled={!canEdit}
                               title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
@@ -1934,6 +1955,17 @@ export default function Loans() {
           loan={editingLoan}
           onSuccess={fetchLoans}
         />
+
+        {/* Print Documents Dialog */}
+        {printingLoan && (
+          <PrintDocumentsDialog
+            open={printDialogOpen}
+            onOpenChange={setPrintDialogOpen}
+            loanId={printingLoan.id}
+            loanNumber={printingLoan.loan_number}
+            customerName={printingLoan.customer_name}
+          />
+        )}
 
       </div>
     </DashboardLayout>
