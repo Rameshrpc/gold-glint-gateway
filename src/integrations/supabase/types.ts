@@ -461,6 +461,81 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          branch_id: string | null
+          changed_fields: string[] | null
+          client_id: string
+          created_at: string
+          entity_id: string | null
+          entity_identifier: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          branch_id?: string | null
+          changed_fields?: string[] | null
+          client_id: string
+          created_at?: string
+          entity_id?: string | null
+          entity_identifier?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          branch_id?: string | null
+          changed_fields?: string[] | null
+          client_id?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_identifier?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       banks_nbfc: {
         Row: {
           account_number: string | null
@@ -686,6 +761,74 @@ export type Database = {
             foreignKeyName: "client_modules_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_notification_settings: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          daily_sms_limit: number | null
+          default_send_time: string | null
+          email_enabled: boolean | null
+          id: string
+          last_reset_date: string | null
+          monthly_sms_limit: number | null
+          msg91_auth_key: string | null
+          msg91_dlt_entity_id: string | null
+          msg91_sender_id: string | null
+          sms_enabled: boolean | null
+          sms_sent_this_month: number | null
+          sms_sent_today: number | null
+          updated_at: string | null
+          whatsapp_enabled: boolean | null
+          whatsapp_template_namespace: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          daily_sms_limit?: number | null
+          default_send_time?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          last_reset_date?: string | null
+          monthly_sms_limit?: number | null
+          msg91_auth_key?: string | null
+          msg91_dlt_entity_id?: string | null
+          msg91_sender_id?: string | null
+          sms_enabled?: boolean | null
+          sms_sent_this_month?: number | null
+          sms_sent_today?: number | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_template_namespace?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          daily_sms_limit?: number | null
+          default_send_time?: string | null
+          email_enabled?: boolean | null
+          id?: string
+          last_reset_date?: string | null
+          monthly_sms_limit?: number | null
+          msg91_auth_key?: string | null
+          msg91_dlt_entity_id?: string | null
+          msg91_sender_id?: string | null
+          sms_enabled?: boolean | null
+          sms_sent_this_month?: number | null
+          sms_sent_today?: number | null
+          updated_at?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_template_namespace?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_notification_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
@@ -1078,6 +1221,96 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboard_kpi_cache: {
+        Row: {
+          active_loans: number | null
+          branch_id: string | null
+          calculated_at: string | null
+          client_id: string
+          gold_weight_grams: number | null
+          id: string
+          interest_accrued: number | null
+          interest_collected_mtd: number | null
+          kpi_date: string
+          loans_created_today: number | null
+          npa_amount: number | null
+          npa_count: number | null
+          overdue_180_days: number | null
+          overdue_30_days: number | null
+          overdue_60_days: number | null
+          overdue_90_days: number | null
+          redemptions_today: number | null
+          today_collections: number | null
+          today_disbursements: number | null
+          today_redemptions: number | null
+          total_aum: number | null
+          total_customers: number | null
+        }
+        Insert: {
+          active_loans?: number | null
+          branch_id?: string | null
+          calculated_at?: string | null
+          client_id: string
+          gold_weight_grams?: number | null
+          id?: string
+          interest_accrued?: number | null
+          interest_collected_mtd?: number | null
+          kpi_date?: string
+          loans_created_today?: number | null
+          npa_amount?: number | null
+          npa_count?: number | null
+          overdue_180_days?: number | null
+          overdue_30_days?: number | null
+          overdue_60_days?: number | null
+          overdue_90_days?: number | null
+          redemptions_today?: number | null
+          today_collections?: number | null
+          today_disbursements?: number | null
+          today_redemptions?: number | null
+          total_aum?: number | null
+          total_customers?: number | null
+        }
+        Update: {
+          active_loans?: number | null
+          branch_id?: string | null
+          calculated_at?: string | null
+          client_id?: string
+          gold_weight_grams?: number | null
+          id?: string
+          interest_accrued?: number | null
+          interest_collected_mtd?: number | null
+          kpi_date?: string
+          loans_created_today?: number | null
+          npa_amount?: number | null
+          npa_count?: number | null
+          overdue_180_days?: number | null
+          overdue_30_days?: number | null
+          overdue_60_days?: number | null
+          overdue_90_days?: number | null
+          redemptions_today?: number | null
+          today_collections?: number | null
+          today_disbursements?: number | null
+          today_redemptions?: number | null
+          total_aum?: number | null
+          total_customers?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_kpi_cache_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dashboard_kpi_cache_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -1865,6 +2098,171 @@ export type Database = {
             columns: ["loyalty_id"]
             isOneToOne: false
             referencedRelation: "loyalties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_logs: {
+        Row: {
+          branch_id: string | null
+          channel: string
+          client_id: string
+          cost_credits: number | null
+          created_at: string
+          delivered_at: string | null
+          entity_id: string | null
+          entity_type: string | null
+          error_message: string | null
+          id: string
+          message_content: string
+          provider: string | null
+          provider_message_id: string | null
+          provider_response: Json | null
+          recipient_email: string | null
+          recipient_id: string | null
+          recipient_name: string | null
+          recipient_phone: string | null
+          recipient_type: string
+          retry_count: number | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+          template_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id?: string | null
+          channel: string
+          client_id: string
+          cost_credits?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          message_content: string
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          recipient_email?: string | null
+          recipient_id?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          recipient_type: string
+          retry_count?: number | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string | null
+          channel?: string
+          client_id?: string
+          cost_credits?: number | null
+          created_at?: string
+          delivered_at?: string | null
+          entity_id?: string | null
+          entity_type?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          provider_response?: Json | null
+          recipient_email?: string | null
+          recipient_id?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string | null
+          recipient_type?: string
+          retry_count?: number | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+          template_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "notification_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_templates: {
+        Row: {
+          channel: string
+          client_id: string
+          created_at: string | null
+          days_before_due: number | null
+          id: string
+          is_active: boolean | null
+          is_regulatory: boolean | null
+          msg91_template_id: string | null
+          send_time: string | null
+          template_code: string
+          template_content: string
+          template_name: string
+          updated_at: string | null
+          variables: string[] | null
+        }
+        Insert: {
+          channel?: string
+          client_id: string
+          created_at?: string | null
+          days_before_due?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_regulatory?: boolean | null
+          msg91_template_id?: string | null
+          send_time?: string | null
+          template_code: string
+          template_content: string
+          template_name: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Update: {
+          channel?: string
+          client_id?: string
+          created_at?: string | null
+          days_before_due?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_regulatory?: boolean | null
+          msg91_template_id?: string | null
+          send_time?: string | null
+          template_code?: string
+          template_content?: string
+          template_name?: string
+          updated_at?: string | null
+          variables?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
@@ -2780,6 +3178,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_dashboard_kpis: {
+        Args: { p_branch_id?: string; p_client_id: string }
+        Returns: Json
+      }
       generate_auction_lot_number: {
         Args: { p_client_id: string }
         Returns: string
@@ -2815,6 +3217,10 @@ export type Database = {
         Returns: boolean
       }
       initialize_account_groups: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
+      initialize_notification_templates: {
         Args: { p_client_id: string }
         Returns: undefined
       }
