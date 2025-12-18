@@ -24,6 +24,11 @@ export const translations = {
   daughterOf: { en: 'D/o', ta: 'மகள்' },
   wifeOf: { en: 'W/o', ta: 'மனைவி' },
   residingAt: { en: 'Residing at', ta: 'வசிக்கும் முகவரி' },
+  dateOfBirth: { en: 'Date of Birth', ta: 'பிறந்த தேதி' },
+  gender: { en: 'Gender', ta: 'பாலினம்' },
+  male: { en: 'Male', ta: 'ஆண்' },
+  female: { en: 'Female', ta: 'பெண்' },
+  other: { en: 'Other', ta: 'மற்றவை' },
   
   // Loan
   loanDisbursement: { en: 'Loan Disbursement Voucher', ta: 'கடன் வழங்கல் சான்றிதழ்' },
@@ -43,6 +48,8 @@ export const translations = {
   perAnnum: { en: 'per annum', ta: 'ஆண்டுக்கு' },
   perMonth: { en: 'per month', ta: 'மாதத்திற்கு' },
   days: { en: 'days', ta: 'நாட்கள்' },
+  loanScheme: { en: 'Loan Scheme', ta: 'கடன் திட்டம்' },
+  ltvRatio: { en: 'LTV Ratio', ta: 'கடன்-மதிப்பு விகிதம்' },
   
   // Gold
   goldDetails: { en: 'Gold Details', ta: 'தங்க விவரங்கள்' },
@@ -58,6 +65,7 @@ export const translations = {
   totalItems: { en: 'Total Items', ta: 'மொத்த பொருட்கள்' },
   totalWeight: { en: 'Total Weight', ta: 'மொத்த எடை' },
   totalValue: { en: 'Total Value', ta: 'மொத்த மதிப்பு' },
+  marketRate: { en: 'Market Rate', ta: 'சந்தை விலை' },
   
   // Interest Receipt
   interestReceipt: { en: 'Interest Receipt', ta: 'வட்டி ரசீது' },
@@ -80,6 +88,10 @@ export const translations = {
   goldReleased: { en: 'Gold Released', ta: 'தங்கம் விடுவிக்கப்பட்டது' },
   rebateAmount: { en: 'Rebate Amount', ta: 'தள்ளுபடி தொகை' },
   loanClosed: { en: 'Loan Closed', ta: 'கடன் முடிவடைந்தது' },
+  goldReleasedStatement: {
+    en: 'All pledged gold ornaments have been returned to the customer in good condition.',
+    ta: 'அனைத்து அடமானம் வைக்கப்பட்ட தங்க நகைகளும் வாடிக்கையாளருக்கு நல்ல நிலையில் திருப்பி அளிக்கப்பட்டன.'
+  },
   
   // Auction
   auctionNotice: { en: 'Auction Notice', ta: 'ஏல அறிவிப்பு' },
@@ -91,6 +103,18 @@ export const translations = {
   buyerName: { en: 'Buyer Name', ta: 'வாங்குபவர் பெயர்' },
   surplusAmount: { en: 'Surplus Amount', ta: 'உபரித் தொகை' },
   shortfallAmount: { en: 'Shortfall Amount', ta: 'பற்றாக்குறை தொகை' },
+  auctionTime: { en: 'Auction Time', ta: 'ஏல நேரம்' },
+  auctionVenue: { en: 'Auction Venue', ta: 'ஏல இடம்' },
+  lastDateToPay: { en: 'Last Date to Pay', ta: 'செலுத்த கடைசி தேதி' },
+  overduePeriod: { en: 'Overdue Period', ta: 'தாமத காலம்' },
+  auctionNoticeIntro: {
+    en: 'This is to notify you that the gold ornaments pledged against the loan mentioned below have become due for auction as per the Tamil Nadu Pawnbrokers Act.',
+    ta: 'கீழே குறிப்பிடப்பட்ட கடனுக்கு எதிராக அடமானம் வைக்கப்பட்ட தங்க நகைகள் தமிழ்நாடு அடமானதாரர் சட்டத்தின்படி ஏலத்திற்கு தகுதியானவை என்பதை இதன்மூலம் அறிவிக்கிறோம்.'
+  },
+  auctionWarning: {
+    en: 'If you wish to redeem your pledged articles, please settle all outstanding dues before the auction date.',
+    ta: 'நீங்கள் உங்கள் அடமான பொருட்களை மீட்க விரும்பினால், ஏல தேதிக்கு முன் அனைத்து நிலுவைத் தொகைகளையும் செலுத்தவும்.'
+  },
   
   // Declaration
   declaration: { en: 'Declaration', ta: 'உறுதிமொழி' },
@@ -142,6 +166,7 @@ export const translations = {
   witnessSignature: { en: 'Witness Signature', ta: 'சாட்சி கையொப்பம்' },
   thumbImpression: { en: 'Thumb Impression', ta: 'கட்டைவிரல் ரேகை' },
   withThumbImpression: { en: '(with Thumb Impression)', ta: '(கட்டைவிரல் ரேகையுடன்)' },
+  officeSeal: { en: 'Office Seal', ta: 'அலுவலக முத்திரை' },
   
   // Copy Types
   customerCopy: { en: 'CUSTOMER COPY', ta: 'வாடிக்கையாளர் நகல்' },
@@ -152,11 +177,12 @@ export const translations = {
   jewelImages: { en: 'Jewel Images', ta: 'நகை படங்கள்' },
   captureTime: { en: 'Capture Time', ta: 'படம் எடுத்த நேரம்' },
   captured: { en: 'Captured', ta: 'படம் எடுக்கப்பட்டது' },
+  capturedOn: { en: 'Captured on', ta: 'படம் எடுக்கப்பட்ட தேதி' },
   appraiserSheet: { en: 'Appraiser Sheet', ta: 'மதிப்பீட்டாளர் தாள்' },
   appraiser: { en: 'Appraiser', ta: 'மதிப்பீட்டாளர்' },
   appraisedBy: { en: 'Appraised By', ta: 'மதிப்பீடு செய்தவர்' },
   
-  // KYC Documents
+  // KYC Documents - Enhanced
   kycDocuments: { en: 'KYC Documents', ta: 'KYC ஆவணங்கள்' },
   customerKycDocuments: { en: 'Customer KYC Documents', ta: 'வாடிக்கையாளர் KYC ஆவணங்கள்' },
   identityDocuments: { en: 'Identity Documents', ta: 'அடையாள ஆவணங்கள்' },
@@ -167,6 +193,11 @@ export const translations = {
   aadhaarFront: { en: 'Aadhaar (Front)', ta: 'ஆதார் (முன்பக்கம்)' },
   aadhaarBack: { en: 'Aadhaar (Back)', ta: 'ஆதார் (பின்பக்கம்)' },
   panCard: { en: 'PAN Card', ta: 'பான் அட்டை' },
+  kycCard: { en: 'KYC Card', ta: 'கேஒய்சி அட்டை' },
+  panKycCard: { en: 'KYC Card - PAN', ta: 'கேஒய்சி அட்டை - பான்' },
+  aadhaarKycCard: { en: 'KYC Card - Aadhaar', ta: 'கேஒய்சி அட்டை - ஆதார்' },
+  aadhaarNumber: { en: 'Aadhaar No.', ta: 'ஆதார் எண்' },
+  panNumber: { en: 'PAN No.', ta: 'பான் எண்' },
   
   // Rebate Schedule
   earlyReleaseRebate: { en: 'Early Release Rebate Schedule', ta: 'முன்கூட்டி விடுவிப்பு தள்ளுபடி அட்டவணை' },
@@ -175,7 +206,7 @@ export const translations = {
   daysRange: { en: 'Days', ta: 'நாட்கள்' },
   rebate: { en: 'Rebate', ta: 'தள்ளுபடி' },
   
-  // Terms and Conditions
+  // Terms and Conditions - Headers
   termsAndConditions: { en: 'Terms & Conditions', ta: 'விதிமுறைகள் மற்றும் நிபந்தனைகள்' },
   termsApply: { en: 'Terms & Conditions Apply', ta: 'விதிமுறைகள் மற்றும் நிபந்தனைகள் பொருந்தும்' },
   asPerTNPawnbrokersAct: { en: 'As per Tamil Nadu Pawnbrokers Act', ta: 'தமிழ்நாடு அடமானதாரர் சட்டத்தின்படி' },
@@ -184,7 +215,7 @@ export const translations = {
     ta: 'மேலே உள்ள விதிமுறைகள் மற்றும் நிபந்தனைகளைப் படித்து புரிந்துகொண்டேன்.'
   },
   
-  // Default Terms (Tamil Nadu Pawnbrokers Act)
+  // Terms and Conditions - Regulatory (Tamil Nadu Pawnbrokers Act)
   term1: {
     en: 'Interest shall be charged at the agreed rate per annum as mentioned at the time of pledge.',
     ta: 'அடமானம் வைக்கும் போது குறிப்பிடப்பட்ட ஆண்டு வட்டி விகிதத்தில் வட்டி வசூலிக்கப்படும்.'
@@ -218,6 +249,24 @@ export const translations = {
     ta: 'ஏற்படும் எந்த தகராறும் அடமானதாரர் இருக்கும் மாவட்ட நீதிமன்றங்களின் அதிகார வரம்பிற்கு உட்பட்டது.'
   },
   
+  // Additional Terms (Business Terms)
+  term9: {
+    en: 'Interest is calculated on daily basis from the date of loan until the date of redemption.',
+    ta: 'கடன் தேதியிலிருந்து மீட்பு தேதி வரை தினசரி அடிப்படையில் வட்டி கணக்கிடப்படும்.'
+  },
+  term10: {
+    en: 'Partial payment of principal is not allowed. Interest can be paid periodically to avoid compounding.',
+    ta: 'அசல் தொகையின் பகுதி செலுத்துதல் அனுமதிக்கப்படவில்லை. கூட்டு வட்டியை தவிர்க்க வட்டியை அவ்வப்போது செலுத்தலாம்.'
+  },
+  term11: {
+    en: 'The company reserves the right to verify the purity and weight of pledged gold at any time.',
+    ta: 'அடமானம் வைக்கப்பட்ட தங்கத்தின் தூய்மை மற்றும் எடையை எந்த நேரத்திலும் சரிபார்க்கும் உரிமை நிறுவனத்திற்கு உண்டு.'
+  },
+  term12: {
+    en: 'In case of death of pledger, legal heirs can redeem the pledge on producing valid documents.',
+    ta: 'அடமானக்காரர் இறந்தால், சட்டப்பூர்வ வாரிசுகள் தக்க ஆவணங்களை சமர்ப்பித்து அடமானத்தை மீட்கலாம்.'
+  },
+  
   // Footer
   thankYou: { en: 'Thank you for your business!', ta: 'உங்கள் வணிகத்திற்கு நன்றி!' },
   computerGenerated: { en: 'This is a computer generated document', ta: 'இது கணினியால் உருவாக்கப்பட்ட ஆவணம்' },
@@ -236,6 +285,16 @@ export const translations = {
   detailsOfPledgedGold: { en: 'Details of Pledged Gold', ta: 'அடமானம் வைக்கப்பட்ட தங்கத்தின் விவரங்கள்' },
   disbursementSummary: { en: 'Disbursement Summary', ta: 'வழங்கல் சுருக்கம்' },
   less: { en: 'Less', ta: 'கழிவு' },
+  to: { en: 'To', ta: 'க்கு' },
+  from: { en: 'From', ta: 'இருந்து' },
+  dear: { en: 'Dear', ta: 'அன்புள்ள' },
+  subject: { en: 'Subject', ta: 'பொருள்' },
+  ref: { en: 'Ref', ta: 'குறிப்பு' },
+  
+  // Print Pack Labels
+  loanPrintPack: { en: 'Loan Print Pack', ta: 'கடன் அச்சு தொகுப்பு' },
+  printDate: { en: 'Print Date', ta: 'அச்சு தேதி' },
+  generatedBy: { en: 'Generated By', ta: 'உருவாக்கியவர்' },
 };
 
 export type TranslationKey = keyof typeof translations;
@@ -252,12 +311,40 @@ export const getTranslation = (key: TranslationKey, language: 'english' | 'tamil
 export const getBilingualText = (key: TranslationKey) => {
   const translation = translations[key];
   if (!translation) return { en: key, ta: key };
-  return translation;
+  return { en: translation.en, ta: translation.ta };
 };
 
-// Helper function for bilingual labels in PDF
-export const bilingualLabel = (key: TranslationKey): string => {
-  const t = translations[key];
-  if (!t) return String(key);
-  return `${t.en} / ${t.ta}`;
+export const bilingualLabel = (key: TranslationKey) => {
+  const translation = translations[key];
+  if (!translation) return key;
+  return `${translation.en} / ${translation.ta}`;
+};
+
+// Get all regulatory terms (1-8)
+export const getRegulatoryTerms = () => {
+  return [
+    translations.term1,
+    translations.term2,
+    translations.term3,
+    translations.term4,
+    translations.term5,
+    translations.term6,
+    translations.term7,
+    translations.term8,
+  ];
+};
+
+// Get all business terms (9-12)
+export const getBusinessTerms = () => {
+  return [
+    translations.term9,
+    translations.term10,
+    translations.term11,
+    translations.term12,
+  ];
+};
+
+// Get all terms combined
+export const getAllTerms = () => {
+  return [...getRegulatoryTerms(), ...getBusinessTerms()];
 };
