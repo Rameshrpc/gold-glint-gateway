@@ -9,7 +9,6 @@ import { Loader2, Printer, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
 import { PDFDocument } from 'pdf-lib';
-import { useDefaultPrintProfile } from '@/hooks/usePrintProfiles';
 
 // PDF Components
 import LoanReceiptPDF from './documents/LoanReceiptPDF';
@@ -47,12 +46,30 @@ const DOCUMENT_LABELS: Record<string, string> = {
   'auction_notice': 'Auction Notice',
 };
 
-const DEFAULT_DOCUMENTS: Record<string, string[]> = {
-  'loan': ['loan_receipt', 'kyc', 'gold_declaration', 'summary', 'declaration'],
-  'interest': ['interest_receipt'],
-  'redemption': ['redemption_receipt', 'gold_declaration'],
-  'reloan': ['loan_receipt', 'kyc', 'gold_declaration'],
-  'auction': ['auction_notice'],
+// Hardcoded default documents for each profile type
+const DEFAULT_PROFILE_DOCUMENTS: Record<string, DocumentSelection[]> = {
+  'loan': [
+    { document_type: 'loan_receipt', copies: 2, selected: true, is_required: true },
+    { document_type: 'kyc', copies: 1, selected: true, is_required: false },
+    { document_type: 'gold_declaration', copies: 1, selected: true, is_required: false },
+    { document_type: 'summary', copies: 1, selected: false, is_required: false },
+    { document_type: 'declaration', copies: 1, selected: false, is_required: false },
+  ],
+  'interest': [
+    { document_type: 'interest_receipt', copies: 2, selected: true, is_required: true },
+  ],
+  'redemption': [
+    { document_type: 'redemption_receipt', copies: 2, selected: true, is_required: true },
+    { document_type: 'gold_declaration', copies: 1, selected: true, is_required: false },
+  ],
+  'reloan': [
+    { document_type: 'loan_receipt', copies: 2, selected: true, is_required: true },
+    { document_type: 'kyc', copies: 1, selected: true, is_required: false },
+    { document_type: 'gold_declaration', copies: 1, selected: true, is_required: false },
+  ],
+  'auction': [
+    { document_type: 'auction_notice', copies: 1, selected: true, is_required: true },
+  ],
 };
 
 export default function PrintProfileDialog({
@@ -62,35 +79,16 @@ export default function PrintProfileDialog({
   data,
   title,
 }: PrintProfileDialogProps) {
-  const { profile, loading: profileLoading } = useDefaultPrintProfile(profileType);
   const [documents, setDocuments] = useState<DocumentSelection[]>([]);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Initialize documents based on profile or defaults
+  // Initialize documents based on hardcoded defaults
   useEffect(() => {
-    if (profile && profile.documents.length > 0) {
-      setDocuments(
-        profile.documents.map((doc) => ({
-          document_type: doc.document_type,
-          copies: doc.copies || 1,
-          selected: doc.is_required || true,
-          is_required: doc.is_required || false,
-        }))
-      );
-    } else {
-      const defaultDocs = DEFAULT_DOCUMENTS[profileType] || [];
-      setDocuments(
-        defaultDocs.map((docType, index) => ({
-          document_type: docType,
-          copies: 1,
-          selected: true,
-          is_required: index === 0,
-        }))
-      );
-    }
-  }, [profile, profileType]);
+    const defaultDocs = DEFAULT_PROFILE_DOCUMENTS[profileType] || [];
+    setDocuments(defaultDocs.map(doc => ({ ...doc })));
+  }, [profileType]);
 
   const toggleDocument = (docType: string) => {
     setDocuments((prev) =>
@@ -249,16 +247,6 @@ export default function PrintProfileDialog({
         />
 
         <div className="py-4">
-          {/* Profile Info */}
-          {profile && (
-            <div className="mb-4 p-3 bg-muted rounded-lg">
-              <p className="text-sm font-medium">{profile.profile_name}</p>
-              {profile.description && (
-                <p className="text-xs text-muted-foreground">{profile.description}</p>
-              )}
-            </div>
-          )}
-
           {/* Document Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Select Documents</Label>
