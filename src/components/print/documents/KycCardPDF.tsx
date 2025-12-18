@@ -225,8 +225,8 @@ function KycCard({
                 <Text>Address</Text>
                 {language !== 'english' && <Text style={styles.labelTamil}>முகவரி</Text>}
               </View>
-              <Text style={[styles.value, { fontSize: 5 }]} numberOfLines={2}>
-                {customer.address}
+              <Text style={[styles.value, { fontSize: 5 }]}>
+                {customer.address?.substring(0, 60)}{customer.address && customer.address.length > 60 ? '...' : ''}
               </Text>
             </View>
           )}

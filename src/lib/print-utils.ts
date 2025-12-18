@@ -61,13 +61,23 @@ export const formatIndianCurrencyPrint = (amount: number): string => {
   }).format(amount);
 };
 
-export const formatDatePrint = (dateString: string, format: 'short' | 'long' = 'short'): string => {
+export const formatDatePrint = (dateString: string, format: 'short' | 'long' | 'datetime' = 'short'): string => {
   const date = new Date(dateString);
   if (format === 'long') {
     return date.toLocaleDateString('en-IN', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
+    });
+  }
+  if (format === 'datetime') {
+    return date.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    }) + ' ' + date.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
   }
   return date.toLocaleDateString('en-IN', {
