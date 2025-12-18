@@ -24,7 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-import PrintDocumentDialog from '@/components/print/PrintDocumentDialog';
+
 import PrintProfileDialog from '@/components/print/PrintProfileDialog';
 
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
