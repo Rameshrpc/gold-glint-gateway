@@ -5,7 +5,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Loader2, Printer, Download } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Printer, Download, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { pdf } from '@react-pdf/renderer';
 import { PDFDocument } from 'pdf-lib';
@@ -18,6 +19,8 @@ import KycDocumentPDF from './documents/KycDocumentPDF';
 import GoldDeclarationPDF from './documents/GoldDeclarationPDF';
 import LoanSummaryPDF from './documents/LoanSummaryPDF';
 import DeclarationPDF from './documents/DeclarationPDF';
+
+type LanguageOption = 'bilingual' | 'english' | 'tamil';
 
 interface PrintProfileDialogProps {
   open: boolean;
@@ -82,6 +85,7 @@ export default function PrintProfileDialog({
   const [documents, setDocuments] = useState<DocumentSelection[]>([]);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [language, setLanguage] = useState<LanguageOption>('bilingual');
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Initialize documents based on hardcoded defaults
@@ -108,46 +112,59 @@ export default function PrintProfileDialog({
     );
   };
 
-  const getDocumentComponent = (docType: string) => {
+  // Returns array of components for documents that generate multiple pages (like loan receipt with customer/office copies)
+  const getDocumentComponents = (docType: string): React.ReactElement[] => {
     switch (docType) {
       case 'loan_receipt':
-        return <LoanReceiptPDF data={data} />;
+        // Generate both customer and office copies
+        return [
+          <LoanReceiptPDF key="customer" data={data} config={{ language, copyType: 'customer' }} />,
+          <LoanReceiptPDF key="office" data={data} config={{ language, copyType: 'office' }} />
+        ];
       case 'interest_receipt':
-        return <InterestReceiptPDF data={data} />;
+        return [<InterestReceiptPDF key="interest" data={data} />];
       case 'redemption_receipt':
-        return <RedemptionReceiptPDF data={data} />;
+        return [<RedemptionReceiptPDF key="redemption" data={data} />];
       case 'kyc':
-        return <KycDocumentPDF data={data} />;
+        return [<KycDocumentPDF key="kyc" data={data} config={{ language }} />];
       case 'gold_declaration':
-        return <GoldDeclarationPDF data={data} />;
+        return [<GoldDeclarationPDF key="gold" data={data} config={{ language }} />];
       case 'summary':
-        return <LoanSummaryPDF data={data} />;
+        return [<LoanSummaryPDF key="summary" data={data} />];
       case 'declaration':
-        return <DeclarationPDF data={data} />;
+        return [<DeclarationPDF key="declaration" data={data} config={{ language }} />];
       default:
-        return null;
+        return [];
     }
   };
 
   const generateMergedPdf = async (selectedDocs: DocumentSelection[]) => {
     const mergedPdf = await PDFDocument.create();
-    const totalItems = selectedDocs.reduce((sum, doc) => sum + doc.copies, 0);
+    // Calculate total items including multi-page documents like loan receipt (customer + office)
+    let totalItems = 0;
+    for (const doc of selectedDocs) {
+      const components = getDocumentComponents(doc.document_type);
+      totalItems += components.length * doc.copies;
+    }
     let processed = 0;
 
     for (const doc of selectedDocs) {
-      const component = getDocumentComponent(doc.document_type);
-      if (!component) continue;
+      const components = getDocumentComponents(doc.document_type);
+      if (components.length === 0) continue;
 
-      const blob = await pdf(component).toBlob();
-      const pdfBytes = await blob.arrayBuffer();
-      const existingPdf = await PDFDocument.load(pdfBytes);
+      // Generate each component (e.g., customer copy and office copy for loan receipt)
+      for (const component of components) {
+        const blob = await pdf(component).toBlob();
+        const pdfBytes = await blob.arrayBuffer();
+        const existingPdf = await PDFDocument.load(pdfBytes);
 
-      // Add copies of this document
-      for (let i = 0; i < doc.copies; i++) {
-        const pages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices());
-        pages.forEach(page => mergedPdf.addPage(page));
-        processed++;
-        setProgress((processed / totalItems) * 100);
+        // Add copies of this document
+        for (let i = 0; i < doc.copies; i++) {
+          const pages = await mergedPdf.copyPages(existingPdf, existingPdf.getPageIndices());
+          pages.forEach(page => mergedPdf.addPage(page));
+          processed++;
+          setProgress((processed / totalItems) * 100);
+        }
       }
     }
 
@@ -246,7 +263,25 @@ export default function PrintProfileDialog({
           title="Print Frame"
         />
 
-        <div className="py-4">
+        <div className="py-4 space-y-4">
+          {/* Language Selection */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Languages className="h-4 w-4" />
+              Language / மொழி
+            </Label>
+            <Select value={language} onValueChange={(val: LanguageOption) => setLanguage(val)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bilingual">Bilingual (English + தமிழ்)</SelectItem>
+                <SelectItem value="english">English Only</SelectItem>
+                <SelectItem value="tamil">தமிழ் மட்டும்</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Document Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">Select Documents</Label>

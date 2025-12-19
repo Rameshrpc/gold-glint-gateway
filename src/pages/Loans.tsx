@@ -760,10 +760,13 @@ export default function Loans() {
       const selectedSchemeData = schemes.find(s => s.id === selectedSchemeId);
       const selectedBranchData = branches.find(b => b.id === selectedBranchId);
       
+      // Get complete customer data with all image URLs
+      const fullCustomerData = customers.find(c => c.id === selectedCustomerId);
+      
       setPrintingLoanData({
         ...loanResult,
         gold_items: goldItemsData,
-        customer: selectedCustomerData,
+        customer: fullCustomerData || selectedCustomerData,
         scheme: selectedSchemeData,
         branch: selectedBranchData,
         client: client,
@@ -803,13 +806,30 @@ export default function Loans() {
       .select('*')
       .eq('loan_id', loan.id);
     
+    // Fetch complete customer data with images
+    const { data: fullCustomer } = await supabase
+      .from('customers')
+      .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, date_of_birth, gender, occupation, nominee_name, nominee_relation')
+      .eq('id', loan.customer.id)
+      .single();
+
+    // Fetch complete scheme data
+    const { data: fullScheme } = await supabase
+      .from('schemes')
+      .select('*')
+      .eq('id', loan.scheme.id)
+      .single();
+    
+    // Get branch data
+    const branchData = branches.find(b => b.id === loan.branch_id);
+    
     setPrintingLoanData({
       ...loan,
       gold_items: items || [],
-      customer: loan.customer,
-      scheme: loan.scheme,
+      customer: fullCustomer || loan.customer,
+      scheme: fullScheme || loan.scheme,
       client: client,
-      branch: branches.find(b => b.id === loan.branch_id),
+      branch: branchData,
     });
     setPrintProfileDialogOpen(true);
   };
