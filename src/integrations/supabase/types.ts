@@ -294,8 +294,183 @@ export type Database = {
           },
         ]
       }
+      approval_requests: {
+        Row: {
+          amount: number | null
+          approved_at_l1: string | null
+          approved_at_l2: string | null
+          approved_by_l1: string | null
+          approved_by_l2: string | null
+          branch_id: string | null
+          client_id: string
+          comments_l1: string | null
+          comments_l2: string | null
+          created_at: string | null
+          description: string | null
+          entity_id: string
+          entity_number: string | null
+          entity_type: string
+          id: string
+          metadata: Json | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          requested_at: string | null
+          requested_by: string | null
+          status: string | null
+          updated_at: string | null
+          workflow_type: string
+        }
+        Insert: {
+          amount?: number | null
+          approved_at_l1?: string | null
+          approved_at_l2?: string | null
+          approved_by_l1?: string | null
+          approved_by_l2?: string | null
+          branch_id?: string | null
+          client_id: string
+          comments_l1?: string | null
+          comments_l2?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id: string
+          entity_number?: string | null
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workflow_type: string
+        }
+        Update: {
+          amount?: number | null
+          approved_at_l1?: string | null
+          approved_at_l2?: string | null
+          approved_by_l1?: string | null
+          approved_by_l2?: string | null
+          branch_id?: string | null
+          client_id?: string
+          comments_l1?: string | null
+          comments_l2?: string | null
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string
+          entity_number?: string | null
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          requested_at?: string | null
+          requested_by?: string | null
+          status?: string | null
+          updated_at?: string | null
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_requests_approved_by_l1_fkey"
+            columns: ["approved_by_l1"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_approved_by_l2_fkey"
+            columns: ["approved_by_l2"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_rejected_by_fkey"
+            columns: ["rejected_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      approval_workflows: {
+        Row: {
+          auto_approve_roles: Database["public"]["Enums"]["app_role"][] | null
+          client_id: string
+          created_at: string | null
+          id: string
+          is_enabled: boolean | null
+          l1_approver_roles: Database["public"]["Enums"]["app_role"][] | null
+          l2_approver_roles: Database["public"]["Enums"]["app_role"][] | null
+          requires_dual_approval: boolean | null
+          threshold_amount: number | null
+          updated_at: string | null
+          workflow_type: string
+        }
+        Insert: {
+          auto_approve_roles?: Database["public"]["Enums"]["app_role"][] | null
+          client_id: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          l1_approver_roles?: Database["public"]["Enums"]["app_role"][] | null
+          l2_approver_roles?: Database["public"]["Enums"]["app_role"][] | null
+          requires_dual_approval?: boolean | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+          workflow_type: string
+        }
+        Update: {
+          auto_approve_roles?: Database["public"]["Enums"]["app_role"][] | null
+          client_id?: string
+          created_at?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          l1_approver_roles?: Database["public"]["Enums"]["app_role"][] | null
+          l2_approver_roles?: Database["public"]["Enums"]["app_role"][] | null
+          requires_dual_approval?: boolean | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+          workflow_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approval_workflows_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auctions: {
         Row: {
+          approval_status: string | null
           auction_date: string
           auction_lot_number: string
           branch_id: string
@@ -334,6 +509,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approval_status?: string | null
           auction_date: string
           auction_lot_number: string
           branch_id: string
@@ -372,6 +548,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approval_status?: string | null
           auction_date?: string
           auction_lot_number?: string
           branch_id?: string
@@ -1513,6 +1690,7 @@ export type Database = {
           agent_id: string | null
           appraised_by: string | null
           appraiser_sheet_url: string | null
+          approval_status: string | null
           approved_by: string | null
           branch_id: string
           client_id: string
@@ -1553,6 +1731,7 @@ export type Database = {
           agent_id?: string | null
           appraised_by?: string | null
           appraiser_sheet_url?: string | null
+          approval_status?: string | null
           approved_by?: string | null
           branch_id: string
           client_id: string
@@ -1593,6 +1772,7 @@ export type Database = {
           agent_id?: string | null
           appraised_by?: string | null
           appraiser_sheet_url?: string | null
+          approval_status?: string | null
           approved_by?: string | null
           branch_id?: string
           client_id?: string
@@ -2105,6 +2285,7 @@ export type Database = {
       redemptions: {
         Row: {
           amount_received: number
+          approval_status: string | null
           approved_by: string | null
           branch_id: string
           client_id: string
@@ -2137,6 +2318,7 @@ export type Database = {
         }
         Insert: {
           amount_received: number
+          approval_status?: string | null
           approved_by?: string | null
           branch_id: string
           client_id: string
@@ -2169,6 +2351,7 @@ export type Database = {
         }
         Update: {
           amount_received?: number
+          approval_status?: string | null
           approved_by?: string | null
           branch_id?: string
           client_id?: string
@@ -2742,6 +2925,7 @@ export type Database = {
       }
       vouchers: {
         Row: {
+          approval_status: string | null
           approved_by: string | null
           branch_id: string
           client_id: string
@@ -2762,6 +2946,7 @@ export type Database = {
           voucher_type: string
         }
         Insert: {
+          approval_status?: string | null
           approved_by?: string | null
           branch_id: string
           client_id: string
@@ -2782,6 +2967,7 @@ export type Database = {
           voucher_type: string
         }
         Update: {
+          approval_status?: string | null
           approved_by?: string | null
           branch_id?: string
           client_id?: string
@@ -2855,6 +3041,10 @@ export type Database = {
         Returns: boolean
       }
       initialize_account_groups: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
+      initialize_approval_workflows: {
         Args: { p_client_id: string }
         Returns: undefined
       }
