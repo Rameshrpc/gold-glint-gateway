@@ -24,6 +24,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
+import { LoanPrintDialog } from '@/components/print/LoanPrintDialog';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
@@ -235,6 +236,12 @@ export default function Loans() {
   // Edit loan dialog
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
+  
+  // Print dialog
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printingLoan, setPrintingLoan] = useState<Loan | null>(null);
+  const [printingCustomer, setPrintingCustomer] = useState<Customer | null>(null);
+  const [printingGoldItems, setPrintingGoldItems] = useState<GoldItem[]>([]);
   
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
@@ -786,8 +793,19 @@ export default function Loans() {
   };
 
   const handlePrintLoan = async (loan: Loan) => {
-    // Print functionality will be rebuilt with new print system
-    toast.info('Print functionality is being rebuilt');
+    // Fetch gold items for the loan
+    const { data: goldItemsData } = await supabase
+      .from('gold_items')
+      .select('*')
+      .eq('loan_id', loan.id);
+    
+    // Find full customer data
+    const fullCustomer = customers.find(c => c.id === loan.customer.id);
+    
+    setPrintingLoan(loan);
+    setPrintingCustomer(fullCustomer || loan.customer as Customer);
+    setPrintingGoldItems(goldItemsData || []);
+    setPrintDialogOpen(true);
   };
 
   const filteredLoans = loans.filter(loan => {
@@ -1949,6 +1967,17 @@ export default function Loans() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Print Dialog */}
+        {printingLoan && printingCustomer && (
+          <LoanPrintDialog
+            open={printDialogOpen}
+            onOpenChange={setPrintDialogOpen}
+            loan={printingLoan}
+            customer={printingCustomer}
+            goldItems={printingGoldItems}
+          />
+        )}
 
       </div>
     </DashboardLayout>
