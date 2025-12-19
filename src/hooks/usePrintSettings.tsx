@@ -72,54 +72,27 @@ export function usePrintSettings() {
     
     setLoading(true);
     try {
-      // Fetch print settings
-      const { data: settingsData, error: settingsError } = await supabase
+      // Just fetch existing settings - don't auto-create
+      const { data: settingsData } = await supabase
         .from('print_settings')
         .select('*')
         .eq('client_id', client.id)
         .maybeSingle();
-
-      if (settingsError) throw settingsError;
-
+      
       if (settingsData) {
         setSettings(settingsData as PrintSettings);
-      } else {
-        // Initialize settings if not exists - use upsert to handle race conditions
-        const { data: newSettings, error: insertError } = await supabase
-          .from('print_settings')
-          .upsert({ client_id: client.id }, { onConflict: 'client_id' })
-          .select()
-          .single();
-        
-        if (insertError) {
-          // If upsert fails, try to fetch again (another process may have created it)
-          const { data: retryData } = await supabase
-            .from('print_settings')
-            .select('*')
-            .eq('client_id', client.id)
-            .single();
-          
-          if (retryData) {
-            setSettings(retryData as PrintSettings);
-          } else {
-            throw insertError;
-          }
-        } else {
-          setSettings(newSettings as PrintSettings);
-          // Also initialize content blocks
-          await initializeContentBlocks(client.id);
-        }
       }
+      // If no settings exist, we use DEFAULT_SETTINGS (via the return statement)
+      // Settings will be created on first explicit save
 
       // Fetch content blocks
-      const { data: blocksData, error: blocksError } = await supabase
+      const { data: blocksData } = await supabase
         .from('print_content_blocks')
         .select('*')
         .eq('client_id', client.id)
         .order('block_type')
         .order('display_order');
-
-      if (blocksError) throw blocksError;
+      
       setContentBlocks((blocksData || []) as PrintContentBlock[]);
 
     } catch (error) {
@@ -153,18 +126,34 @@ export function usePrintSettings() {
   };
 
   const updateSettings = async (updates: Partial<PrintSettings>) => {
-    if (!settings?.id) return;
+    if (!client?.id) return;
     
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('print_settings')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', settings.id);
+      if (settings?.id) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('print_settings')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', settings.id);
 
-      if (error) throw error;
+        if (error) throw error;
+        setSettings(prev => prev ? { ...prev, ...updates } : null);
+      } else {
+        // Create settings on first save
+        const { data: newSettings, error } = await supabase
+          .from('print_settings')
+          .insert({ client_id: client.id, ...updates })
+          .select()
+          .single();
 
-      setSettings(prev => prev ? { ...prev, ...updates } : null);
+        if (error) throw error;
+        setSettings(newSettings as PrintSettings);
+        
+        // Also initialize content blocks on first save
+        await initializeContentBlocks(client.id);
+      }
+
       toast({
         title: 'Saved',
         description: 'Print settings updated successfully',
