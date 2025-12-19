@@ -2225,6 +2225,136 @@ export type Database = {
           },
         ]
       }
+      print_content_blocks: {
+        Row: {
+          block_type: string
+          client_id: string
+          content_english: string
+          content_tamil: string
+          created_at: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          block_type: string
+          client_id: string
+          content_english: string
+          content_tamil: string
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          block_type?: string
+          client_id?: string
+          content_english?: string
+          content_tamil?: string
+          created_at?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_content_blocks_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_settings: {
+        Row: {
+          client_id: string
+          company_slogan_english: string | null
+          company_slogan_tamil: string | null
+          created_at: string | null
+          font_family: string
+          footer_english: string | null
+          footer_tamil: string | null
+          gold_declaration_copies: number
+          header_english: string | null
+          header_tamil: string | null
+          id: string
+          include_gold_declaration: boolean
+          include_jewel_image: boolean
+          include_kyc_documents: boolean
+          include_loan_receipt: boolean
+          include_terms_conditions: boolean
+          jewel_image_copies: number
+          kyc_documents_copies: number
+          language: string
+          loan_receipt_copies: number
+          paper_size: string
+          terms_conditions_copies: number
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          font_family?: string
+          footer_english?: string | null
+          footer_tamil?: string | null
+          gold_declaration_copies?: number
+          header_english?: string | null
+          header_tamil?: string | null
+          id?: string
+          include_gold_declaration?: boolean
+          include_jewel_image?: boolean
+          include_kyc_documents?: boolean
+          include_loan_receipt?: boolean
+          include_terms_conditions?: boolean
+          jewel_image_copies?: number
+          kyc_documents_copies?: number
+          language?: string
+          loan_receipt_copies?: number
+          paper_size?: string
+          terms_conditions_copies?: number
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          font_family?: string
+          footer_english?: string | null
+          footer_tamil?: string | null
+          gold_declaration_copies?: number
+          header_english?: string | null
+          header_tamil?: string | null
+          id?: string
+          include_gold_declaration?: boolean
+          include_jewel_image?: boolean
+          include_kyc_documents?: boolean
+          include_loan_receipt?: boolean
+          include_terms_conditions?: boolean
+          jewel_image_copies?: number
+          kyc_documents_copies?: number
+          language?: string
+          loan_receipt_copies?: number
+          paper_size?: string
+          terms_conditions_copies?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -3063,6 +3193,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      initialize_print_settings: {
+        Args: { p_client_id: string }
+        Returns: undefined
       }
       initialize_system_accounts: {
         Args: { p_client_id: string }
