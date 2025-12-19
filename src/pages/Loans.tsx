@@ -24,9 +24,6 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-
-import PrintProfileDialog from '@/components/print/PrintProfileDialog';
-
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 
 interface Customer {
@@ -239,9 +236,6 @@ export default function Loans() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
-  // Print loan dialog - using print profiles
-  const [printProfileDialogOpen, setPrintProfileDialogOpen] = useState(false);
-  const [printingLoanData, setPrintingLoanData] = useState<any>(null);
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -763,15 +757,7 @@ export default function Loans() {
       // Get complete customer data with all image URLs
       const fullCustomerData = customers.find(c => c.id === selectedCustomerId);
       
-      setPrintingLoanData({
-        ...loanResult,
-        gold_items: goldItemsData,
-        customer: fullCustomerData || selectedCustomerData,
-        scheme: selectedSchemeData,
-        branch: selectedBranchData,
-        client: client,
-      });
-      setPrintProfileDialogOpen(true);
+      // Print dialog removed - will be rebuilt with new print system
       
       setIsFormOpen(false);
       resetForm();
@@ -800,38 +786,8 @@ export default function Loans() {
   };
 
   const handlePrintLoan = async (loan: Loan) => {
-    // Fetch gold items for this loan
-    const { data: items } = await supabase
-      .from('gold_items')
-      .select('*')
-      .eq('loan_id', loan.id);
-    
-    // Fetch complete customer data with images
-    const { data: fullCustomer } = await supabase
-      .from('customers')
-      .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, date_of_birth, gender, occupation, nominee_name, nominee_relation')
-      .eq('id', loan.customer.id)
-      .single();
-
-    // Fetch complete scheme data
-    const { data: fullScheme } = await supabase
-      .from('schemes')
-      .select('*')
-      .eq('id', loan.scheme.id)
-      .single();
-    
-    // Get branch data
-    const branchData = branches.find(b => b.id === loan.branch_id);
-    
-    setPrintingLoanData({
-      ...loan,
-      gold_items: items || [],
-      customer: fullCustomer || loan.customer,
-      scheme: fullScheme || loan.scheme,
-      client: client,
-      branch: branchData,
-    });
-    setPrintProfileDialogOpen(true);
+    // Print functionality will be rebuilt with new print system
+    toast.info('Print functionality is being rebuilt');
   };
 
   const filteredLoans = loans.filter(loan => {
@@ -1993,17 +1949,6 @@ export default function Loans() {
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Print Profile Dialog */}
-        {printingLoanData && (
-          <PrintProfileDialog
-            open={printProfileDialogOpen}
-            onOpenChange={setPrintProfileDialogOpen}
-            profileType="loan"
-            data={printingLoanData}
-            title="Print Loan Documents"
-          />
-        )}
 
       </div>
     </DashboardLayout>
