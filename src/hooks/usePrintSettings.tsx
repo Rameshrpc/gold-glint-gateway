@@ -84,18 +84,31 @@ export function usePrintSettings() {
       if (settingsData) {
         setSettings(settingsData as PrintSettings);
       } else {
-        // Initialize settings if not exists
+        // Initialize settings if not exists - use upsert to handle race conditions
         const { data: newSettings, error: insertError } = await supabase
           .from('print_settings')
-          .insert({ client_id: client.id })
+          .upsert({ client_id: client.id }, { onConflict: 'client_id' })
           .select()
           .single();
         
-        if (insertError) throw insertError;
-        setSettings(newSettings as PrintSettings);
-        
-        // Also initialize content blocks
-        await initializeContentBlocks(client.id);
+        if (insertError) {
+          // If upsert fails, try to fetch again (another process may have created it)
+          const { data: retryData } = await supabase
+            .from('print_settings')
+            .select('*')
+            .eq('client_id', client.id)
+            .single();
+          
+          if (retryData) {
+            setSettings(retryData as PrintSettings);
+          } else {
+            throw insertError;
+          }
+        } else {
+          setSettings(newSettings as PrintSettings);
+          // Also initialize content blocks
+          await initializeContentBlocks(client.id);
+        }
       }
 
       // Fetch content blocks
