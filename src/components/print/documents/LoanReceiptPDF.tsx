@@ -10,7 +10,7 @@ import { fontsRegistered } from '@/lib/pdf-fonts';
 const _fonts = fontsRegistered;
 
 interface GoldItem {
-  id: string;
+  id?: string;
   item_type: string;
   description?: string | null;
   gross_weight_grams: number;
