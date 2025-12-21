@@ -233,6 +233,7 @@ interface BilingualValueRowProps {
 
 /**
  * Bilingual row component for label: value pairs
+ * Uses stacked layout to prevent text overlapping
  */
 export function BilingualValueRow({
   labelEn,
@@ -240,7 +241,7 @@ export function BilingualValueRow({
   value,
   mode = 'bilingual',
   fontSize = 10,
-  labelWidth = '40%',
+  labelWidth = '45%',
   valueStyle = 'normal'
 }: BilingualValueRowProps) {
   const valueStyleObj = {
@@ -249,13 +250,35 @@ export function BilingualValueRow({
     padding: valueStyle === 'highlight' ? 2 : 0,
   };
 
+  // For bilingual mode, use stacked label layout
+  if (mode === 'bilingual') {
+    return (
+      <View style={{ flexDirection: 'row', marginBottom: 6, alignItems: 'flex-start' }}>
+        <View style={{ width: labelWidth }}>
+          <Text style={[bilingualStyles.englishText, { fontSize: fontSize - 1, color: '#555' }]}>
+            {labelEn}
+          </Text>
+          <Text style={[bilingualStyles.tamilText, { fontSize: fontSize - 2, color: '#777', marginTop: 1 }]}>
+            {labelTa}
+          </Text>
+        </View>
+        <Text style={[bilingualStyles.englishText, { fontSize, flex: 1, ...valueStyleObj }]}>
+          : {String(value)}
+        </Text>
+      </View>
+    );
+  }
+
+  // Single language mode - simpler layout
   return (
     <View style={{ flexDirection: 'row', marginBottom: 4, alignItems: 'flex-start' }}>
       <View style={{ width: labelWidth }}>
-        <BilingualLabel english={labelEn} tamil={labelTa} mode={mode} fontSize={fontSize} color="#666" />
+        <Text style={[mode === 'tamil' ? bilingualStyles.tamilText : bilingualStyles.englishText, { fontSize: fontSize - 1, color: '#555' }]}>
+          {mode === 'tamil' ? labelTa : labelEn}
+        </Text>
       </View>
       <Text style={[bilingualStyles.englishText, { fontSize, flex: 1, ...valueStyleObj }]}>
-        {String(value)}
+        : {String(value)}
       </Text>
     </View>
   );
