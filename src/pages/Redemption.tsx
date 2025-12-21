@@ -20,6 +20,7 @@ import { pdf } from '@react-pdf/renderer';
 import { RedemptionReceiptPDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { toast } from 'sonner';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import {
@@ -106,7 +107,8 @@ const PAYMENT_MODES = [
 ];
 
 export default function Redemption() {
-  const { client, profile, isPlatformAdmin, hasRole } = useAuth();
+  const { client, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
+  const { settings: printSettings } = useEffectivePrintSettings(currentBranch?.id);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LoanWithDetails[]>([]);
   const [searching, setSearching] = useState(false);
@@ -788,6 +790,14 @@ export default function Redemption() {
                                 }}
                                 goldItems={[]}
                                 companyName={client.company_name}
+                                branchName={currentBranch?.branch_name}
+                                language={printSettings.language}
+                                paperSize={printSettings.paper_size}
+                                footerEnglish={printSettings.footer_english}
+                                footerTamil={printSettings.footer_tamil}
+                                sloganEnglish={printSettings.company_slogan_english}
+                                sloganTamil={printSettings.company_slogan_tamil}
+                                logoUrl={printSettings.logo_url}
                               />
                             ).toBlob();
                             const url = URL.createObjectURL(blob);

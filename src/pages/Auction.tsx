@@ -19,6 +19,7 @@ import { pdf } from '@react-pdf/renderer';
 import { AuctionNoticePDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { toast } from 'sonner';
 import { format, differenceInDays } from 'date-fns';
 import { 
@@ -98,7 +99,8 @@ interface Auction {
 }
 
 const Auction = () => {
-  const { user, profile, isPlatformAdmin, hasRole } = useAuth();
+  const { user, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
+  const { settings: printSettings } = useEffectivePrintSettings(currentBranch?.id);
   
   // State
   const [activeTab, setActiveTab] = useState('eligible');
@@ -951,7 +953,15 @@ const Auction = () => {
                                       address: auction.loan?.customer?.address || '',
                                     }}
                                     goldItems={[]}
-                                    companyName="Company"
+                                    companyName={profile?.client_id ? "Company" : "Company"}
+                                    branchName={currentBranch?.branch_name}
+                                    language={printSettings.language}
+                                    paperSize={printSettings.paper_size}
+                                    footerEnglish={printSettings.footer_english}
+                                    footerTamil={printSettings.footer_tamil}
+                                    sloganEnglish={printSettings.company_slogan_english}
+                                    sloganTamil={printSettings.company_slogan_tamil}
+                                    logoUrl={printSettings.logo_url}
                                   />
                                 ).toBlob();
                                 const url = URL.createObjectURL(blob);

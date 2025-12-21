@@ -21,6 +21,7 @@ import { pdf } from '@react-pdf/renderer';
 import { InterestReceiptPDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { toast } from 'sonner';
 import { format, differenceInDays, addDays, isAfter, parseISO } from 'date-fns';
 import {
@@ -101,7 +102,8 @@ const PAYMENT_MODES = [
 ];
 
 export default function Interest() {
-  const { client, profile, isPlatformAdmin, hasRole } = useAuth();
+  const { client, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
+  const { settings: printSettings } = useEffectivePrintSettings(currentBranch?.id);
   const [loans, setLoans] = useState<LoanWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -956,6 +958,14 @@ export default function Interest() {
                             newOutstanding: receiptData.allocation.newActualPrincipal,
                           }}
                           companyName={client.company_name}
+                          branchName={currentBranch?.branch_name}
+                          language={printSettings.language}
+                          paperSize={printSettings.paper_size}
+                          footerEnglish={printSettings.footer_english}
+                          footerTamil={printSettings.footer_tamil}
+                          sloganEnglish={printSettings.company_slogan_english}
+                          sloganTamil={printSettings.company_slogan_tamil}
+                          logoUrl={printSettings.logo_url}
                         />
                       ).toBlob();
                       const url = URL.createObjectURL(blob);
