@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -10,8 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { usePrintSettings, PrintContentBlock } from '@/hooks/usePrintSettings';
-import { Loader2, Plus, Trash2, Edit2, Save, X, GripVertical } from 'lucide-react';
+import { Loader2, Plus, Trash2, Edit2, Save, X, GripVertical, Upload, ImageIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export function PrintSettingsTab() {
   const { 
@@ -31,6 +33,60 @@ export function PrintSettingsTab() {
   const [newBlockType, setNewBlockType] = useState<PrintContentBlock['block_type']>('gold_declaration');
   const [newBlockEnglish, setNewBlockEnglish] = useState('');
   const [newBlockTamil, setNewBlockTamil] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Logo must be less than 2MB');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `logo-${Date.now()}.${fileExt}`;
+      const filePath = `logos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('print-assets')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('print-assets')
+        .getPublicUrl(filePath);
+
+      await updateSettings({ logo_url: publicUrl });
+      toast.success('Logo uploaded successfully');
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast.error('Failed to upload logo');
+    } finally {
+      setUploadingLogo(false);
+      if (logoInputRef.current) {
+        logoInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    try {
+      await updateSettings({ logo_url: null });
+      toast.success('Logo removed');
+    } catch (error) {
+      toast.error('Failed to remove logo');
+    }
+  };
   
   if (loading) {
     return (
@@ -371,9 +427,61 @@ export function PrintSettingsTab() {
           <Card>
             <CardHeader>
               <CardTitle>Header & Footer Settings</CardTitle>
-              <CardDescription>Customize header slogan and footer text (bilingual)</CardDescription>
+              <CardDescription>Customize logo, header slogan and footer text (bilingual)</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Logo Upload Section */}
+              <div className="space-y-3">
+                <Label>Company Logo</Label>
+                <div className="flex items-center gap-4">
+                  {settings.logo_url ? (
+                    <div className="relative">
+                      <img 
+                        src={settings.logo_url} 
+                        alt="Company Logo" 
+                        className="w-20 h-20 object-contain border rounded-lg bg-muted"
+                      />
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-6 w-6"
+                        onClick={handleRemoveLogo}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 border-2 border-dashed rounded-lg flex items-center justify-center bg-muted/50">
+                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="hidden"
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={uploadingLogo}
+                    >
+                      {uploadingLogo ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4 mr-2" />
+                      )}
+                      {settings.logo_url ? 'Change Logo' : 'Upload Logo'}
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Recommended: Square image, max 2MB
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label>Company Slogan (English)</Label>

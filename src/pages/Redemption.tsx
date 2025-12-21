@@ -14,8 +14,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, Wallet, Calculator, IndianRupee, 
   Package, CheckCircle, AlertTriangle, FileText,
-  Coins
+  Coins, Printer, Download
 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { RedemptionReceiptPDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -730,6 +732,7 @@ export default function Redemption() {
                     <TableHead>Customer</TableHead>
                     <TableHead className="text-right">Settlement</TableHead>
                     <TableHead>Gold</TableHead>
+                    <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -752,6 +755,51 @@ export default function Redemption() {
                             Pending
                           </Badge>
                         )}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={async () => {
+                            if (!client) return;
+                            const blob = await pdf(
+                              <RedemptionReceiptPDF
+                                redemption={{
+                                  redemption_number: redemption.redemption_number,
+                                  redemption_date: redemption.redemption_date,
+                                  payment_mode: redemption.payment_mode,
+                                }}
+                                loan={{
+                                  loan_number: redemption.loan?.loan_number || '',
+                                  loan_date: '',
+                                  principal_amount: redemption.outstanding_principal,
+                                }}
+                                customer={{
+                                  full_name: redemption.loan?.customer?.full_name || '',
+                                  customer_code: redemption.loan?.customer?.customer_code || '',
+                                  phone: '',
+                                }}
+                                breakdown={{
+                                  principal: redemption.outstanding_principal,
+                                  interest: redemption.interest_due,
+                                  penalty: redemption.penalty_amount,
+                                  rebate: redemption.rebate_amount,
+                                  total: redemption.total_settlement,
+                                }}
+                                goldItems={[]}
+                                companyName={client.company_name}
+                              />
+                            ).toBlob();
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `redemption-${redemption.redemption_number}.pdf`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          }}
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

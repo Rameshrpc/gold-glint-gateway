@@ -15,8 +15,10 @@ import { Separator } from '@/components/ui/separator';
 import { 
   IndianRupee, Calendar, Clock, AlertTriangle, 
   Search, Receipt, Calculator, FileText,
-  TrendingUp
+  TrendingUp, Printer, Download
 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { InterestReceiptPDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -921,6 +923,52 @@ export default function Interest() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 print:hidden">
+                  <Button 
+                    variant="outline" 
+                    onClick={async () => {
+                      if (!receiptData || !client) return;
+                      const blob = await pdf(
+                        <InterestReceiptPDF
+                          payment={{
+                            receipt_number: receiptData.payment.receipt_number,
+                            payment_date: receiptData.payment.payment_date,
+                            payment_mode: receiptData.payment.payment_mode,
+                            amount_paid: receiptData.payment.amount_paid,
+                            days_covered: receiptData.payment.days_covered,
+                            period_from: receiptData.payment.period_from,
+                            period_to: receiptData.payment.period_to,
+                          }}
+                          loan={{
+                            loan_number: receiptData.loan.loan_number,
+                            principal_amount: receiptData.loan.principal_amount,
+                            interest_rate: receiptData.loan.scheme.shown_rate,
+                          }}
+                          customer={{
+                            full_name: receiptData.loan.customer.full_name,
+                            customer_code: receiptData.loan.customer.customer_code,
+                            phone: receiptData.loan.customer.phone,
+                          }}
+                          breakdown={{
+                            shownInterest: receiptData.allocation.interestPaid,
+                            penalty: receiptData.allocation.penalty,
+                            partPayment: receiptData.allocation.partPayment,
+                            principalReduction: receiptData.allocation.totalPrincipalReduction,
+                            newOutstanding: receiptData.allocation.newActualPrincipal,
+                          }}
+                          companyName={client.company_name}
+                        />
+                      ).toBlob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `interest-receipt-${receiptData.payment.receipt_number}.pdf`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download PDF
+                  </Button>
                   <Button variant="outline" onClick={() => setReceiptDialogOpen(false)}>
                     Close
                   </Button>

@@ -12,8 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   Search, Gavel, AlertTriangle, Package, IndianRupee, 
-  Calendar, User, CheckCircle, XCircle, FileText, TrendingUp, TrendingDown
+  Calendar, User, CheckCircle, XCircle, FileText, TrendingUp, TrendingDown,
+  Printer
 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { AuctionNoticePDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -892,6 +895,7 @@ const Auction = () => {
                         <TableHead className="text-right">Sold For</TableHead>
                         <TableHead className="text-right">Surplus/Shortfall</TableHead>
                         <TableHead>Buyer</TableHead>
+                        <TableHead className="w-12"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -918,6 +922,49 @@ const Auction = () => {
                             )}
                           </TableCell>
                           <TableCell>{auction.buyer_name}</TableCell>
+                          <TableCell>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={async () => {
+                                if (!profile?.client_id) return;
+                                const blob = await pdf(
+                                  <AuctionNoticePDF
+                                    auction={{
+                                      auction_lot_number: auction.auction_lot_number,
+                                      auction_date: auction.auction_date,
+                                      total_outstanding: auction.total_outstanding,
+                                      reserve_price: auction.reserve_price,
+                                      sold_price: auction.sold_price,
+                                      buyer_name: auction.buyer_name,
+                                    }}
+                                    loan={{
+                                      loan_number: auction.loan?.loan_number || '',
+                                      loan_date: '',
+                                      maturity_date: '',
+                                      principal_amount: auction.outstanding_principal,
+                                    }}
+                                    customer={{
+                                      full_name: auction.loan?.customer?.full_name || '',
+                                      customer_code: auction.loan?.customer?.customer_code || '',
+                                      phone: auction.loan?.customer?.phone || '',
+                                      address: auction.loan?.customer?.address || '',
+                                    }}
+                                    goldItems={[]}
+                                    companyName="Company"
+                                  />
+                                ).toBlob();
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = `auction-${auction.auction_lot_number}.pdf`;
+                                a.click();
+                                URL.revokeObjectURL(url);
+                              }}
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

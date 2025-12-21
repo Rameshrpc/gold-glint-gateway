@@ -14,20 +14,20 @@ interface InterestPayment {
   payment_date: string;
   payment_mode: string;
   amount_paid: number;
-  shown_interest: number;
-  actual_interest: number;
-  penalty_amount: number;
+  shown_interest?: number;
+  actual_interest?: number;
+  penalty_amount?: number;
   days_covered: number;
   period_from: string;
   period_to: string;
-  principal_reduction: number;
+  principal_reduction?: number;
   remarks?: string | null;
 }
 
 interface Loan {
   loan_number: string;
   principal_amount: number;
-  actual_principal: number;
+  actual_principal?: number;
   interest_rate: number;
 }
 
@@ -37,10 +37,19 @@ interface Customer {
   phone: string;
 }
 
+interface InterestBreakdown {
+  shownInterest?: number;
+  penalty?: number;
+  partPayment?: number;
+  principalReduction?: number;
+  newOutstanding?: number;
+}
+
 interface InterestReceiptPDFProps {
   payment: InterestPayment;
   loan: Loan;
   customer: Customer;
+  breakdown?: InterestBreakdown;
   companyName: string;
   branchName?: string;
   language?: LanguageMode;
@@ -55,6 +64,7 @@ export function InterestReceiptPDF({
   payment,
   loan,
   customer,
+  breakdown,
   companyName,
   branchName,
   language = 'bilingual',
@@ -65,6 +75,12 @@ export function InterestReceiptPDF({
   sloganTamil,
 }: InterestReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
+  
+  // Use breakdown if provided, otherwise use payment values
+  const shownInterest = breakdown?.shownInterest ?? payment.shown_interest ?? 0;
+  const penaltyAmount = breakdown?.penalty ?? payment.penalty_amount ?? 0;
+  const principalReduction = breakdown?.principalReduction ?? payment.principal_reduction ?? 0;
+  const newOutstanding = breakdown?.newOutstanding ?? (loan.actual_principal ?? loan.principal_amount);
   
   return (
     <Document>
@@ -141,7 +157,7 @@ export function InterestReceiptPDF({
               <BilingualValueRow
                 labelEn="Outstanding Principal"
                 labelTa="நிலுவை அசல்"
-                value={formatCurrencyPrint(loan.actual_principal)}
+                value={formatCurrencyPrint(loan.actual_principal ?? loan.principal_amount)}
                 mode={language}
               />
               <BilingualValueRow
@@ -224,20 +240,20 @@ export function InterestReceiptPDF({
           
           <View style={pdfStyles.amountRow}>
             <BilingualLabel english="Interest Amount" tamil="வட்டி தொகை" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(payment.shown_interest)}</Text>
+            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(shownInterest)}</Text>
           </View>
           
-          {payment.penalty_amount > 0 && (
+          {penaltyAmount > 0 && (
             <View style={pdfStyles.amountRow}>
               <BilingualLabel english="Penalty Amount" tamil="அபராத தொகை" mode={language} fontSize={10} color="#c00" />
-              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>{formatCurrencyPrint(payment.penalty_amount)}</Text>
+              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>{formatCurrencyPrint(penaltyAmount)}</Text>
             </View>
           )}
           
-          {payment.principal_reduction > 0 && (
+          {principalReduction > 0 && (
             <View style={pdfStyles.amountRow}>
               <BilingualLabel english="Principal Reduction" tamil="அசல் குறைப்பு" mode={language} fontSize={10} color="#060" />
-              <Text style={[pdfStyles.amountValue, { color: '#060' }]}>{formatCurrencyPrint(payment.principal_reduction)}</Text>
+              <Text style={[pdfStyles.amountValue, { color: '#060' }]}>{formatCurrencyPrint(principalReduction)}</Text>
             </View>
           )}
           

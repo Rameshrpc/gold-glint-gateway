@@ -21,29 +21,29 @@ interface GoldItem {
 interface Auction {
   auction_lot_number: string;
   auction_date: string;
-  outstanding_principal: number;
-  outstanding_interest: number;
-  outstanding_penalty: number;
+  outstanding_principal?: number;
+  outstanding_interest?: number;
+  outstanding_penalty?: number;
   total_outstanding: number;
-  total_gold_weight_grams: number;
-  total_appraised_value: number;
+  total_gold_weight_grams?: number;
+  total_appraised_value?: number;
   reserve_price: number;
   buyer_name?: string | null;
   sold_price?: number | null;
-  status: string;
+  status?: string;
 }
 
 interface Loan {
   loan_number: string;
-  loan_date: string;
-  maturity_date: string;
+  loan_date?: string;
+  maturity_date?: string;
   principal_amount: number;
 }
 
 interface Customer {
   customer_code: string;
   full_name: string;
-  phone: string;
+  phone?: string;
   address?: string | null;
 }
 
@@ -120,7 +120,7 @@ export function AuctionNoticePDF({
         </View>
         
         {/* Notice Text */}
-        {isNotice && (
+        {isNotice && loan.loan_date && (
           <View style={{ marginBottom: 12, padding: 10, borderWidth: 2, borderColor: '#c00' }}>
             <BilingualText
               english={`NOTICE is hereby given that the gold ornaments pledged against Loan No. ${loan.loan_number} dated ${formatDatePrint(loan.loan_date)} have become liable for auction due to non-payment of dues.`}
@@ -160,7 +160,7 @@ export function AuctionNoticePDF({
               <BilingualValueRow
                 labelEn="Phone"
                 labelTa="தொலைபேசி"
-                value={customer.phone}
+                value={customer.phone || '-'}
                 mode={language}
               />
               {customer.address && (
@@ -188,18 +188,22 @@ export function AuctionNoticePDF({
                 value={loan.loan_number}
                 mode={language}
               />
-              <BilingualValueRow
-                labelEn="Loan Date"
-                labelTa="கடன் தேதி"
-                value={formatDatePrint(loan.loan_date)}
-                mode={language}
-              />
-              <BilingualValueRow
-                labelEn="Maturity Date"
-                labelTa="முதிர்வு தேதி"
-                value={formatDatePrint(loan.maturity_date)}
-                mode={language}
-              />
+              {loan.loan_date && (
+                <BilingualValueRow
+                  labelEn="Loan Date"
+                  labelTa="கடன் தேதி"
+                  value={formatDatePrint(loan.loan_date)}
+                  mode={language}
+                />
+              )}
+              {loan.maturity_date && (
+                <BilingualValueRow
+                  labelEn="Maturity Date"
+                  labelTa="முதிர்வு தேதி"
+                  value={formatDatePrint(loan.maturity_date)}
+                  mode={language}
+                />
+              )}
               <BilingualValueRow
                 labelEn="Original Principal"
                 labelTa="அசல் தொகை"
@@ -248,7 +252,7 @@ export function AuctionNoticePDF({
               <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>-</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '12%' }]}>-</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(auction.total_appraised_value)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(auction.total_appraised_value ?? 0)}</Text>
             </View>
           </View>
         </View>
@@ -265,20 +269,24 @@ export function AuctionNoticePDF({
             />
           </View>
           
-          <View style={pdfStyles.amountRow}>
-            <BilingualLabel english="Principal Outstanding" tamil="நிலுவை அசல்" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_principal)}</Text>
-          </View>
+          {auction.outstanding_principal && (
+            <View style={pdfStyles.amountRow}>
+              <BilingualLabel english="Principal Outstanding" tamil="நிலுவை அசல்" mode={language} fontSize={10} />
+              <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_principal)}</Text>
+            </View>
+          )}
           
-          <View style={pdfStyles.amountRow}>
-            <BilingualLabel english="Interest Due" tamil="வட்டி நிலுவை" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_interest)}</Text>
-          </View>
+          {auction.outstanding_interest && (
+            <View style={pdfStyles.amountRow}>
+              <BilingualLabel english="Interest Due" tamil="வட்டி நிலுவை" mode={language} fontSize={10} />
+              <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_interest)}</Text>
+            </View>
+          )}
           
-          {auction.outstanding_penalty > 0 && (
+          {(auction.outstanding_penalty ?? 0) > 0 && (
             <View style={pdfStyles.amountRow}>
               <BilingualLabel english="Penalty" tamil="அபராதம்" mode={language} fontSize={10} />
-              <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_penalty)}</Text>
+              <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(auction.outstanding_penalty ?? 0)}</Text>
             </View>
           )}
           
