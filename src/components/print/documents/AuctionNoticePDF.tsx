@@ -61,6 +61,7 @@ interface AuctionNoticePDFProps {
   footerTamil?: string | null;
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
   isNotice?: boolean; // true for pre-auction notice, false for completion receipt
 }
 
@@ -78,6 +79,7 @@ export function AuctionNoticePDF({
   footerTamil,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
   isNotice = true,
 }: AuctionNoticePDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
@@ -96,6 +98,7 @@ export function AuctionNoticePDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}

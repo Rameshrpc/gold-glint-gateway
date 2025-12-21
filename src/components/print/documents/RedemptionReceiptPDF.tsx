@@ -66,6 +66,7 @@ interface RedemptionReceiptPDFProps {
   footerTamil?: string | null;
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
 }
 
 export function RedemptionReceiptPDF({
@@ -82,6 +83,7 @@ export function RedemptionReceiptPDF({
   footerTamil,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
 }: RedemptionReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
@@ -106,6 +108,7 @@ export function RedemptionReceiptPDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}

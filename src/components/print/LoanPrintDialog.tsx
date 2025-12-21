@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { Printer, Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
 
@@ -93,7 +94,9 @@ export function LoanPrintDialog({
   goldItems,
 }: LoanPrintDialogProps) {
   const { client, currentBranch } = useAuth();
-  const { settings, getBlocksByType } = usePrintSettings();
+  const { getBlocksByType } = usePrintSettings();
+  // Use effective settings based on current branch
+  const { settings: effectiveSettings } = useEffectivePrintSettings(currentBranch?.id);
   const { data: terms = [] } = useClientTerms('loan');
   
   const [generating, setGenerating] = useState(false);
@@ -113,25 +116,25 @@ export function LoanPrintDialog({
     termsConditions: 1,
   });
 
-  // Update defaults from settings
+  // Update defaults from effective settings
   useEffect(() => {
-    if (settings) {
+    if (effectiveSettings) {
       setSelection({
-        loanReceipt: settings.include_loan_receipt ?? true,
-        kycDocuments: settings.include_kyc_documents ?? false,
-        jewelImage: settings.include_jewel_image ?? false,
-        goldDeclaration: settings.include_gold_declaration ?? true,
-        termsConditions: settings.include_terms_conditions ?? false,
+        loanReceipt: effectiveSettings.include_loan_receipt ?? true,
+        kycDocuments: effectiveSettings.include_kyc_documents ?? false,
+        jewelImage: effectiveSettings.include_jewel_image ?? false,
+        goldDeclaration: effectiveSettings.include_gold_declaration ?? true,
+        termsConditions: effectiveSettings.include_terms_conditions ?? false,
       });
       setCopies({
-        loanReceipt: settings.loan_receipt_copies ?? 2,
-        kycDocuments: settings.kyc_documents_copies ?? 1,
-        jewelImage: settings.jewel_image_copies ?? 1,
-        goldDeclaration: settings.gold_declaration_copies ?? 1,
-        termsConditions: settings.terms_conditions_copies ?? 1,
+        loanReceipt: effectiveSettings.loan_receipt_copies ?? 2,
+        kycDocuments: effectiveSettings.kyc_documents_copies ?? 1,
+        jewelImage: effectiveSettings.jewel_image_copies ?? 1,
+        goldDeclaration: effectiveSettings.gold_declaration_copies ?? 1,
+        termsConditions: effectiveSettings.terms_conditions_copies ?? 1,
       });
     }
-  }, [settings]);
+  }, [effectiveSettings]);
 
   const handleSelectionChange = (doc: keyof DocumentSelection) => {
     setSelection(prev => ({ ...prev, [doc]: !prev[doc] }));
@@ -174,8 +177,8 @@ export function LoanPrintDialog({
 
     setGenerating(true);
     try {
-      const language = (settings?.language || 'bilingual') as 'bilingual' | 'english' | 'tamil';
-      const paperSize = (settings?.paper_size || 'A4') as 'A4' | 'Legal' | 'Letter';
+      const language = effectiveSettings.language;
+      const paperSize = effectiveSettings.paper_size;
       
       const companyName = client?.company_name || 'Company';
       const branchName = currentBranch?.branch_name;
@@ -198,11 +201,11 @@ export function LoanPrintDialog({
             branchName={branchName}
             language={language}
             paperSize={paperSize}
-            footerEnglish={settings?.footer_english}
-            footerTamil={settings?.footer_tamil}
-            sloganEnglish={settings?.company_slogan_english}
-            sloganTamil={settings?.company_slogan_tamil}
-            logoUrl={settings?.logo_url}
+            footerEnglish={effectiveSettings.footer_english}
+            footerTamil={effectiveSettings.footer_tamil}
+            sloganEnglish={effectiveSettings.company_slogan_english}
+            sloganTamil={effectiveSettings.company_slogan_tamil}
+            logoUrl={effectiveSettings.logo_url}
           />
         );
         for (let i = 0; i < copies.loanReceipt; i++) {
@@ -225,9 +228,9 @@ export function LoanPrintDialog({
             warnings={warnings}
             acknowledgments={acknowledgments}
             signatureLabels={signatureLabels}
-            sloganEnglish={settings?.company_slogan_english}
-            sloganTamil={settings?.company_slogan_tamil}
-            logoUrl={settings?.logo_url}
+            sloganEnglish={effectiveSettings.company_slogan_english}
+            sloganTamil={effectiveSettings.company_slogan_tamil}
+            logoUrl={effectiveSettings.logo_url}
           />
         );
         for (let i = 0; i < copies.goldDeclaration; i++) {
@@ -249,9 +252,9 @@ export function LoanPrintDialog({
             terms={terms}
             acknowledgments={acknowledgments}
             signatureLabels={signatureLabels}
-            sloganEnglish={settings?.company_slogan_english}
-            sloganTamil={settings?.company_slogan_tamil}
-            logoUrl={settings?.logo_url}
+            sloganEnglish={effectiveSettings.company_slogan_english}
+            sloganTamil={effectiveSettings.company_slogan_tamil}
+            logoUrl={effectiveSettings.logo_url}
           />
         );
         for (let i = 0; i < copies.termsConditions; i++) {
@@ -269,7 +272,7 @@ export function LoanPrintDialog({
             companyName={companyName}
             language={language}
             paperSize={paperSize}
-            logoUrl={settings?.logo_url}
+            logoUrl={effectiveSettings.logo_url}
           />
         );
         for (let i = 0; i < copies.kycDocuments; i++) {
@@ -291,7 +294,7 @@ export function LoanPrintDialog({
             companyName={companyName}
             language={language}
             paperSize={paperSize}
-            logoUrl={settings?.logo_url}
+            logoUrl={effectiveSettings.logo_url}
           />
         );
         for (let i = 0; i < copies.jewelImage; i++) {

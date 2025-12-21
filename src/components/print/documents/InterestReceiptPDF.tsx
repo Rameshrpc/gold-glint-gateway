@@ -58,6 +58,7 @@ interface InterestReceiptPDFProps {
   footerTamil?: string | null;
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
 }
 
 export function InterestReceiptPDF({
@@ -73,6 +74,7 @@ export function InterestReceiptPDF({
   footerTamil,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
 }: InterestReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
@@ -93,6 +95,7 @@ export function InterestReceiptPDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}
