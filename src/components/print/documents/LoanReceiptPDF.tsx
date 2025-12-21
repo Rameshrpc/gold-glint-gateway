@@ -57,6 +57,7 @@ interface LoanReceiptPDFProps {
   footerTamil?: string | null;
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
 }
 
 export function LoanReceiptPDF({
@@ -73,6 +74,7 @@ export function LoanReceiptPDF({
   footerTamil,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
 }: LoanReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
@@ -95,6 +97,7 @@ export function LoanReceiptPDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}

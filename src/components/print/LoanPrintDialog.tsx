@@ -202,6 +202,7 @@ export function LoanPrintDialog({
             footerTamil={settings?.footer_tamil}
             sloganEnglish={settings?.company_slogan_english}
             sloganTamil={settings?.company_slogan_tamil}
+            logoUrl={settings?.logo_url}
           />
         );
         for (let i = 0; i < copies.loanReceipt; i++) {
@@ -226,6 +227,7 @@ export function LoanPrintDialog({
             signatureLabels={signatureLabels}
             sloganEnglish={settings?.company_slogan_english}
             sloganTamil={settings?.company_slogan_tamil}
+            logoUrl={settings?.logo_url}
           />
         );
         for (let i = 0; i < copies.goldDeclaration; i++) {
@@ -249,6 +251,7 @@ export function LoanPrintDialog({
             signatureLabels={signatureLabels}
             sloganEnglish={settings?.company_slogan_english}
             sloganTamil={settings?.company_slogan_tamil}
+            logoUrl={settings?.logo_url}
           />
         );
         for (let i = 0; i < copies.termsConditions; i++) {
@@ -266,6 +269,7 @@ export function LoanPrintDialog({
             companyName={companyName}
             language={language}
             paperSize={paperSize}
+            logoUrl={settings?.logo_url}
           />
         );
         for (let i = 0; i < copies.kycDocuments; i++) {
@@ -287,6 +291,7 @@ export function LoanPrintDialog({
             companyName={companyName}
             language={language}
             paperSize={paperSize}
+            logoUrl={settings?.logo_url}
           />
         );
         for (let i = 0; i < copies.jewelImage; i++) {

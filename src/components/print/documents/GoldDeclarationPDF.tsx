@@ -45,6 +45,7 @@ interface GoldDeclarationPDFProps {
   signatureLabels: ContentBlock[];
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
 }
 
 export function GoldDeclarationPDF({
@@ -62,6 +63,7 @@ export function GoldDeclarationPDF({
   signatureLabels,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
 }: GoldDeclarationPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
 
@@ -86,6 +88,7 @@ export function GoldDeclarationPDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}
