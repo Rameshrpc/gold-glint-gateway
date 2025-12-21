@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { pdf } from '@react-pdf/renderer';
+import { PDFDocument } from 'pdf-lib';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -299,9 +300,18 @@ export function LoanPrintDialog({
         return;
       }
 
-      // For simplicity, we'll use the first blob
-      // In production, you might want to merge PDFs
-      const finalBlob = blobs[0];
+      // Merge all PDFs using pdf-lib
+      const mergedPdf = await PDFDocument.create();
+      
+      for (const blob of blobs) {
+        const arrayBuffer = await blob.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pages = await mergedPdf.copyPages(pdfDoc, pdfDoc.getPageIndices());
+        pages.forEach(page => mergedPdf.addPage(page));
+      }
+      
+      const mergedPdfBytes = await mergedPdf.save();
+      const finalBlob = new Blob([new Uint8Array(mergedPdfBytes)], { type: 'application/pdf' });
       const url = URL.createObjectURL(finalBlob);
 
       if (action === 'download') {
@@ -311,7 +321,7 @@ export function LoanPrintDialog({
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        toast.success('PDF downloaded successfully');
+        toast.success(`PDF downloaded with ${blobs.length} document(s)`);
       } else {
         const printWindow = window.open(url, '_blank');
         if (printWindow) {
@@ -319,7 +329,7 @@ export function LoanPrintDialog({
             printWindow.print();
           };
         }
-        toast.success('Opening print dialog...');
+        toast.success(`Opening ${blobs.length} document(s) for print...`);
       }
 
       URL.revokeObjectURL(url);
