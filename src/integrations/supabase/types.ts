@@ -784,6 +784,73 @@ export type Database = {
           },
         ]
       }
+      branch_print_settings: {
+        Row: {
+          branch_id: string
+          client_id: string
+          company_slogan_english: string | null
+          company_slogan_tamil: string | null
+          created_at: string | null
+          default_template_id: string | null
+          footer_english: string | null
+          footer_tamil: string | null
+          id: string
+          logo_url: string | null
+          updated_at: string | null
+          use_client_logo: boolean | null
+        }
+        Insert: {
+          branch_id: string
+          client_id: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          default_template_id?: string | null
+          footer_english?: string | null
+          footer_tamil?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string | null
+          use_client_logo?: boolean | null
+        }
+        Update: {
+          branch_id?: string
+          client_id?: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          default_template_id?: string | null
+          footer_english?: string | null
+          footer_tamil?: string | null
+          id?: string
+          logo_url?: string | null
+          updated_at?: string | null
+          use_client_logo?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_print_settings_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: true
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_print_settings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_print_settings_default_template_id_fkey"
+            columns: ["default_template_id"]
+            isOneToOne: false
+            referencedRelation: "print_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -2353,6 +2420,110 @@ export type Database = {
             foreignKeyName: "print_settings_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      print_templates: {
+        Row: {
+          client_id: string
+          company_slogan_english: string | null
+          company_slogan_tamil: string | null
+          created_at: string | null
+          description: string | null
+          font_family: string | null
+          footer_english: string | null
+          footer_tamil: string | null
+          gold_declaration_copies: number | null
+          header_english: string | null
+          header_tamil: string | null
+          id: string
+          include_gold_declaration: boolean | null
+          include_jewel_image: boolean | null
+          include_kyc_documents: boolean | null
+          include_loan_receipt: boolean | null
+          include_terms_conditions: boolean | null
+          is_active: boolean | null
+          is_default: boolean | null
+          jewel_image_copies: number | null
+          kyc_documents_copies: number | null
+          language: string | null
+          loan_receipt_copies: number | null
+          logo_url: string | null
+          paper_size: string | null
+          template_code: string
+          template_name: string
+          terms_conditions_copies: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          description?: string | null
+          font_family?: string | null
+          footer_english?: string | null
+          footer_tamil?: string | null
+          gold_declaration_copies?: number | null
+          header_english?: string | null
+          header_tamil?: string | null
+          id?: string
+          include_gold_declaration?: boolean | null
+          include_jewel_image?: boolean | null
+          include_kyc_documents?: boolean | null
+          include_loan_receipt?: boolean | null
+          include_terms_conditions?: boolean | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          jewel_image_copies?: number | null
+          kyc_documents_copies?: number | null
+          language?: string | null
+          loan_receipt_copies?: number | null
+          logo_url?: string | null
+          paper_size?: string | null
+          template_code: string
+          template_name: string
+          terms_conditions_copies?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          company_slogan_english?: string | null
+          company_slogan_tamil?: string | null
+          created_at?: string | null
+          description?: string | null
+          font_family?: string | null
+          footer_english?: string | null
+          footer_tamil?: string | null
+          gold_declaration_copies?: number | null
+          header_english?: string | null
+          header_tamil?: string | null
+          id?: string
+          include_gold_declaration?: boolean | null
+          include_jewel_image?: boolean | null
+          include_kyc_documents?: boolean | null
+          include_loan_receipt?: boolean | null
+          include_terms_conditions?: boolean | null
+          is_active?: boolean | null
+          is_default?: boolean | null
+          jewel_image_copies?: number | null
+          kyc_documents_copies?: number | null
+          language?: string | null
+          loan_receipt_copies?: number | null
+          logo_url?: string | null
+          paper_size?: string | null
+          template_code?: string
+          template_name?: string
+          terms_conditions_copies?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },

@@ -49,6 +49,7 @@ interface TermsConditionsPDFProps {
   signatureLabels: ContentBlock[];
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
+  logoUrl?: string | null;
 }
 
 // Parse bilingual term text (format: "English text / Tamil text")
@@ -77,6 +78,7 @@ export function TermsConditionsPDF({
   signatureLabels,
   sloganEnglish,
   sloganTamil,
+  logoUrl,
 }: TermsConditionsPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
 
@@ -103,6 +105,7 @@ export function TermsConditionsPDF({
           sloganEnglish={sloganEnglish}
           sloganTamil={sloganTamil}
           language={language}
+          logoUrl={logoUrl}
         />
         
         {/* Document Title */}

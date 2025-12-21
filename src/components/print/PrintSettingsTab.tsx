@@ -14,6 +14,8 @@ import { Loader2, Plus, Trash2, Edit2, Save, X, GripVertical, Upload, ImageIcon 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { TemplatesTab } from './TemplatesTab';
+import { BranchPrintSettingsTab } from './BranchPrintSettingsTab';
 
 export function PrintSettingsTab() {
   const { 
@@ -116,11 +118,13 @@ export function PrintSettingsTab() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="general" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="content">Editable Content</TabsTrigger>
           <TabsTrigger value="footer">Header & Footer</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="branches">Branch Settings</TabsTrigger>
         </TabsList>
         
         {/* General Settings */}
@@ -523,6 +527,16 @@ export function PrintSettingsTab() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        {/* Templates Tab */}
+        <TabsContent value="templates">
+          <TemplatesTab />
+        </TabsContent>
+        
+        {/* Branch Settings Tab */}
+        <TabsContent value="branches">
+          <BranchPrintSettingsTab />
         </TabsContent>
       </Tabs>
       

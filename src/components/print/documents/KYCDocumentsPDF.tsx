@@ -21,6 +21,7 @@ interface KYCDocumentsPDFProps {
   companyName: string;
   language?: LanguageMode;
   paperSize?: 'A4' | 'Legal' | 'Letter';
+  logoUrl?: string | null;
 }
 
 export function KYCDocumentsPDF({
@@ -29,6 +30,7 @@ export function KYCDocumentsPDF({
   companyName,
   language = 'bilingual',
   paperSize = 'A4',
+  logoUrl,
 }: KYCDocumentsPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
@@ -37,6 +39,11 @@ export function KYCDocumentsPDF({
       <Page size={[pageSize.width, pageSize.height]} style={pdfStyles.page}>
         {/* Header */}
         <View style={{ marginBottom: 20, borderBottomWidth: 1, borderBottomColor: '#000', paddingBottom: 10 }}>
+          {logoUrl && (
+            <View style={{ alignItems: 'center', marginBottom: 8 }}>
+              <Image src={logoUrl} style={{ width: 60, height: 60, objectFit: 'contain' }} />
+            </View>
+          )}
           <Text style={{ fontSize: 14, fontWeight: 'bold', textAlign: 'center', marginBottom: 4 }}>
             {companyName}
           </Text>
