@@ -197,15 +197,15 @@ export function BranchPrintSettingsTab() {
               {/* Template Assignment */}
               <div className="space-y-2">
                 <Label>Default Print Template</Label>
-                <Select 
-                  value={formData.default_template_id} 
-                  onValueChange={(val) => setFormData(prev => ({ ...prev, default_template_id: val }))}
+              <Select 
+                  value={formData.default_template_id || "__none__"} 
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, default_template_id: val === "__none__" ? "" : val }))}
                 >
                   <SelectTrigger className="w-full max-w-sm">
                     <SelectValue placeholder="Use client default" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Use Client Default</SelectItem>
+                    <SelectItem value="__none__">Use Client Default</SelectItem>
                     {templates.map(template => (
                       <SelectItem key={template.id} value={template.id}>
                         <div className="flex items-center gap-2">
