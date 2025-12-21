@@ -2291,6 +2291,7 @@ export type Database = {
           kyc_documents_copies: number
           language: string
           loan_receipt_copies: number
+          logo_url: string | null
           paper_size: string
           terms_conditions_copies: number
           updated_at: string | null
@@ -2316,6 +2317,7 @@ export type Database = {
           kyc_documents_copies?: number
           language?: string
           loan_receipt_copies?: number
+          logo_url?: string | null
           paper_size?: string
           terms_conditions_copies?: number
           updated_at?: string | null
@@ -2341,6 +2343,7 @@ export type Database = {
           kyc_documents_copies?: number
           language?: string
           loan_receipt_copies?: number
+          logo_url?: string | null
           paper_size?: string
           terms_conditions_copies?: number
           updated_at?: string | null

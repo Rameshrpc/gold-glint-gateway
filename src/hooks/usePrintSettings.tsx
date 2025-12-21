@@ -25,6 +25,7 @@ export interface PrintSettings {
   footer_tamil: string | null;
   company_slogan_english: string | null;
   company_slogan_tamil: string | null;
+  logo_url: string | null;
 }
 
 export interface PrintContentBlock {
@@ -57,6 +58,7 @@ const DEFAULT_SETTINGS: Omit<PrintSettings, 'id' | 'client_id'> = {
   footer_tamil: 'உங்கள் வணிகத்திற்கு நன்றி',
   company_slogan_english: null,
   company_slogan_tamil: null,
+  logo_url: null,
 };
 
 export function usePrintSettings() {

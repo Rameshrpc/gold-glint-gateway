@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from '@react-pdf/renderer';
+import { View, Text, Image } from '@react-pdf/renderer';
 import { pdfStyles, formatDatePrint } from './PDFStyles';
 import { BilingualLabel, LanguageMode } from '@/lib/bilingual-utils';
 
@@ -13,6 +13,7 @@ interface PDFHeaderProps {
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
   language?: LanguageMode;
+  logoUrl?: string | null;
 }
 
 export function PDFHeader({
@@ -25,9 +26,15 @@ export function PDFHeader({
   sloganEnglish,
   sloganTamil,
   language = 'bilingual',
+  logoUrl,
 }: PDFHeaderProps) {
   return (
     <View style={pdfStyles.header}>
+      {logoUrl && (
+        <View style={{ alignItems: 'center', marginBottom: 8 }}>
+          <Image src={logoUrl} style={{ width: 60, height: 60, objectFit: 'contain' }} />
+        </View>
+      )}
       <Text style={pdfStyles.headerCompanyName}>{companyName}</Text>
       
       {sloganEnglish && sloganTamil && (

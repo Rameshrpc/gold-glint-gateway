@@ -21,27 +21,35 @@ interface GoldItem {
 interface Redemption {
   redemption_number: string;
   redemption_date: string;
-  outstanding_principal: number;
-  interest_due: number;
-  penalty_amount: number;
-  rebate_amount: number;
-  total_settlement: number;
-  amount_received: number;
+  outstanding_principal?: number;
+  interest_due?: number;
+  penalty_amount?: number;
+  rebate_amount?: number;
+  total_settlement?: number;
+  amount_received?: number;
   payment_mode: string;
-  released_to: string;
+  released_to?: string;
 }
 
 interface Loan {
   loan_number: string;
-  loan_date: string;
+  loan_date?: string;
   principal_amount: number;
 }
 
 interface Customer {
   customer_code: string;
   full_name: string;
-  phone: string;
+  phone?: string;
   address?: string | null;
+}
+
+interface RedemptionBreakdown {
+  principal: number;
+  interest: number;
+  penalty: number;
+  rebate: number;
+  total: number;
 }
 
 interface RedemptionReceiptPDFProps {
@@ -49,6 +57,7 @@ interface RedemptionReceiptPDFProps {
   loan: Loan;
   customer: Customer;
   goldItems: GoldItem[];
+  breakdown?: RedemptionBreakdown;
   companyName: string;
   branchName?: string;
   language?: LanguageMode;
@@ -64,6 +73,7 @@ export function RedemptionReceiptPDF({
   loan,
   customer,
   goldItems,
+  breakdown,
   companyName,
   branchName,
   language = 'bilingual',
@@ -74,6 +84,13 @@ export function RedemptionReceiptPDF({
   sloganTamil,
 }: RedemptionReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
+  
+  // Use breakdown if provided, otherwise use redemption values
+  const principal = breakdown?.principal ?? redemption.outstanding_principal ?? 0;
+  const interest = breakdown?.interest ?? redemption.interest_due ?? 0;
+  const penalty = breakdown?.penalty ?? redemption.penalty_amount ?? 0;
+  const rebate = breakdown?.rebate ?? redemption.rebate_amount ?? 0;
+  const total = breakdown?.total ?? redemption.total_settlement ?? 0;
   
   const totalGrossWeight = goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0);
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
@@ -130,7 +147,7 @@ export function RedemptionReceiptPDF({
               <BilingualValueRow
                 labelEn="Phone"
                 labelTa="தொலைபேசி"
-                value={customer.phone}
+                value={customer.phone || '-'}
                 mode={language}
               />
             </View>
@@ -153,7 +170,7 @@ export function RedemptionReceiptPDF({
               <BilingualValueRow
                 labelEn="Loan Date"
                 labelTa="கடன் தேதி"
-                value={formatDatePrint(loan.loan_date)}
+                value={loan.loan_date ? formatDatePrint(loan.loan_date) : '-'}
                 mode={language}
               />
               <BilingualValueRow
@@ -220,31 +237,31 @@ export function RedemptionReceiptPDF({
           
           <View style={pdfStyles.amountRow}>
             <BilingualLabel english="Outstanding Principal" tamil="நிலுவை அசல்" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(redemption.outstanding_principal)}</Text>
+            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(principal)}</Text>
           </View>
           
           <View style={pdfStyles.amountRow}>
             <BilingualLabel english="Interest Due" tamil="நிலுவை வட்டி" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(redemption.interest_due)}</Text>
+            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(interest)}</Text>
           </View>
           
-          {redemption.penalty_amount > 0 && (
+          {penalty > 0 && (
             <View style={pdfStyles.amountRow}>
               <BilingualLabel english="Penalty Amount" tamil="அபராத தொகை" mode={language} fontSize={10} color="#c00" />
-              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>+ {formatCurrencyPrint(redemption.penalty_amount)}</Text>
+              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>+ {formatCurrencyPrint(penalty)}</Text>
             </View>
           )}
           
-          {redemption.rebate_amount > 0 && (
+          {rebate > 0 && (
             <View style={pdfStyles.amountRow}>
               <BilingualLabel english="Rebate (Early Closure)" tamil="தள்ளுபடி" mode={language} fontSize={10} color="#060" />
-              <Text style={[pdfStyles.amountValue, { color: '#060' }]}>- {formatCurrencyPrint(redemption.rebate_amount)}</Text>
+              <Text style={[pdfStyles.amountValue, { color: '#060' }]}>- {formatCurrencyPrint(rebate)}</Text>
             </View>
           )}
           
           <View style={pdfStyles.amountTotal}>
             <BilingualLabel english="Total Settlement" tamil="மொத்த தீர்வு" mode={language} fontSize={12} fontWeight="bold" />
-            <Text style={pdfStyles.amountTotalValue}>{formatCurrencyPrint(redemption.total_settlement)}</Text>
+            <Text style={pdfStyles.amountTotalValue}>{formatCurrencyPrint(total)}</Text>
           </View>
           
           <View style={{ marginTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -254,16 +271,18 @@ export function RedemptionReceiptPDF({
         </View>
         
         {/* Gold Release Confirmation */}
-        <View style={{ marginTop: 12, padding: 10, borderWidth: 1, borderColor: '#000', backgroundColor: '#f9f9f9' }}>
-          <BilingualLabel
-            english="Gold Released To"
-            tamil="தங்கம் வழங்கப்பட்டவர்"
-            mode={language}
-            fontSize={10}
-            fontWeight="bold"
-          />
-          <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>{redemption.released_to}</Text>
-        </View>
+        {redemption.released_to && (
+          <View style={{ marginTop: 12, padding: 10, borderWidth: 1, borderColor: '#000', backgroundColor: '#f9f9f9' }}>
+            <BilingualLabel
+              english="Gold Released To"
+              tamil="தங்கம் வழங்கப்பட்டவர்"
+              mode={language}
+              fontSize={10}
+              fontWeight="bold"
+            />
+            <Text style={{ fontSize: 11, fontWeight: 'bold', marginTop: 4 }}>{redemption.released_to}</Text>
+          </View>
+        )}
         
         {/* Signatures */}
         <PDFFooter
