@@ -49,6 +49,14 @@ import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
 import MobileCustomers from "./components/mobile/MobileCustomers";
 import MobileInterest from "./components/mobile/MobileInterest";
 import MobileRedemption from "./components/mobile/MobileRedemption";
+import MobileNewLoan from "./components/mobile/MobileNewLoan";
+import MobileReloan from "./components/mobile/MobileReloan";
+import MobileAuction from "./components/mobile/MobileAuction";
+import MobileSchemes from "./components/mobile/MobileSchemes";
+import MobileVouchers from "./components/mobile/MobileVouchers";
+import MobileSettings from "./components/mobile/MobileSettings";
+import MobileProfile from "./components/mobile/MobileProfile";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -74,7 +82,10 @@ const App = () => (
             } />
             <Route path="/profile" element={
               <ProtectedRoute>
-                <Profile />
+                <DeviceAwareWrapper 
+                  mobile={<MobileProfile />} 
+                  desktop={<Profile />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/customers" element={
@@ -110,6 +121,14 @@ const App = () => (
                 />
               </ProtectedRoute>
             } />
+            <Route path="/new-loan" element={
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileNewLoan />} 
+                  desktop={<Loans />} 
+                />
+              </ProtectedRoute>
+            } />
             
             {/* Mobile More Menu */}
             <Route path="/more" element={
@@ -119,7 +138,10 @@ const App = () => (
             } />
             <Route path="/schemes" element={
               <ProtectedRoute>
-                <Schemes />
+                <DeviceAwareWrapper 
+                  mobile={<MobileSchemes />} 
+                  desktop={<Schemes />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/interest" element={
@@ -140,7 +162,10 @@ const App = () => (
             } />
             <Route path="/reloan" element={
               <ProtectedRoute>
-                <Reloan />
+                <DeviceAwareWrapper 
+                  mobile={<MobileReloan />} 
+                  desktop={<Reloan />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/agents" element={
@@ -165,7 +190,10 @@ const App = () => (
             } />
             <Route path="/auction" element={
               <ProtectedRoute>
-                <Auction />
+                <DeviceAwareWrapper 
+                  mobile={<MobileAuction />} 
+                  desktop={<Auction />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/banks-nbfc" element={
@@ -218,7 +246,10 @@ const App = () => (
             } />
             <Route path="/vouchers" element={
               <ProtectedRoute>
-                <Vouchers />
+                <DeviceAwareWrapper 
+                  mobile={<MobileVouchers />} 
+                  desktop={<Vouchers />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/backfill-vouchers" element={
@@ -242,10 +273,12 @@ const App = () => (
               </ProtectedRoute>
             } />
             
-            {/* Configuration */}
             <Route path="/settings" element={
               <ProtectedRoute>
-                <Settings />
+                <DeviceAwareWrapper 
+                  mobile={<MobileSettings />} 
+                  desktop={<Settings />} 
+                />
               </ProtectedRoute>
             } />
 
