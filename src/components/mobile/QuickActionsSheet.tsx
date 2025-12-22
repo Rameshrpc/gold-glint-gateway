@@ -8,7 +8,7 @@ interface QuickActionsSheetProps {
 }
 
 const quickActions = [
-  { icon: FileText, label: 'New Loan', path: '/loans', color: 'bg-blue-500' },
+  { icon: FileText, label: 'New Loan', path: '/new-loan', color: 'bg-blue-500' },
   { icon: Banknote, label: 'Collect Interest', path: '/interest', color: 'bg-green-500' },
   { icon: Award, label: 'Redeem Loan', path: '/redemption', color: 'bg-amber-500' },
   { icon: RefreshCw, label: 'Reloan', path: '/reloan', color: 'bg-purple-500' },

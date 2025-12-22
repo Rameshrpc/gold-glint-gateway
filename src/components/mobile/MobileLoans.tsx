@@ -6,6 +6,7 @@ import { Search, Plus, Loader2, X } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
 import LoanCard from './LoanCard';
+import MobilePrintSheet from './sheets/MobilePrintSheet';
 import { cn } from '@/lib/utils';
 
 type FilterType = 'all' | 'active' | 'closed' | 'overdue';
@@ -36,6 +37,7 @@ export default function MobileLoans() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterType>('active');
   const [showSearch, setShowSearch] = useState(false);
+  const [printLoanId, setPrintLoanId] = useState<string | null>(null);
 
   const filters: { key: FilterType; label: string; count?: number }[] = [
     { key: 'all', label: 'All', count: loans.length },
@@ -207,6 +209,7 @@ export default function MobileLoans() {
                   onClick={() => navigate(`/loans?id=${loan.id}`)}
                   onInterestClick={() => navigate(`/interest?loan=${loan.loan_number}`)}
                   onRedeemClick={() => navigate(`/redemption?loan=${loan.loan_number}`)}
+                  onPrintClick={() => setPrintLoanId(loan.id)}
                 />
               </div>
             ))
@@ -219,11 +222,20 @@ export default function MobileLoans() {
 
       {/* FAB for new loan */}
       <button
-        onClick={() => navigate('/loans')}
+        onClick={() => navigate('/new-loan')}
         className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
       >
         <Plus className="w-6 h-6" />
       </button>
+
+      {/* Print Sheet */}
+      {printLoanId && (
+        <MobilePrintSheet
+          open={!!printLoanId}
+          onOpenChange={(open) => !open && setPrintLoanId(null)}
+          loanId={printLoanId}
+        />
+      )}
     </MobileLayout>
   );
 }
