@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +6,11 @@ import { Award, Calendar, Scale, Banknote, CheckCircle2 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
+import PullToRefreshContainer from './PullToRefreshContainer';
 import { MobileSearchBar, MobileBottomSheet, MobileDataCard } from './shared';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { vibrateLight } from '@/lib/haptics';
 
 interface LoanForRedemption {
   id: string;
@@ -40,11 +42,7 @@ export default function MobileRedemption() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLoan, setSelectedLoan] = useState<LoanForRedemption | null>(null);
 
-  useEffect(() => {
-    fetchLoans();
-  }, [profile?.client_id]);
-
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     if (!profile?.client_id) return;
 
     try {
@@ -83,7 +81,16 @@ export default function MobileRedemption() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profile?.client_id]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchLoans();
+  }, [fetchLoans]);
 
   useEffect(() => {
     let filtered = [...loans];
@@ -104,7 +111,7 @@ export default function MobileRedemption() {
     <MobileLayout>
       <MobileGradientHeader title="Redemption" variant="minimal" />
 
-      <div className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Summary Card */}
         <div className="gradient-gold rounded-2xl p-4 text-white shadow-mobile-lg">
           <div className="flex items-center gap-3 mb-3">
@@ -190,7 +197,7 @@ export default function MobileRedemption() {
 
         {/* Bottom spacer */}
         <div className="h-20" />
-      </div>
+      </PullToRefreshContainer>
 
       {/* Redemption Sheet */}
       <MobileBottomSheet

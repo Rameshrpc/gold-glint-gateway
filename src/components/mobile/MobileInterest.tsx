@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,9 +6,12 @@ import { Banknote, Calendar, AlertTriangle, Clock, CheckCircle } from 'lucide-re
 import { format, differenceInDays, isPast, addDays } from 'date-fns';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
+import PullToRefreshContainer from './PullToRefreshContainer';
+import LoadingButton from './LoadingButton';
 import { MobileSearchBar, MobileBottomSheet, MobileDataCard, MobileFormField, MobileSelectField } from './shared';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { vibrateLight } from '@/lib/haptics';
 
 interface LoanWithInterest {
   id: string;
@@ -44,11 +47,7 @@ export default function MobileInterest() {
     { key: 'due-soon', label: 'Due Soon', count: loans.filter(l => l.urgency === 'due-soon').length },
   ];
 
-  useEffect(() => {
-    fetchLoans();
-  }, [profile?.client_id]);
-
-  const fetchLoans = async () => {
+  const fetchLoans = useCallback(async () => {
     if (!profile?.client_id) return;
 
     try {
@@ -99,7 +98,16 @@ export default function MobileInterest() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profile?.client_id]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchLoans();
+  }, [fetchLoans]);
 
   useEffect(() => {
     let filtered = [...loans];
@@ -137,7 +145,7 @@ export default function MobileInterest() {
     <MobileLayout>
       <MobileGradientHeader title="Interest Collection" variant="minimal" />
 
-      <div className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Stats Summary */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800">
@@ -244,7 +252,7 @@ export default function MobileInterest() {
 
         {/* Bottom spacer */}
         <div className="h-20" />
-      </div>
+      </PullToRefreshContainer>
 
       {/* Collection Sheet */}
       <MobileBottomSheet

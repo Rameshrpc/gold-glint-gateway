@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +21,9 @@ import {
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
+import PullToRefreshContainer from './PullToRefreshContainer';
 import { cn } from '@/lib/utils';
+import { vibrateLight } from '@/lib/haptics';
 
 interface DashboardStats {
   totalCustomers: number;
@@ -66,89 +68,94 @@ export default function MobileDashboard() {
   }, [profile?.client_id, autoSync]);
 
   // Fetch dashboard stats and recent activity
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!profile?.client_id) return;
+  const fetchData = useCallback(async () => {
+    if (!profile?.client_id) return;
 
-      try {
-        const [customersRes, loansRes, interestRes, recentLoansRes, recentInterestRes] = await Promise.all([
-          supabase
-            .from('customers')
-            .select('id', { count: 'exact' })
-            .eq('client_id', profile.client_id)
-            .eq('is_active', true),
-          supabase
-            .from('loans')
-            .select('id, principal_amount, status')
-            .eq('client_id', profile.client_id),
-          supabase
-            .from('interest_payments')
-            .select('amount_paid')
-            .eq('client_id', profile.client_id),
-          // Recent loans with customer info
-          supabase
-            .from('loans')
-            .select('id, loan_number, principal_amount, loan_date, customer:customers(full_name)')
-            .eq('client_id', profile.client_id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-          // Recent interest payments
-          supabase
-            .from('interest_payments')
-            .select('id, receipt_number, amount_paid, payment_date, loan:loans(loan_number, customer:customers(full_name))')
-            .eq('client_id', profile.client_id)
-            .order('created_at', { ascending: false })
-            .limit(5),
-        ]);
+    try {
+      const [customersRes, loansRes, interestRes, recentLoansRes, recentInterestRes] = await Promise.all([
+        supabase
+          .from('customers')
+          .select('id', { count: 'exact' })
+          .eq('client_id', profile.client_id)
+          .eq('is_active', true),
+        supabase
+          .from('loans')
+          .select('id, principal_amount, status')
+          .eq('client_id', profile.client_id),
+        supabase
+          .from('interest_payments')
+          .select('amount_paid')
+          .eq('client_id', profile.client_id),
+        // Recent loans with customer info
+        supabase
+          .from('loans')
+          .select('id, loan_number, principal_amount, loan_date, customer:customers(full_name)')
+          .eq('client_id', profile.client_id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+        // Recent interest payments
+        supabase
+          .from('interest_payments')
+          .select('id, receipt_number, amount_paid, payment_date, loan:loans(loan_number, customer:customers(full_name))')
+          .eq('client_id', profile.client_id)
+          .order('created_at', { ascending: false })
+          .limit(5),
+      ]);
 
-        const activeLoans = loansRes.data?.filter(l => l.status === 'active') || [];
-        const totalDisbursed = activeLoans.reduce((sum, l) => sum + (l.principal_amount || 0), 0);
-        const interestCollected = interestRes.data?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
+      const activeLoans = loansRes.data?.filter(l => l.status === 'active') || [];
+      const totalDisbursed = activeLoans.reduce((sum, l) => sum + (l.principal_amount || 0), 0);
+      const interestCollected = interestRes.data?.reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
 
-        setStats({
-          totalCustomers: customersRes.count || 0,
-          activeLoans: activeLoans.length,
-          totalDisbursed,
-          interestCollected,
+      setStats({
+        totalCustomers: customersRes.count || 0,
+        activeLoans: activeLoans.length,
+        totalDisbursed,
+        interestCollected,
+      });
+
+      // Combine and sort recent activity
+      const activities: RecentActivity[] = [];
+      
+      recentLoansRes.data?.forEach(loan => {
+        activities.push({
+          id: loan.id,
+          type: 'loan',
+          amount: loan.principal_amount,
+          description: `New Loan ${loan.loan_number}`,
+          date: loan.loan_date,
+          customerName: (loan.customer as any)?.full_name,
         });
+      });
 
-        // Combine and sort recent activity
-        const activities: RecentActivity[] = [];
-        
-        recentLoansRes.data?.forEach(loan => {
-          activities.push({
-            id: loan.id,
-            type: 'loan',
-            amount: loan.principal_amount,
-            description: `New Loan ${loan.loan_number}`,
-            date: loan.loan_date,
-            customerName: (loan.customer as any)?.full_name,
-          });
+      recentInterestRes.data?.forEach(payment => {
+        activities.push({
+          id: payment.id,
+          type: 'interest',
+          amount: payment.amount_paid,
+          description: `Interest ${payment.receipt_number}`,
+          date: payment.payment_date,
+          customerName: (payment.loan as any)?.customer?.full_name,
         });
+      });
 
-        recentInterestRes.data?.forEach(payment => {
-          activities.push({
-            id: payment.id,
-            type: 'interest',
-            amount: payment.amount_paid,
-            description: `Interest ${payment.receipt_number}`,
-            date: payment.payment_date,
-            customerName: (payment.loan as any)?.customer?.full_name,
-          });
-        });
-
-        // Sort by date descending and take top 5
-        activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setRecentActivity(activities.slice(0, 5));
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
+      // Sort by date descending and take top 5
+      activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setRecentActivity(activities.slice(0, 5));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [profile?.client_id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchData();
+  }, [fetchData]);
 
   const quickActions = [
     { icon: FileText, label: 'New Loan', path: '/new-loan', gradient: 'from-blue-500 to-blue-600' },
@@ -190,9 +197,9 @@ export default function MobileDashboard() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader showSearch onSearchClick={() => navigate('/loans')} />
+      <MobileGradientHeader showSearch onSearchClick={() => { vibrateLight(); navigate('/loans'); }} />
 
-      <div className="px-4 -mt-2 space-y-6 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 -mt-2 space-y-6 animate-fade-in">
         {/* Hero Balance Card */}
         <div className="relative overflow-hidden rounded-3xl glass shadow-mobile-lg border border-border/50">
           {/* Background decoration */}
@@ -247,7 +254,7 @@ export default function MobileDashboard() {
             {quickActions.map((action, index) => (
               <button
                 key={action.path}
-                onClick={() => navigate(action.path)}
+                onClick={() => { vibrateLight(); navigate(action.path); }}
                 className="flex flex-col items-center gap-2 tap-scale animate-slide-up-fade"
                 style={{ animationDelay: `${index * 75}ms` }}
               >
@@ -357,7 +364,7 @@ export default function MobileDashboard() {
 
         {/* Bottom spacer */}
         <div className="h-4" />
-      </div>
+      </PullToRefreshContainer>
     </MobileLayout>
   );
 }
