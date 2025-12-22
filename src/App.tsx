@@ -46,6 +46,9 @@ import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
 import MobileDashboard from "./components/mobile/MobileDashboard";
 import MobileLoans from "./components/mobile/MobileLoans";
 import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
+import MobileCustomers from "./components/mobile/MobileCustomers";
+import MobileInterest from "./components/mobile/MobileInterest";
+import MobileRedemption from "./components/mobile/MobileRedemption";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -76,7 +79,10 @@ const App = () => (
             } />
             <Route path="/customers" element={
               <ProtectedRoute>
-                <Customers />
+                <DeviceAwareWrapper 
+                  mobile={<MobileCustomers />} 
+                  desktop={<Customers />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/branches" element={
@@ -118,12 +124,18 @@ const App = () => (
             } />
             <Route path="/interest" element={
               <ProtectedRoute>
-                <Interest />
+                <DeviceAwareWrapper 
+                  mobile={<MobileInterest />} 
+                  desktop={<Interest />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/redemption" element={
               <ProtectedRoute>
-                <Redemption />
+                <DeviceAwareWrapper 
+                  mobile={<MobileRedemption />} 
+                  desktop={<Redemption />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/reloan" element={
