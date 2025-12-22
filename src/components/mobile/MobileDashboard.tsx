@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useBackfillVouchers } from '@/hooks/useBackfillVouchers';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 import { 
   FileText, 
   Banknote, 
@@ -14,7 +15,9 @@ import {
   Wallet,
   Activity,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
+  Plus,
+  Minus
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
@@ -25,6 +28,15 @@ interface DashboardStats {
   activeLoans: number;
   totalDisbursed: number;
   interestCollected: number;
+}
+
+interface RecentActivity {
+  id: string;
+  type: 'loan' | 'interest' | 'redemption';
+  amount: number;
+  description: string;
+  date: string;
+  customerName?: string;
 }
 
 export default function MobileDashboard() {
@@ -38,6 +50,7 @@ export default function MobileDashboard() {
     totalDisbursed: 0,
     interestCollected: 0,
   });
+  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Auto-sync vouchers on mount
@@ -52,13 +65,13 @@ export default function MobileDashboard() {
     }
   }, [profile?.client_id, autoSync]);
 
-  // Fetch dashboard stats
+  // Fetch dashboard stats and recent activity
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       if (!profile?.client_id) return;
 
       try {
-        const [customersRes, loansRes, interestRes] = await Promise.all([
+        const [customersRes, loansRes, interestRes, recentLoansRes, recentInterestRes] = await Promise.all([
           supabase
             .from('customers')
             .select('id', { count: 'exact' })
@@ -72,6 +85,20 @@ export default function MobileDashboard() {
             .from('interest_payments')
             .select('amount_paid')
             .eq('client_id', profile.client_id),
+          // Recent loans with customer info
+          supabase
+            .from('loans')
+            .select('id, loan_number, principal_amount, loan_date, customer:customers(full_name)')
+            .eq('client_id', profile.client_id)
+            .order('created_at', { ascending: false })
+            .limit(5),
+          // Recent interest payments
+          supabase
+            .from('interest_payments')
+            .select('id, receipt_number, amount_paid, payment_date, loan:loans(loan_number, customer:customers(full_name))')
+            .eq('client_id', profile.client_id)
+            .order('created_at', { ascending: false })
+            .limit(5),
         ]);
 
         const activeLoans = loansRes.data?.filter(l => l.status === 'active') || [];
@@ -84,14 +111,43 @@ export default function MobileDashboard() {
           totalDisbursed,
           interestCollected,
         });
+
+        // Combine and sort recent activity
+        const activities: RecentActivity[] = [];
+        
+        recentLoansRes.data?.forEach(loan => {
+          activities.push({
+            id: loan.id,
+            type: 'loan',
+            amount: loan.principal_amount,
+            description: `New Loan ${loan.loan_number}`,
+            date: loan.loan_date,
+            customerName: (loan.customer as any)?.full_name,
+          });
+        });
+
+        recentInterestRes.data?.forEach(payment => {
+          activities.push({
+            id: payment.id,
+            type: 'interest',
+            amount: payment.amount_paid,
+            description: `Interest ${payment.receipt_number}`,
+            date: payment.payment_date,
+            customerName: (payment.loan as any)?.customer?.full_name,
+          });
+        });
+
+        // Sort by date descending and take top 5
+        activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setRecentActivity(activities.slice(0, 5));
       } catch (error) {
-        console.error('Error fetching stats:', error);
+        console.error('Error fetching data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchStats();
+    fetchData();
   }, [profile?.client_id]);
 
   const quickActions = [
@@ -246,18 +302,55 @@ export default function MobileDashboard() {
               <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-2">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => (
                 <div key={i} className="h-16 rounded-2xl shimmer" />
               ))
-            ) : (
+            ) : recentActivity.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl bg-muted/30 border border-border/50">
                 <Activity className="w-10 h-10 text-muted-foreground/40 mb-2" />
                 <p className="text-sm text-muted-foreground">
                   Recent transactions will appear here
                 </p>
               </div>
+            ) : (
+              recentActivity.map((activity, index) => (
+                <div
+                  key={activity.id}
+                  className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/50 shadow-mobile-sm animate-slide-up-fade"
+                  style={{ animationDelay: `${index * 50 + 400}ms` }}
+                >
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    activity.type === 'loan' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                    activity.type === 'interest' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
+                    'bg-amber-100 dark:bg-amber-900/30'
+                  )}>
+                    {activity.type === 'loan' ? (
+                      <ArrowDownRight className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    ) : activity.type === 'interest' ? (
+                      <Plus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{activity.description}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {activity.customerName || 'Customer'} • {format(new Date(activity.date), 'dd MMM')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className={cn(
+                      "text-sm font-semibold",
+                      activity.type === 'loan' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'
+                    )}>
+                      {activity.type === 'loan' ? '-' : '+'}₹{(activity.amount / 1000).toFixed(1)}K
+                    </p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
