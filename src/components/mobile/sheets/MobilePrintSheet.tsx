@@ -9,6 +9,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 import { LoanReceiptPDF } from '@/components/print/documents/LoanReceiptPDF';
@@ -59,23 +60,31 @@ interface Loan {
   jewel_photo_url?: string | null;
 }
 
-interface MobilePrintSheetProps {
+// Support both direct data and loanId (for fetching)
+interface MobilePrintSheetPropsWithData {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loan: Loan;
   customer: Customer;
   goldItems: GoldItem[];
+  loanId?: never;
 }
+
+interface MobilePrintSheetPropsWithId {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  loanId: string;
+  loan?: never;
+  customer?: never;
+  goldItems?: never;
+}
+
+export type MobilePrintSheetProps = MobilePrintSheetPropsWithData | MobilePrintSheetPropsWithId;
 
 type DocumentType = 'loanReceipt' | 'goldDeclaration' | 'termsConditions' | 'kycDocuments' | 'jewelImage';
 
-export default function MobilePrintSheet({
-  open,
-  onOpenChange,
-  loan,
-  customer,
-  goldItems,
-}: MobilePrintSheetProps) {
+export default function MobilePrintSheet(props: MobilePrintSheetProps) {
+  const { open, onOpenChange } = props;
   const { client, currentBranch } = useAuth();
   const { getBlocksByType } = usePrintSettings();
   const { settings: effectiveSettings } = useEffectivePrintSettings(currentBranch?.id);
@@ -83,6 +92,51 @@ export default function MobilePrintSheet({
   
   const [generating, setGenerating] = useState(false);
   const [selectedDocs, setSelectedDocs] = useState<Set<DocumentType>>(new Set(['loanReceipt', 'goldDeclaration']));
+  const [fetchedData, setFetchedData] = useState<{ loan: Loan; customer: Customer; goldItems: GoldItem[] } | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Determine data source
+  const hasDirectData = 'loan' in props && props.loan;
+  const loan = hasDirectData ? props.loan : fetchedData?.loan;
+  const customer = hasDirectData ? props.customer : fetchedData?.customer;
+  const goldItems = hasDirectData ? props.goldItems : fetchedData?.goldItems || [];
+
+  // Fetch data if loanId is provided
+  useEffect(() => {
+    if ('loanId' in props && props.loanId && open) {
+      const fetchLoanData = async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('loans')
+            .select(`
+              id, loan_number, loan_date, maturity_date, principal_amount, interest_rate,
+              tenure_days, processing_fee, document_charges, net_disbursed, shown_principal,
+              advance_interest_shown, jewel_photo_url,
+              customer:customers(id, customer_code, full_name, phone, address, city, state, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url),
+              gold_items(id, item_type, description, gross_weight_grams, net_weight_grams, purity, purity_percentage, appraised_value, image_url)
+            `)
+            .eq('id', props.loanId)
+            .single();
+
+          if (error) throw error;
+          if (data) {
+            setFetchedData({
+              loan: data as unknown as Loan,
+              customer: data.customer as unknown as Customer,
+              goldItems: (data.gold_items || []) as unknown as GoldItem[],
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch loan data:', error);
+          toast.error('Failed to load loan data');
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchLoanData();
+    }
+  }, [props, open]);
 
   const documents: { key: DocumentType; label: string; sublabel: string; disabled?: boolean }[] = [
     { key: 'loanReceipt', label: 'Loan Receipt', sublabel: 'Principal & items details' },
