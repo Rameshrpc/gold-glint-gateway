@@ -1,4 +1,4 @@
-import { Phone, Calendar, Banknote, Award, ChevronRight } from 'lucide-react';
+import { Phone, Calendar, Banknote, Award, ChevronRight, Printer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, differenceInDays, isPast } from 'date-fns';
 
@@ -22,9 +22,10 @@ interface LoanCardProps {
   onClick: () => void;
   onInterestClick?: () => void;
   onRedeemClick?: () => void;
+  onPrintClick?: () => void;
 }
 
-export default function LoanCard({ loan, onClick, onInterestClick, onRedeemClick }: LoanCardProps) {
+export default function LoanCard({ loan, onClick, onInterestClick, onRedeemClick, onPrintClick }: LoanCardProps) {
   const totalGold = loan.gold_items?.reduce((sum, item) => sum + item.net_weight_grams, 0) || 0;
   const isOverdue = loan.status === 'active' && isPast(new Date(loan.maturity_date));
   const daysRemaining = differenceInDays(new Date(loan.maturity_date), new Date());
@@ -170,10 +171,20 @@ export default function LoanCard({ loan, onClick, onInterestClick, onRedeemClick
               e.stopPropagation();
               onRedeemClick?.();
             }}
-            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors tap-scale"
+            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors tap-scale border-r border-border"
           >
             <Award className="w-4 h-4" />
             Redeem
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPrintClick?.();
+            }}
+            className="flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors tap-scale"
+          >
+            <Printer className="w-4 h-4" />
+            Print
           </button>
         </div>
       )}
