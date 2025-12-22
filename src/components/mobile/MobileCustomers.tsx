@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Phone, Plus, User, MapPin, Mail } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
+import PullToRefreshContainer from './PullToRefreshContainer';
 import { MobileSearchBar, MobileBottomSheet, MobileDataCard, MobileFormField } from './shared';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { vibrateLight } from '@/lib/haptics';
 
 interface Customer {
   id: string;
@@ -38,11 +40,7 @@ export default function MobileCustomers() {
     { key: 'inactive', label: 'Inactive', count: customers.filter(c => !c.is_active).length },
   ];
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [profile?.client_id]);
-
-  const fetchCustomers = async () => {
+  const fetchCustomers = useCallback(async () => {
     if (!profile?.client_id) return;
 
     try {
@@ -61,7 +59,16 @@ export default function MobileCustomers() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [profile?.client_id]);
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [fetchCustomers]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchCustomers();
+  }, [fetchCustomers]);
 
   useEffect(() => {
     let filtered = [...customers];
@@ -89,7 +96,7 @@ export default function MobileCustomers() {
     <MobileLayout>
       <MobileGradientHeader title="Customers" variant="minimal" />
 
-      <div className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Search and Filters */}
         <MobileSearchBar
           value={searchQuery}
@@ -164,11 +171,11 @@ export default function MobileCustomers() {
 
         {/* Bottom spacer */}
         <div className="h-20" />
-      </div>
+      </PullToRefreshContainer>
 
       {/* FAB for new customer */}
       <button
-        onClick={() => setShowAddSheet(true)}
+        onClick={() => { vibrateLight(); setShowAddSheet(true); }}
         className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
       >
         <Plus className="w-6 h-6" />

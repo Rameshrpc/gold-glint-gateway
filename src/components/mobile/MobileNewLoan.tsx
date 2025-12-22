@@ -13,6 +13,9 @@ import { Label } from '@/components/ui/label';
 import MobileLayout from './MobileLayout';
 import MobileBottomSheet from './shared/MobileBottomSheet';
 import MobilePrintSheet from './sheets/MobilePrintSheet';
+import SuccessAnimation from './SuccessAnimation';
+import LoadingButton from './LoadingButton';
+import { vibrateLight, vibrateSuccess } from '@/lib/haptics';
 
 interface Customer {
   id: string;
@@ -100,6 +103,7 @@ export default function MobileNewLoan() {
   });
   
   const [showPrintSheet, setShowPrintSheet] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const [createdLoan, setCreatedLoan] = useState<any>(null);
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
@@ -268,9 +272,9 @@ export default function MobileNewLoan() {
       }));
 
       await supabase.from('gold_items').insert(goldItemsData);
-      toast.success('Loan created!');
+      vibrateSuccess();
       setCreatedLoan({ ...loan, customer: selectedCustomer, goldItems: goldItemsData });
-      setShowPrintSheet(true);
+      setShowSuccess(true);
     } catch (error: any) {
       toast.error(error.message || 'Failed to create loan');
     } finally {
@@ -371,9 +375,9 @@ export default function MobileNewLoan() {
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t safe-area-inset-bottom">
         {currentStep === 'confirm' ? (
-          <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full py-6 gradient-gold text-white text-lg">{isSubmitting ? 'Creating...' : 'Create Loan'}</Button>
+          <LoadingButton onClick={handleSubmit} isLoading={isSubmitting} loadingText="Creating..." className="w-full py-6 gradient-gold text-white text-lg">Create Loan</LoadingButton>
         ) : (
-          <Button onClick={goNext} disabled={!canGoNext()} className="w-full py-6 gradient-gold text-white">Continue<ChevronRight className="w-5 h-5 ml-2" /></Button>
+          <Button onClick={() => { vibrateLight(); goNext(); }} disabled={!canGoNext()} className="w-full py-6 gradient-gold text-white">Continue<ChevronRight className="w-5 h-5 ml-2" /></Button>
         )}
       </div>
 
@@ -394,6 +398,12 @@ export default function MobileNewLoan() {
           <Button onClick={addGoldItem} className="w-full">Add Item</Button>
         </div>
       </MobileBottomSheet>
+
+      <SuccessAnimation 
+        isVisible={showSuccess} 
+        message="Loan Created Successfully!" 
+        onComplete={() => { setShowSuccess(false); setShowPrintSheet(true); }} 
+      />
 
       {createdLoan && (
         <MobilePrintSheet open={showPrintSheet} onOpenChange={(open) => { if (!open) navigate('/loans'); else setShowPrintSheet(open); }}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +7,9 @@ import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
 import LoanCard from './LoanCard';
 import MobilePrintSheet from './sheets/MobilePrintSheet';
+import PullToRefreshContainer from './PullToRefreshContainer';
 import { cn } from '@/lib/utils';
+import { vibrateLight } from '@/lib/haptics';
 
 type FilterType = 'all' | 'active' | 'closed' | 'overdue';
 
@@ -46,39 +48,44 @@ export default function MobileLoans() {
     { key: 'closed', label: 'Closed', count: loans.filter(l => l.status === 'closed').length },
   ];
 
-  useEffect(() => {
-    const fetchLoans = async () => {
-      if (!profile?.client_id) return;
+  const fetchLoans = useCallback(async () => {
+    if (!profile?.client_id) return;
 
-      try {
-        const { data, error } = await supabase
-          .from('loans')
-          .select(`
-            id,
-            loan_number,
-            principal_amount,
-            status,
-            loan_date,
-            maturity_date,
-            interest_rate,
-            customer:customers(full_name, phone),
-            gold_items(net_weight_grams)
-          `)
-          .eq('client_id', profile.client_id)
-          .order('created_at', { ascending: false })
-          .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from('loans')
+        .select(`
+          id,
+          loan_number,
+          principal_amount,
+          status,
+          loan_date,
+          maturity_date,
+          interest_rate,
+          customer:customers(full_name, phone),
+          gold_items(net_weight_grams)
+        `)
+        .eq('client_id', profile.client_id)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-        if (error) throw error;
-        setLoans(data || []);
-      } catch (error) {
-        console.error('Error fetching loans:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchLoans();
+      if (error) throw error;
+      setLoans(data || []);
+    } catch (error) {
+      console.error('Error fetching loans:', error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [profile?.client_id]);
+
+  useEffect(() => {
+    fetchLoans();
+  }, [fetchLoans]);
+
+  const handleRefresh = useCallback(async () => {
+    setIsLoading(true);
+    await fetchLoans();
+  }, [fetchLoans]);
 
   useEffect(() => {
     let filtered = [...loans];
@@ -113,10 +120,10 @@ export default function MobileLoans() {
         title="Loans" 
         variant="minimal"
         showSearch 
-        onSearchClick={() => setShowSearch(!showSearch)} 
+        onSearchClick={() => { vibrateLight(); setShowSearch(!showSearch); }} 
       />
 
-      <div className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Search Bar */}
         {showSearch && (
           <div className="relative animate-slide-down">
@@ -145,7 +152,7 @@ export default function MobileLoans() {
           {filters.map((filter, index) => (
             <button
               key={filter.key}
-              onClick={() => setActiveFilter(filter.key)}
+              onClick={() => { vibrateLight(); setActiveFilter(filter.key); }}
               className={cn(
                 "relative flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 tap-scale animate-slide-up-fade",
                 activeFilter === filter.key
@@ -191,7 +198,7 @@ export default function MobileLoans() {
                 {searchQuery ? 'Try a different search term' : 'Create your first loan to get started'}
               </p>
               <button
-                onClick={() => navigate('/loans')}
+                onClick={() => { vibrateLight(); navigate('/new-loan'); }}
                 className="px-6 py-3 rounded-full gradient-gold text-white font-medium shadow-mobile-md tap-scale"
               >
                 Create New Loan
@@ -218,11 +225,11 @@ export default function MobileLoans() {
 
         {/* Bottom spacer */}
         <div className="h-20" />
-      </div>
+      </PullToRefreshContainer>
 
       {/* FAB for new loan */}
       <button
-        onClick={() => navigate('/new-loan')}
+        onClick={() => { vibrateLight(); navigate('/new-loan'); }}
         className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
       >
         <Plus className="w-6 h-6" />
