@@ -2,15 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Award, Calendar, Scale, Banknote, CheckCircle2 } from 'lucide-react';
+import { Award, Calendar, Scale, Banknote, CheckCircle2, Printer } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
-import { MobileSearchBar, MobileBottomSheet, MobileDataCard } from './shared';
+import LoadingButton from './LoadingButton';
+import SuccessAnimation from './SuccessAnimation';
+import { MobileSearchBar, MobileBottomSheet, MobileDataCard, MobileSelectField } from './shared';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { vibrateLight } from '@/lib/haptics';
+import { vibrateLight, vibrateSuccess } from '@/lib/haptics';
+import { generateRedemptionVoucher } from '@/hooks/useVoucherGeneration';
 
 interface LoanForRedemption {
   id: string;
@@ -20,6 +23,7 @@ interface LoanForRedemption {
   loan_date: string;
   maturity_date: string;
   last_interest_paid_date: string | null;
+  branch_id: string;
   customer: {
     full_name: string;
     phone: string;
@@ -31,6 +35,7 @@ interface LoanForRedemption {
   totalGold: number;
   interestDue: number;
   totalDue: number;
+  daysSincePayment: number;
 }
 
 export default function MobileRedemption() {
@@ -41,6 +46,11 @@ export default function MobileRedemption() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLoan, setSelectedLoan] = useState<LoanForRedemption | null>(null);
+  const [paymentMode, setPaymentMode] = useState('cash');
+  const [goldVerified, setGoldVerified] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [lastReceiptNumber, setLastReceiptNumber] = useState<string | null>(null);
 
   const fetchLoans = useCallback(async () => {
     if (!profile?.client_id) return;
@@ -49,7 +59,7 @@ export default function MobileRedemption() {
       const { data, error } = await supabase
         .from('loans')
         .select(`
-          id, loan_number, principal_amount, interest_rate, loan_date, maturity_date, last_interest_paid_date,
+          id, loan_number, principal_amount, interest_rate, loan_date, maturity_date, last_interest_paid_date, branch_id,
           customer:customers(full_name, phone),
           gold_items(net_weight_grams, item_type)
         `)
@@ -71,6 +81,7 @@ export default function MobileRedemption() {
           totalGold,
           interestDue,
           totalDue: loan.principal_amount + interestDue,
+          daysSincePayment,
         };
       });
 
@@ -107,8 +118,114 @@ export default function MobileRedemption() {
     setFilteredLoans(filtered);
   }, [loans, searchQuery]);
 
+  // Generate receipt number
+  const generateReceiptNumber = async (): Promise<string> => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `RDM-${timestamp}-${random}`;
+  };
+
+  // Handle redemption
+  const handleRedeem = async () => {
+    if (!selectedLoan || !profile?.client_id) return;
+
+    if (!goldVerified) {
+      toast.error('Please verify gold release before proceeding');
+      return;
+    }
+
+    setIsSubmitting(true);
+    vibrateLight();
+
+    try {
+      const receiptNumber = await generateReceiptNumber();
+      const today = format(new Date(), 'yyyy-MM-dd');
+
+      // Update loan status to closed
+      const { error: loanError } = await supabase
+        .from('loans')
+        .update({
+          status: 'closed',
+          closed_date: today,
+          closure_type: 'redeemed',
+        })
+        .eq('id', selectedLoan.id);
+
+      if (loanError) throw loanError;
+
+      // Create interest payment for final interest (if any)
+      if (selectedLoan.interestDue > 0) {
+        const { error: interestError } = await supabase
+          .from('interest_payments')
+          .insert({
+            client_id: profile.client_id,
+            branch_id: selectedLoan.branch_id,
+            loan_id: selectedLoan.id,
+            receipt_number: `${receiptNumber}-INT`,
+            payment_date: today,
+            amount_paid: selectedLoan.interestDue,
+            shown_interest: selectedLoan.interestDue,
+            actual_interest: selectedLoan.interestDue,
+            days_covered: selectedLoan.daysSincePayment,
+            period_from: selectedLoan.last_interest_paid_date || selectedLoan.loan_date,
+            period_to: today,
+            overdue_days: 0,
+            penalty_amount: 0,
+            payment_mode: paymentMode,
+            collected_by: profile.id,
+          });
+
+        if (interestError) throw interestError;
+      }
+
+      // Generate redemption voucher
+      await generateRedemptionVoucher({
+        clientId: profile.client_id,
+        branchId: selectedLoan.branch_id,
+        redemptionId: selectedLoan.id,
+        loanNumber: selectedLoan.loan_number,
+        amountReceived: selectedLoan.totalDue,
+        principalAmount: selectedLoan.principal_amount,
+        interestDue: selectedLoan.interestDue,
+        penaltyAmount: 0,
+        rebateAmount: 0,
+      });
+
+      vibrateSuccess();
+      setLastReceiptNumber(receiptNumber);
+      setShowSuccess(true);
+    } catch (error: any) {
+      console.error('Error processing redemption:', error);
+      toast.error(error.message || 'Failed to process redemption');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSuccessComplete = () => {
+    setShowSuccess(false);
+    setSelectedLoan(null);
+    setGoldVerified(false);
+    setPaymentMode('cash');
+    fetchLoans(); // Refresh the list
+    toast.success(`Loan redeemed! Receipt: ${lastReceiptNumber}`);
+  };
+
+  // Render success animation as overlay
+  const renderSuccessOverlay = () => {
+    if (!showSuccess) return null;
+    return (
+      <SuccessAnimation
+        isVisible={showSuccess}
+        message={`Loan Redeemed! Gold Released. Receipt: ${lastReceiptNumber}`}
+        onComplete={handleSuccessComplete}
+      />
+    );
+  };
+
   return (
     <MobileLayout>
+      {renderSuccessOverlay()}
       <MobileGradientHeader title="Redemption" variant="minimal" />
 
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
@@ -180,7 +297,10 @@ export default function MobileRedemption() {
                     {
                       label: 'Redeem',
                       icon: <Award className="w-4 h-4" />,
-                      onClick: () => setSelectedLoan(loan),
+                      onClick: () => {
+                        vibrateLight();
+                        setSelectedLoan(loan);
+                      },
                       variant: 'warning',
                     },
                   ]}
@@ -202,7 +322,10 @@ export default function MobileRedemption() {
       {/* Redemption Sheet */}
       <MobileBottomSheet
         isOpen={!!selectedLoan}
-        onClose={() => setSelectedLoan(null)}
+        onClose={() => {
+          setSelectedLoan(null);
+          setGoldVerified(false);
+        }}
         title="Loan Redemption"
         snapPoints={['half', 'full']}
       >
@@ -251,20 +374,73 @@ export default function MobileRedemption() {
               </p>
             </div>
 
+            {/* Payment Mode */}
+            <MobileSelectField
+              label="Payment Mode"
+              value={paymentMode}
+              onChange={setPaymentMode}
+              options={[
+                { value: 'cash', label: 'Cash' },
+                { value: 'upi', label: 'UPI' },
+                { value: 'bank_transfer', label: 'Bank Transfer' },
+                { value: 'cheque', label: 'Cheque' },
+              ]}
+            />
+
+            {/* Gold Verification */}
+            <button
+              onClick={() => {
+                vibrateLight();
+                setGoldVerified(!goldVerified);
+              }}
+              className={cn(
+                "w-full p-4 rounded-xl border-2 flex items-center gap-3 transition-all",
+                goldVerified 
+                  ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20" 
+                  : "border-border bg-muted/30"
+              )}
+            >
+              <div className={cn(
+                "w-6 h-6 rounded-full flex items-center justify-center",
+                goldVerified ? "bg-emerald-500" : "bg-muted"
+              )}>
+                {goldVerified && <CheckCircle2 className="w-4 h-4 text-white" />}
+              </div>
+              <div className="text-left">
+                <p className={cn(
+                  "font-medium",
+                  goldVerified ? "text-emerald-700 dark:text-emerald-300" : "text-muted-foreground"
+                )}>
+                  Gold Verified & Released
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Confirm gold items have been verified and returned
+                </p>
+              </div>
+            </button>
+
             {/* Action Buttons */}
             <div className="space-y-3 pt-2">
+              <LoadingButton
+                onClick={handleRedeem}
+                isLoading={isSubmitting}
+                loadingText="Processing..."
+                disabled={!goldVerified}
+                className={cn(
+                  "w-full py-4 rounded-xl font-semibold shadow-mobile-md flex items-center justify-center gap-2",
+                  goldVerified 
+                    ? "gradient-gold text-white" 
+                    : "bg-muted text-muted-foreground cursor-not-allowed"
+                )}
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Complete Redemption
+              </LoadingButton>
               <button
                 onClick={() => {
                   setSelectedLoan(null);
-                  navigate(`/redemption?loan=${selectedLoan.loan_number}`);
+                  setGoldVerified(false);
                 }}
-                className="w-full py-4 rounded-xl gradient-gold text-white font-semibold tap-scale shadow-mobile-md flex items-center justify-center gap-2"
-              >
-                <CheckCircle2 className="w-5 h-5" />
-                Proceed to Redeem
-              </button>
-              <button
-                onClick={() => setSelectedLoan(null)}
                 className="w-full py-3 rounded-xl bg-muted font-medium tap-scale"
               >
                 Cancel
