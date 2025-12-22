@@ -6,7 +6,7 @@ import { Search, RefreshCw, ArrowLeft, Package, ChevronRight, CheckCircle, Alert
 import MobileLayout from './MobileLayout';
 import MobileGradientHeader from './MobileGradientHeader';
 import { MobileBottomSheet } from './shared';
-import { MobilePrintSheet } from './sheets/MobilePrintSheet';
+import MobilePrintSheet from './sheets/MobilePrintSheet';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { format, differenceInDays, parseISO, addDays, addMonths } from 'date-fns';
@@ -192,7 +192,7 @@ export default function MobileReloan() {
       // Close old loan
       await supabase
         .from('loans')
-        .update({ status: 'closed', closure_type: 'reloan', closed_date: today })
+        .update({ status: 'closed', closure_type: 'reloaned', closed_date: today })
         .eq('id', selectedLoan.id);
 
       // Create new loan
@@ -208,7 +208,7 @@ export default function MobileReloan() {
           maturity_date: format(maturityDate, 'yyyy-MM-dd'),
           principal_amount: newLoanCalc.loanAmount,
           actual_principal: newLoanCalc.advanceCalc.actualPrincipal,
-          shown_principal: newLoanCalc.advanceCalc.shownPrincipal,
+          shown_principal: newLoanCalc.loanAmount,
           interest_rate: newLoanCalc.scheme.shown_rate / 12,
           tenure_days: newLoanCalc.scheme.max_tenure_days,
           net_disbursed: newLoanCalc.netCash,
@@ -388,10 +388,10 @@ export default function MobileReloan() {
       {/* Print Sheet */}
       {createdLoanId && (
         <MobilePrintSheet
-          isOpen={showPrint}
-          onClose={() => {
-            setShowPrint(false);
-            navigate('/loans');
+          open={showPrint}
+          onOpenChange={(open) => {
+            setShowPrint(open);
+            if (!open) navigate('/loans');
           }}
           loanId={createdLoanId}
         />
