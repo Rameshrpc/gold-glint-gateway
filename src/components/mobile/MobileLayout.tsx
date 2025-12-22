@@ -1,6 +1,8 @@
 import { useState, ReactNode } from 'react';
 import MobileNavBar from './MobileNavBar';
 import QuickActionsSheet from './QuickActionsSheet';
+import OfflineIndicator from './OfflineIndicator';
+import { MobileErrorBoundary } from './MobileErrorBoundary';
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -11,18 +13,21 @@ export default function MobileLayout({ children, hideNav = false }: MobileLayout
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
 
   return (
-    <div className={`min-h-screen bg-background ${hideNav ? '' : 'pb-20'}`}>
-      {children}
-      
-      {!hideNav && (
-        <>
-          <MobileNavBar onQuickActionClick={() => setIsQuickActionsOpen(true)} />
-          <QuickActionsSheet 
-            isOpen={isQuickActionsOpen} 
-            onClose={() => setIsQuickActionsOpen(false)} 
-          />
-        </>
-      )}
-    </div>
+    <MobileErrorBoundary>
+      <div className={`min-h-screen bg-background ${hideNav ? '' : 'pb-20'}`}>
+        <OfflineIndicator />
+        {children}
+        
+        {!hideNav && (
+          <>
+            <MobileNavBar onQuickActionClick={() => setIsQuickActionsOpen(true)} />
+            <QuickActionsSheet 
+              isOpen={isQuickActionsOpen} 
+              onClose={() => setIsQuickActionsOpen(false)} 
+            />
+          </>
+        )}
+      </div>
+    </MobileErrorBoundary>
   );
 }

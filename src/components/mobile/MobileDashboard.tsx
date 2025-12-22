@@ -151,7 +151,7 @@ export default function MobileDashboard() {
   }, [profile?.client_id]);
 
   const quickActions = [
-    { icon: FileText, label: 'New Loan', path: '/loans', gradient: 'from-blue-500 to-blue-600' },
+    { icon: FileText, label: 'New Loan', path: '/new-loan', gradient: 'from-blue-500 to-blue-600' },
     { icon: Banknote, label: 'Interest', path: '/interest', gradient: 'from-emerald-500 to-emerald-600' },
     { icon: Award, label: 'Redeem', path: '/redemption', gradient: 'from-amber-500 to-orange-500' },
     { icon: RefreshCw, label: 'Reloan', path: '/reloan', gradient: 'from-violet-500 to-purple-600' },
