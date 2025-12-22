@@ -4,21 +4,25 @@ import QuickActionsSheet from './QuickActionsSheet';
 
 interface MobileLayoutProps {
   children: ReactNode;
+  hideNav?: boolean;
 }
 
-export default function MobileLayout({ children }: MobileLayoutProps) {
+export default function MobileLayout({ children, hideNav = false }: MobileLayoutProps) {
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className={`min-h-screen bg-background ${hideNav ? '' : 'pb-20'}`}>
       {children}
       
-      <MobileNavBar onQuickActionClick={() => setIsQuickActionsOpen(true)} />
-      
-      <QuickActionsSheet 
-        isOpen={isQuickActionsOpen} 
-        onClose={() => setIsQuickActionsOpen(false)} 
-      />
+      {!hideNav && (
+        <>
+          <MobileNavBar onQuickActionClick={() => setIsQuickActionsOpen(true)} />
+          <QuickActionsSheet 
+            isOpen={isQuickActionsOpen} 
+            onClose={() => setIsQuickActionsOpen(false)} 
+          />
+        </>
+      )}
     </div>
   );
 }
