@@ -1,4 +1,4 @@
-import { Bell, Search, User } from 'lucide-react';
+import { Bell, Search, User, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -8,13 +8,17 @@ interface MobileGradientHeaderProps {
   showSearch?: boolean;
   onSearchClick?: () => void;
   variant?: 'default' | 'minimal';
+  showBack?: boolean;
+  onBackClick?: () => void;
 }
 
 export default function MobileGradientHeader({ 
   title, 
   showSearch = false, 
   onSearchClick,
-  variant = 'default'
+  variant = 'default',
+  showBack = false,
+  onBackClick
 }: MobileGradientHeaderProps) {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -44,14 +48,25 @@ export default function MobileGradientHeader({
         {/* Header Content */}
         <div className="relative z-10 safe-area-top">
           <div className="flex items-center justify-between px-4 py-3">
-            {/* Logo & Title */}
+            {/* Logo & Title or Back Button */}
             <div className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                <span className="text-white font-bold text-lg">Z</span>
-              </div>
-              <span className="text-white font-semibold text-lg tracking-tight">
-                Zenith One
-              </span>
+              {showBack ? (
+                <button 
+                  onClick={onBackClick}
+                  className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center tap-scale"
+                >
+                  <ArrowLeft className="w-5 h-5 text-white" />
+                </button>
+              ) : (
+                <>
+                  <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <span className="text-white font-bold text-lg">Z</span>
+                  </div>
+                  <span className="text-white font-semibold text-lg tracking-tight">
+                    Zenith One
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Actions */}
