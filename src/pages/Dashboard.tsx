@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBackfillVouchers } from '@/hooks/useBackfillVouchers';
+import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,12 +26,28 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 
+interface DashboardStats {
+  totalCustomers: number;
+  activeLoans: number;
+  totalDisbursed: number;
+  interestCollected: number;
+  overdueLoans: number;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const { profile, client, currentBranch, branches, roles, hasRole } = useAuth();
   const { autoSync, syncStatus } = useBackfillVouchers();
   const hasAutoSynced = useRef(false);
   const [showSyncCard, setShowSyncCard] = useState(true);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalCustomers: 0,
+    activeLoans: 0,
+    totalDisbursed: 0,
+    interestCollected: 0,
+    overdueLoans: 0,
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   const hasMultipleBranches = branches && branches.length > 1;
 
@@ -41,34 +58,90 @@ export default function Dashboard() {
     { title: 'Reloan', icon: RefreshCw, href: '/reloan', color: 'bg-amber-600 hover:bg-amber-700' },
   ];
 
-  const stats = [
+  // Fetch real stats
+  const fetchStats = useCallback(async () => {
+    if (!profile?.client_id) return;
+
+    try {
+      const branchFilter = currentBranch?.id;
+      
+      // Fetch stats in parallel
+      const [customersRes, loansRes, interestRes] = await Promise.all([
+        supabase
+          .from('customers')
+          .select('id', { count: 'exact' })
+          .eq('client_id', profile.client_id)
+          .eq('is_active', true),
+        supabase
+          .from('loans')
+          .select('id, principal_amount, status, maturity_date')
+          .eq('client_id', profile.client_id),
+        supabase
+          .from('interest_payments')
+          .select('amount_paid, payment_date')
+          .eq('client_id', profile.client_id),
+      ]);
+
+      const activeLoans = loansRes.data?.filter(l => l.status === 'active') || [];
+      const totalDisbursed = activeLoans.reduce((sum, l) => sum + (l.principal_amount || 0), 0);
+      
+      // Get this month's interest
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const monthlyInterest = interestRes.data
+        ?.filter(p => p.payment_date >= startOfMonth)
+        .reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
+
+      // Count overdue loans
+      const today = new Date().toISOString().split('T')[0];
+      const overdueLoans = activeLoans.filter(l => l.maturity_date < today).length;
+
+      setStats({
+        totalCustomers: customersRes.count || 0,
+        activeLoans: activeLoans.length,
+        totalDisbursed,
+        interestCollected: monthlyInterest,
+        overdueLoans,
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [profile?.client_id, currentBranch?.id]);
+
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  const statItems = [
     {
       title: 'Total Customers',
-      value: '0',
+      value: isLoadingStats ? '...' : stats.totalCustomers.toLocaleString(),
       icon: Users,
-      change: 'Start adding customers',
+      change: stats.totalCustomers > 0 ? 'Active customers' : 'Start adding customers',
       color: 'text-blue-600',
       bg: 'bg-blue-50',
     },
     {
       title: 'Active Loans',
-      value: '0',
+      value: isLoadingStats ? '...' : stats.activeLoans.toLocaleString(),
       icon: FileText,
-      change: 'No active loans yet',
+      change: stats.overdueLoans > 0 ? `${stats.overdueLoans} overdue` : 'All on track',
       color: 'text-green-600',
       bg: 'bg-green-50',
     },
     {
       title: 'Total Disbursed',
-      value: '₹0',
+      value: isLoadingStats ? '...' : `₹${(stats.totalDisbursed / 100000).toFixed(1)}L`,
       icon: IndianRupee,
-      change: 'This month',
+      change: 'Active portfolio',
       color: 'text-amber-600',
       bg: 'bg-amber-50',
     },
     {
       title: 'Interest Collected',
-      value: '₹0',
+      value: isLoadingStats ? '...' : `₹${(stats.interestCollected / 1000).toFixed(0)}K`,
       icon: TrendingUp,
       change: 'This month',
       color: 'text-purple-600',
@@ -225,7 +298,7 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
+          {statItems.map((stat) => (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
