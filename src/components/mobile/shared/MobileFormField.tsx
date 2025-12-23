@@ -8,15 +8,19 @@ interface MobileFormFieldProps extends React.InputHTMLAttributes<HTMLInputElemen
   icon?: ReactNode;
   clearable?: boolean;
   onClear?: () => void;
+  required?: boolean;
 }
 
 const MobileFormField = forwardRef<HTMLInputElement, MobileFormFieldProps>(
-  ({ label, error, icon, clearable, onClear, className, value, ...props }, ref) => {
+  ({ label, error, icon, clearable, onClear, className, value, required, ...props }, ref) => {
     const hasValue = value !== undefined && value !== '';
 
     return (
       <div className="space-y-1.5">
-        <label className="text-sm font-medium text-foreground">{label}</label>
+        <label className="text-sm font-medium text-foreground">
+          {label}
+          {required && <span className="text-destructive ml-1">*</span>}
+        </label>
         <div className="relative">
           {icon && (
             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
