@@ -13,17 +13,15 @@ import {
   TrendingUp, 
   Users,
   Wallet,
-  Activity,
   ArrowUpRight,
   ArrowDownRight,
   Plus,
-  Minus
+  Bell
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { cn } from '@/lib/utils';
-import { vibrateLight } from '@/lib/haptics';
 
 interface DashboardStats {
   totalCustomers: number;
@@ -44,7 +42,7 @@ interface RecentActivity {
 export default function MobileDashboard() {
   const navigate = useNavigate();
   const { profile } = useAuth();
-  const { autoSync, syncStatus } = useBackfillVouchers();
+  const { autoSync } = useBackfillVouchers();
   const hasAutoSynced = useRef(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalCustomers: 0,
@@ -54,6 +52,14 @@ export default function MobileDashboard() {
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'User';
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  };
 
   // Auto-sync vouchers on mount
   useEffect(() => {
@@ -67,7 +73,6 @@ export default function MobileDashboard() {
     }
   }, [profile?.client_id, autoSync]);
 
-  // Fetch dashboard stats and recent activity
   const fetchData = useCallback(async () => {
     if (!profile?.client_id) return;
 
@@ -86,14 +91,12 @@ export default function MobileDashboard() {
           .from('interest_payments')
           .select('amount_paid')
           .eq('client_id', profile.client_id),
-        // Recent loans with customer info
         supabase
           .from('loans')
           .select('id, loan_number, principal_amount, loan_date, customer:customers(full_name)')
           .eq('client_id', profile.client_id)
           .order('created_at', { ascending: false })
           .limit(5),
-        // Recent interest payments
         supabase
           .from('interest_payments')
           .select('id, receipt_number, amount_paid, payment_date, loan:loans(loan_number, customer:customers(full_name))')
@@ -113,7 +116,6 @@ export default function MobileDashboard() {
         interestCollected,
       });
 
-      // Combine and sort recent activity
       const activities: RecentActivity[] = [];
       
       recentLoansRes.data?.forEach(loan => {
@@ -138,7 +140,6 @@ export default function MobileDashboard() {
         });
       });
 
-      // Sort by date descending and take top 5
       activities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setRecentActivity(activities.slice(0, 5));
     } catch (error) {
@@ -158,113 +159,85 @@ export default function MobileDashboard() {
   }, [fetchData]);
 
   const quickActions = [
-    { icon: FileText, label: 'New Loan', path: '/new-loan', gradient: 'from-blue-500 to-blue-600' },
-    { icon: Banknote, label: 'Interest', path: '/interest', gradient: 'from-emerald-500 to-emerald-600' },
-    { icon: Award, label: 'Redeem', path: '/redemption', gradient: 'from-amber-500 to-orange-500' },
-    { icon: RefreshCw, label: 'Reloan', path: '/reloan', gradient: 'from-violet-500 to-purple-600' },
-  ];
-
-  const statItems = [
-    { 
-      icon: FileText, 
-      label: 'Active Loans', 
-      value: stats.activeLoans,
-      gradient: 'from-blue-500/20 to-blue-600/20',
-      iconColor: 'text-blue-500'
-    },
-    { 
-      icon: Users, 
-      label: 'Customers', 
-      value: stats.totalCustomers,
-      gradient: 'from-violet-500/20 to-purple-600/20',
-      iconColor: 'text-violet-500'
-    },
-    { 
-      icon: Wallet, 
-      label: 'Disbursed', 
-      value: `₹${(stats.totalDisbursed / 100000).toFixed(1)}L`,
-      gradient: 'from-emerald-500/20 to-emerald-600/20',
-      iconColor: 'text-emerald-500'
-    },
-    { 
-      icon: TrendingUp, 
-      label: 'Interest', 
-      value: `₹${(stats.interestCollected / 1000).toFixed(0)}K`,
-      gradient: 'from-amber-500/20 to-orange-500/20',
-      iconColor: 'text-amber-500'
-    },
+    { icon: FileText, label: 'New Loan', path: '/new-loan' },
+    { icon: Banknote, label: 'Interest', path: '/interest' },
+    { icon: Award, label: 'Redeem', path: '/redemption' },
+    { icon: RefreshCw, label: 'Reloan', path: '/reloan' },
   ];
 
   return (
     <MobileLayout>
-      <MobileGradientHeader showSearch onSearchClick={() => { vibrateLight(); navigate('/loans'); }} />
+      <MobileSimpleHeader 
+        title={`${getGreeting()}, ${firstName}`}
+        rightContent={
+          <button 
+            onClick={() => navigate('/notifications')}
+            className="w-9 h-9 rounded-full flex items-center justify-center active:bg-muted transition-colors relative"
+          >
+            <Bell className="w-5 h-5 text-muted-foreground" />
+            <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+          </button>
+        }
+      />
 
-      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 -mt-2 space-y-6 animate-fade-in">
-        {/* Hero Balance Card */}
-        <div className="relative overflow-hidden rounded-3xl glass shadow-mobile-lg border border-border/50">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-[hsl(var(--gradient-primary-start))] to-[hsl(var(--gradient-primary-end))] rounded-full blur-3xl opacity-20 -translate-y-1/2 translate-x-1/2" />
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-5">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <FileText className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs text-muted-foreground">Active Loans</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.activeLoans}</p>
+          </div>
           
-          <div className="relative p-5">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground font-medium">Total Portfolio</span>
-              <button 
-                onClick={() => navigate('/trial-balance')}
-                className="text-xs font-medium text-primary flex items-center gap-1 tap-scale"
-              >
-                View Details
-                <ArrowUpRight className="w-3 h-3" />
-              </button>
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Users className="w-4 h-4 text-primary" />
+              </div>
+              <span className="text-xs text-muted-foreground">Customers</span>
             </div>
-            
-            <div className="mb-5">
-              <h2 className="text-3xl font-bold tracking-tight">
-                ₹{((stats.totalDisbursed + stats.interestCollected) / 100000).toFixed(2)}L
-              </h2>
-              <div className="flex items-center gap-1 mt-1">
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 font-medium flex items-center gap-0.5">
-                  <ArrowUpRight className="w-3 h-3" />
-                  Active
-                </span>
+            <p className="text-2xl font-bold">{stats.totalCustomers}</p>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Wallet className="w-4 h-4 text-primary" />
               </div>
+              <span className="text-xs text-muted-foreground">Disbursed</span>
             </div>
-
-            {/* Mini stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="text-center p-2 rounded-xl bg-muted/50">
-                <p className="text-lg font-bold">{stats.activeLoans}</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Loans</p>
+            <p className="text-2xl font-bold">₹{(stats.totalDisbursed / 100000).toFixed(1)}L</p>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-primary" />
               </div>
-              <div className="text-center p-2 rounded-xl bg-muted/50">
-                <p className="text-lg font-bold">₹{(stats.interestCollected / 1000).toFixed(0)}K</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Interest</p>
-              </div>
-              <div className="text-center p-2 rounded-xl bg-muted/50">
-                <p className="text-lg font-bold">{stats.totalCustomers}</p>
-                <p className="text-[10px] text-muted-foreground font-medium">Customers</p>
-              </div>
+              <span className="text-xs text-muted-foreground">Interest</span>
             </div>
+            <p className="text-2xl font-bold">₹{(stats.interestCollected / 1000).toFixed(0)}K</p>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-base font-semibold mb-3">Quick Actions</h2>
+          <h2 className="text-sm font-semibold mb-3">Quick Actions</h2>
           <div className="grid grid-cols-4 gap-3">
-            {quickActions.map((action, index) => (
+            {quickActions.map((action) => (
               <button
                 key={action.path}
-                onClick={() => { vibrateLight(); navigate(action.path); }}
-                className="flex flex-col items-center gap-2 tap-scale animate-slide-up-fade"
-                style={{ animationDelay: `${index * 75}ms` }}
+                onClick={() => navigate(action.path)}
+                className="flex flex-col items-center gap-2"
               >
-                <div className={cn(
-                  "w-14 h-14 rounded-2xl flex items-center justify-center bg-gradient-to-br shadow-mobile-md",
-                  action.gradient
-                )}>
-                  <action.icon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <action.icon className="w-5 h-5 text-primary" />
                 </div>
-                <span className="text-[11px] font-medium text-center leading-tight">
+                <span className="text-[11px] font-medium text-center">
                   {action.label}
                 </span>
               </button>
@@ -272,97 +245,61 @@ export default function MobileDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div>
-          <h2 className="text-base font-semibold mb-3">Overview</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {statItems.map((item, index) => (
-              <div
-                key={item.label}
-                className={cn(
-                  "relative overflow-hidden p-4 rounded-2xl bg-card border border-border shadow-mobile-sm animate-slide-up-fade"
-                )}
-                style={{ animationDelay: `${index * 50 + 200}ms` }}
-              >
-                <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", item.gradient)} />
-                <div className="relative">
-                  <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center bg-background/80 mb-2", item.iconColor)}>
-                    <item.icon className="w-4 h-4" />
-                  </div>
-                  <p className="text-xl font-bold">{item.value}</p>
-                  <p className="text-xs text-muted-foreground font-medium">{item.label}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Recent Activity */}
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-base font-semibold">Recent Activity</h2>
+            <h2 className="text-sm font-semibold">Recent Activity</h2>
             <button 
               onClick={() => navigate('/day-book')}
-              className="text-xs text-primary font-medium flex items-center gap-1 tap-scale"
+              className="text-xs text-primary font-medium"
             >
               View All
-              <ArrowUpRight className="w-3 h-3" />
             </button>
           </div>
           <div className="space-y-2">
             {isLoading ? (
               Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-16 rounded-2xl shimmer" />
+                <div key={i} className="h-14 rounded-xl bg-muted animate-pulse" />
               ))
             ) : recentActivity.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center rounded-2xl bg-muted/30 border border-border/50">
-                <Activity className="w-10 h-10 text-muted-foreground/40 mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Recent transactions will appear here
-                </p>
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No recent activity
               </div>
             ) : (
-              recentActivity.map((activity, index) => (
+              recentActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className="flex items-center gap-3 p-3 rounded-2xl bg-card border border-border/50 shadow-mobile-sm animate-slide-up-fade"
-                  style={{ animationDelay: `${index * 50 + 400}ms` }}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border"
                 >
                   <div className={cn(
-                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    "w-9 h-9 rounded-lg flex items-center justify-center",
                     activity.type === 'loan' ? 'bg-blue-100 dark:bg-blue-900/30' :
-                    activity.type === 'interest' ? 'bg-emerald-100 dark:bg-emerald-900/30' :
-                    'bg-amber-100 dark:bg-amber-900/30'
+                    'bg-emerald-100 dark:bg-emerald-900/30'
                   )}>
                     {activity.type === 'loan' ? (
-                      <ArrowDownRight className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    ) : activity.type === 'interest' ? (
-                      <Plus className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                      <ArrowDownRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     ) : (
-                      <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <Plus className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{activity.description}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {activity.customerName || 'Customer'} • {format(new Date(activity.date), 'dd MMM')}
+                      {activity.customerName} • {format(new Date(activity.date), 'dd MMM')}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className={cn(
-                      "text-sm font-semibold",
-                      activity.type === 'loan' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'
-                    )}>
-                      {activity.type === 'loan' ? '-' : '+'}₹{(activity.amount / 1000).toFixed(1)}K
-                    </p>
-                  </div>
+                  <p className={cn(
+                    "text-sm font-semibold",
+                    activity.type === 'loan' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'
+                  )}>
+                    {activity.type === 'loan' ? '-' : '+'}₹{(activity.amount / 1000).toFixed(1)}K
+                  </p>
                 </div>
               ))
             )}
           </div>
         </div>
 
-        {/* Bottom spacer */}
         <div className="h-4" />
       </PullToRefreshContainer>
     </MobileLayout>

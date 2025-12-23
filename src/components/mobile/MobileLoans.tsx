@@ -2,14 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, Plus, Loader2, X } from 'lucide-react';
+import { Search, Plus, X, FileText } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import LoanCard from './LoanCard';
 import MobilePrintSheet from './sheets/MobilePrintSheet';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { cn } from '@/lib/utils';
-import { vibrateLight } from '@/lib/haptics';
 
 type FilterType = 'all' | 'active' | 'closed' | 'overdue';
 
@@ -90,7 +89,6 @@ export default function MobileLoans() {
   useEffect(() => {
     let filtered = [...loans];
 
-    // Apply status filter
     if (activeFilter === 'active') {
       filtered = filtered.filter(l => l.status === 'active');
     } else if (activeFilter === 'closed') {
@@ -101,7 +99,6 @@ export default function MobileLoans() {
       );
     }
 
-    // Apply search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(l =>
@@ -116,64 +113,55 @@ export default function MobileLoans() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader 
+      <MobileSimpleHeader 
         title="Loans" 
-        variant="minimal"
-        showSearch 
-        onSearchClick={() => { vibrateLight(); setShowSearch(!showSearch); }} 
+        showSearch
+        onSearchClick={() => setShowSearch(!showSearch)}
+        showAdd
+        onAddClick={() => navigate('/new-loan')}
       />
 
-      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4">
         {/* Search Bar */}
         {showSearch && (
-          <div className="relative animate-slide-down">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search by loan number, customer..."
+              placeholder="Search loans..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-10 py-3.5 rounded-2xl bg-card border border-border text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-mobile-sm"
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg bg-muted border-0 text-sm focus:ring-2 focus:ring-primary/20"
               autoFocus
             />
             {searchQuery && (
               <button 
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-muted flex items-center justify-center tap-scale"
+                className="absolute right-3 top-1/2 -translate-y-1/2"
               >
-                <X className="w-3 h-3" />
+                <X className="w-4 h-4 text-muted-foreground" />
               </button>
             )}
           </div>
         )}
 
         {/* Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide">
-          {filters.map((filter, index) => (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4">
+          {filters.map((filter) => (
             <button
               key={filter.key}
-              onClick={() => { vibrateLight(); setActiveFilter(filter.key); }}
+              onClick={() => setActiveFilter(filter.key)}
               className={cn(
-                "relative flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all duration-300 tap-scale animate-slide-up-fade",
+                "flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors",
                 activeFilter === filter.key
-                  ? "gradient-gold text-white shadow-mobile-md"
-                  : "bg-card border border-border text-muted-foreground hover:bg-muted"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
               )}
-              style={{ animationDelay: `${index * 50}ms` }}
             >
-              <span className="flex items-center gap-1.5">
-                {filter.label}
-                {filter.count !== undefined && filter.count > 0 && (
-                  <span className={cn(
-                    "min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center",
-                    activeFilter === filter.key
-                      ? "bg-white/20 text-white"
-                      : "bg-muted text-muted-foreground"
-                  )}>
-                    {filter.count}
-                  </span>
-                )}
-              </span>
+              {filter.label}
+              {filter.count !== undefined && filter.count > 0 && (
+                <span className="ml-1.5 opacity-70">({filter.count})</span>
+              )}
             </button>
           ))}
         </div>
@@ -183,57 +171,43 @@ export default function MobileLoans() {
           {isLoading ? (
             <div className="space-y-3">
               {Array(3).fill(0).map((_, i) => (
-                <div key={i} className="h-32 rounded-2xl shimmer" />
+                <div key={i} className="h-28 rounded-xl bg-muted animate-pulse" />
               ))}
             </div>
           ) : filteredLoans.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <Search className="w-10 h-10 text-muted-foreground/50" />
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <FileText className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">
-                {searchQuery ? 'No results found' : 'No loans yet'}
+              <h3 className="text-base font-semibold mb-1">
+                {searchQuery ? 'No results' : 'No loans'}
               </h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                {searchQuery ? 'Try a different search term' : 'Create your first loan to get started'}
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery ? 'Try a different search' : 'Create your first loan'}
               </p>
               <button
-                onClick={() => { vibrateLight(); navigate('/new-loan'); }}
-                className="px-6 py-3 rounded-full gradient-gold text-white font-medium shadow-mobile-md tap-scale"
+                onClick={() => navigate('/new-loan')}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
               >
-                Create New Loan
+                New Loan
               </button>
             </div>
           ) : (
-            filteredLoans.map((loan, index) => (
-              <div 
+            filteredLoans.map((loan) => (
+              <LoanCard
                 key={loan.id}
-                className="animate-slide-up-fade"
-                style={{ animationDelay: `${index * 50}ms` }}
-              >
-                <LoanCard
-                  loan={loan}
-                  onClick={() => navigate(`/loans?id=${loan.id}`)}
-                  onInterestClick={() => navigate(`/interest?loan=${loan.loan_number}`)}
-                  onRedeemClick={() => navigate(`/redemption?loan=${loan.loan_number}`)}
-                  onPrintClick={() => setPrintLoanId(loan.id)}
-                />
-              </div>
+                loan={loan}
+                onClick={() => navigate(`/loans?id=${loan.id}`)}
+                onInterestClick={() => navigate(`/interest?loan=${loan.loan_number}`)}
+                onRedeemClick={() => navigate(`/redemption?loan=${loan.loan_number}`)}
+                onPrintClick={() => setPrintLoanId(loan.id)}
+              />
             ))
           )}
         </div>
 
-        {/* Bottom spacer */}
         <div className="h-20" />
       </PullToRefreshContainer>
-
-      {/* FAB for new loan */}
-      <button
-        onClick={() => { vibrateLight(); navigate('/new-loan'); }}
-        className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Print Sheet */}
       {printLoanId && (
