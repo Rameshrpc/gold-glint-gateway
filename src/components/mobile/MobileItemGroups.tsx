@@ -269,8 +269,18 @@ export default function MobileItemGroups() {
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         title={editingGroup ? 'Edit Item Group' : 'Add Item Group'}
+        footer={
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!formData.group_code || !formData.group_name}
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {editingGroup ? 'Update' : 'Create'} Group
+          </Button>
+        }
       >
-        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4">
           <div className="space-y-2">
             <Label>Group Code</Label>
             <Input
@@ -306,18 +316,6 @@ export default function MobileItemGroups() {
             />
             <Label>Active</Label>
           </div>
-        </div>
-        
-        {/* Fixed Bottom Save Button */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button 
-            onClick={handleSubmit} 
-            className="w-full h-12 text-base font-semibold" 
-            disabled={!formData.group_code || !formData.group_name}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {editingGroup ? 'Update' : 'Create'} Group
-          </Button>
         </div>
       </MobileBottomSheet>
     </MobileLayout>

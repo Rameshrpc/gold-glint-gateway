@@ -528,8 +528,19 @@ export default function MobileLoyalties() {
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         title={editingLoyalty ? 'Edit Employee' : 'Add Employee'}
+        snapPoints={['full']}
+        footer={
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!formData.full_name || !formData.phone || submitting}
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {submitting ? 'Saving...' : (editingLoyalty ? 'Update' : 'Create')} Employee
+          </Button>
+        }
       >
-        <div className="p-4 pb-24 max-h-[70vh] overflow-y-auto">
+        <div className="p-4">
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="personal">Personal</TabsTrigger>
@@ -708,18 +719,6 @@ export default function MobileLoyalties() {
             </TabsContent>
           </Tabs>
         </div>
-        
-        {/* Fixed Bottom Save Button */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button 
-            onClick={handleSubmit} 
-            className="w-full h-12 text-base font-semibold" 
-            disabled={!formData.full_name || !formData.phone || submitting}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {submitting ? 'Saving...' : (editingLoyalty ? 'Update' : 'Create')} Employee
-          </Button>
-        </div>
       </MobileBottomSheet>
 
       {/* Bank Accounts Sheet */}
@@ -790,8 +789,18 @@ export default function MobileLoyalties() {
         isOpen={showAccountForm}
         onClose={() => setShowAccountForm(false)}
         title="Add Bank Account"
+        footer={
+          <Button 
+            onClick={handleAddBankAccount} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!accountFormData.bank_id || !accountFormData.account_number || submitting}
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {submitting ? 'Saving...' : 'Add Account'}
+          </Button>
+        }
       >
-        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4">
           <div className="space-y-2">
             <Label>Bank *</Label>
             <Select
@@ -885,18 +894,6 @@ export default function MobileLoyalties() {
             />
             <Label>Primary Account</Label>
           </div>
-        </div>
-        
-        {/* Fixed Bottom Save Button */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button 
-            onClick={handleAddBankAccount} 
-            className="w-full h-12 text-base font-semibold" 
-            disabled={!accountFormData.bank_id || !accountFormData.account_number || submitting}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {submitting ? 'Saving...' : 'Add Account'}
-          </Button>
         </div>
       </MobileBottomSheet>
     </MobileLayout>
