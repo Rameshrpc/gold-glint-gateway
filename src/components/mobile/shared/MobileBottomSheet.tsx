@@ -82,17 +82,12 @@ export default function MobileBottomSheet({
 
   if (!isOpen) return null;
 
-  // Calculate content height based on header and footer presence
-  const headerHeight = title ? 60 : 20;
-  const footerHeight = footer ? 80 : 0;
-  const contentHeight = `calc(100% - ${headerHeight + footerHeight}px)`;
-
   return (
     <>
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 bg-black/50 z-50 transition-opacity duration-300',
+          'fixed inset-0 bg-black/50 z-[90] transition-opacity duration-300',
           isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={onClose}
@@ -102,7 +97,7 @@ export default function MobileBottomSheet({
       <div
         ref={sheetRef}
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl transition-all safe-area-bottom flex flex-col',
+          'fixed bottom-0 left-0 right-0 z-[100] bg-background rounded-t-3xl shadow-2xl transition-all flex flex-col',
           isDragging ? 'transition-none' : 'duration-300 ease-out',
           className
         )}
@@ -135,12 +130,7 @@ export default function MobileBottomSheet({
         )}
 
         {/* Content */}
-        <div
-          className="overflow-y-auto flex-1"
-          style={{ height: contentHeight }}
-        >
-          {children}
-        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
 
         {/* Footer - Outside scrollable area */}
         {footer && (
