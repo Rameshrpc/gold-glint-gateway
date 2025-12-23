@@ -206,19 +206,19 @@ export default function MobileAgents() {
       <div className="p-4 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <UserCog className="h-5 w-5 text-primary" />
-              <span className="text-sm text-muted-foreground">Total Agents</span>
+              <span className="text-sm text-muted-foreground">Total</span>
             </div>
             <p className="text-2xl font-bold">{agents.length}</p>
           </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <IndianRupee className="h-5 w-5 text-green-600" />
-              <span className="text-sm text-muted-foreground">Total Earned</span>
+              <span className="text-sm text-muted-foreground">Earned</span>
             </div>
-            <p className="text-2xl font-bold text-green-600">₹{totalEarned.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-green-600">₹{(totalEarned / 1000).toFixed(0)}K</p>
           </div>
         </div>
 

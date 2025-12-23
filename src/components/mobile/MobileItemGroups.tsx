@@ -193,7 +193,7 @@ export default function MobileItemGroups() {
         </div>
 
         {/* Stats */}
-        <div className="flex items-center justify-between bg-muted/30 rounded-lg p-3">
+        <div className="flex items-center justify-between bg-card rounded-lg p-3 border">
           <div className="flex items-center gap-2">
             <Layers className="h-5 w-5 text-primary" />
             <span className="font-medium">Total Groups</span>

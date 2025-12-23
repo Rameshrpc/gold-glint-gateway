@@ -379,14 +379,14 @@ export default function MobileLoyalties() {
       <div className="p-4 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-5 w-5 text-primary" />
               <span className="text-sm text-muted-foreground">Total</span>
             </div>
             <p className="text-2xl font-bold">{loyalties.length}</p>
           </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <Users className="h-5 w-5 text-green-600" />
               <span className="text-sm text-muted-foreground">Active</span>
