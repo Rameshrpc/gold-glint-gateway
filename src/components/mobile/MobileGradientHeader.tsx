@@ -10,6 +10,7 @@ interface MobileGradientHeaderProps {
   variant?: 'default' | 'minimal';
   showBack?: boolean;
   onBackClick?: () => void;
+  children?: React.ReactNode;
 }
 
 export default function MobileGradientHeader({ 
@@ -18,7 +19,8 @@ export default function MobileGradientHeader({
   onSearchClick,
   variant = 'default',
   showBack = false,
-  onBackClick
+  onBackClick,
+  children
 }: MobileGradientHeaderProps) {
   const navigate = useNavigate();
   const { profile } = useAuth();
@@ -71,6 +73,7 @@ export default function MobileGradientHeader({
 
             {/* Actions */}
             <div className="flex items-center gap-1">
+              {children}
               {showSearch && (
                 <button 
                   onClick={onSearchClick}
