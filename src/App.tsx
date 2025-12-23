@@ -102,7 +102,10 @@ const App = () => (
             } />
             <Route path="/branches" element={
               <ProtectedRoute>
-                <Branches />
+                <DeviceAwareWrapper 
+                  mobile={<MobileBranches />} 
+                  desktop={<Branches />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/clients" element={
@@ -112,7 +115,10 @@ const App = () => (
             } />
             <Route path="/users" element={
               <ProtectedRoute>
-                <Users />
+                <DeviceAwareWrapper 
+                  mobile={<MobileUsers />} 
+                  desktop={<Users />} 
+                />
               </ProtectedRoute>
             } />
             
@@ -189,7 +195,10 @@ const App = () => (
             } />
             <Route path="/market-rates" element={
               <ProtectedRoute>
-                <MarketRates />
+                <DeviceAwareWrapper 
+                  mobile={<MobileMarketRates />} 
+                  desktop={<MarketRates />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/auction" element={
@@ -212,7 +221,10 @@ const App = () => (
             } />
             <Route path="/gold-vault" element={
               <ProtectedRoute>
-                <GoldVault />
+                <DeviceAwareWrapper 
+                  mobile={<MobileGoldVault />} 
+                  desktop={<GoldVault />} 
+                />
               </ProtectedRoute>
             } />
             
