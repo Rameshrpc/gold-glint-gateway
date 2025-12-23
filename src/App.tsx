@@ -60,6 +60,11 @@ import MobileUsers from "./components/mobile/MobileUsers";
 import MobileBranches from "./components/mobile/MobileBranches";
 import MobileMarketRates from "./components/mobile/MobileMarketRates";
 import MobileGoldVault from "./components/mobile/MobileGoldVault";
+import MobileDayBook from "./components/mobile/MobileDayBook";
+import MobileTrialBalance from "./components/mobile/MobileTrialBalance";
+import MobileProfitLoss from "./components/mobile/MobileProfitLoss";
+import MobileBalanceSheet from "./components/mobile/MobileBalanceSheet";
+import MobileLedgerStatement from "./components/mobile/MobileLedgerStatement";
 
 const queryClient = new QueryClient();
 
@@ -231,19 +236,44 @@ const App = () => (
             {/* Financial Reports */}
             <Route path="/reports" element={<Navigate to="/trial-balance" replace />} />
             <Route path="/trial-balance" element={
-              <ProtectedRoute><TrialBalance /></ProtectedRoute>
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileTrialBalance />} 
+                  desktop={<TrialBalance />} 
+                />
+              </ProtectedRoute>
             } />
             <Route path="/profit-loss" element={
-              <ProtectedRoute><ProfitAndLoss /></ProtectedRoute>
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileProfitLoss />} 
+                  desktop={<ProfitAndLoss />} 
+                />
+              </ProtectedRoute>
             } />
             <Route path="/balance-sheet" element={
-              <ProtectedRoute><BalanceSheet /></ProtectedRoute>
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileBalanceSheet />} 
+                  desktop={<BalanceSheet />} 
+                />
+              </ProtectedRoute>
             } />
             <Route path="/ledger-statement" element={
-              <ProtectedRoute><LedgerStatement /></ProtectedRoute>
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileLedgerStatement />} 
+                  desktop={<LedgerStatement />} 
+                />
+              </ProtectedRoute>
             } />
             <Route path="/day-book" element={
-              <ProtectedRoute><DayBook /></ProtectedRoute>
+              <ProtectedRoute>
+                <DeviceAwareWrapper 
+                  mobile={<MobileDayBook />} 
+                  desktop={<DayBook />} 
+                />
+              </ProtectedRoute>
             } />
             <Route path="/accounts" element={
               <ProtectedRoute>
