@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Package, Sparkles, Pencil, Trash2, Filter } from 'lucide-react';
+import { Plus, Package, Sparkles, Pencil, Trash2, Filter, Save } from 'lucide-react';
 import { vibrateSuccess } from '@/lib/haptics';
 
 interface ItemGroup {
@@ -403,7 +403,7 @@ export default function MobileItems() {
         onClose={() => setShowForm(false)}
         title={editingItem ? 'Edit Item' : 'Add Item'}
       >
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
           <div className="space-y-2">
             <Label>Item Group</Label>
             <Select
@@ -457,8 +457,16 @@ export default function MobileItems() {
             />
             <Label>Active</Label>
           </div>
-          
-          <Button onClick={handleSubmit} className="w-full" disabled={!formData.item_group_id || !formData.item_code}>
+        </div>
+        
+        {/* Fixed Bottom Save Button */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!formData.item_group_id || !formData.item_code}
+          >
+            <Save className="w-5 h-5 mr-2" />
             {editingItem ? 'Update' : 'Create'} Item
           </Button>
         </div>
