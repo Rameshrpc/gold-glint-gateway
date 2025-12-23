@@ -56,6 +56,10 @@ import MobileSchemes from "./components/mobile/MobileSchemes";
 import MobileVouchers from "./components/mobile/MobileVouchers";
 import MobileSettings from "./components/mobile/MobileSettings";
 import MobileProfile from "./components/mobile/MobileProfile";
+import MobileUsers from "./components/mobile/MobileUsers";
+import MobileBranches from "./components/mobile/MobileBranches";
+import MobileMarketRates from "./components/mobile/MobileMarketRates";
+import MobileGoldVault from "./components/mobile/MobileGoldVault";
 
 const queryClient = new QueryClient();
 
