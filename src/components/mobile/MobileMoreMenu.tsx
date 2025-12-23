@@ -19,7 +19,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -27,41 +27,40 @@ const menuGroups = [
   {
     title: 'Masters',
     items: [
-      { icon: Users, label: 'Customers', path: '/customers', color: 'from-blue-500 to-blue-600' },
-      { icon: Building2, label: 'Branches', path: '/branches', color: 'from-violet-500 to-purple-600' },
-      { icon: UserCog, label: 'Users', path: '/users', color: 'from-slate-500 to-slate-600' },
-      { icon: Package, label: 'Items', path: '/items', color: 'from-amber-500 to-orange-500' },
-      { icon: Layers, label: 'Item Groups', path: '/item-groups', color: 'from-teal-500 to-emerald-500' },
-      { icon: TrendingUp, label: 'Market Rates', path: '/market-rates', color: 'from-rose-500 to-pink-500' },
-      { icon: Landmark, label: 'Banks/NBFC', path: '/banks-nbfc', color: 'from-cyan-500 to-blue-500' },
-      { icon: Heart, label: 'Loyalties', path: '/loyalties', color: 'from-red-500 to-rose-500' },
-      { icon: Shield, label: 'Schemes', path: '/schemes', color: 'from-indigo-500 to-violet-500' },
+      { icon: Building2, label: 'Branches', path: '/branches' },
+      { icon: UserCog, label: 'Users', path: '/users' },
+      { icon: Package, label: 'Items', path: '/items' },
+      { icon: Layers, label: 'Item Groups', path: '/item-groups' },
+      { icon: TrendingUp, label: 'Market Rates', path: '/market-rates' },
+      { icon: Landmark, label: 'Banks/NBFC', path: '/banks-nbfc' },
+      { icon: Heart, label: 'Loyalties', path: '/loyalties' },
+      { icon: Shield, label: 'Schemes', path: '/schemes' },
     ],
   },
   {
     title: 'Operations',
     items: [
-      { icon: FileText, label: 'Agents', path: '/agents', color: 'from-emerald-500 to-green-500' },
-      { icon: BookOpen, label: 'Gold Vault', path: '/gold-vault', color: 'from-yellow-500 to-amber-500' },
-      { icon: Calculator, label: 'Auction', path: '/auction', color: 'from-orange-500 to-red-500' },
+      { icon: FileText, label: 'Agents', path: '/agents' },
+      { icon: BookOpen, label: 'Gold Vault', path: '/gold-vault' },
+      { icon: Calculator, label: 'Auction', path: '/auction' },
     ],
   },
   {
     title: 'Accounting',
     items: [
-      { icon: PiggyBank, label: 'Chart of Accounts', path: '/accounts', color: 'from-green-500 to-emerald-500' },
-      { icon: BookOpen, label: 'Vouchers', path: '/vouchers', color: 'from-blue-500 to-cyan-500' },
-      { icon: BookOpen, label: 'Day Book', path: '/day-book', color: 'from-purple-500 to-violet-500' },
-      { icon: BarChart3, label: 'Trial Balance', path: '/trial-balance', color: 'from-indigo-500 to-blue-500' },
-      { icon: BarChart3, label: 'Profit & Loss', path: '/profit-loss', color: 'from-emerald-500 to-teal-500' },
-      { icon: BarChart3, label: 'Balance Sheet', path: '/balance-sheet', color: 'from-sky-500 to-blue-500' },
-      { icon: FileText, label: 'Ledger Statement', path: '/ledger-statement', color: 'from-slate-500 to-gray-500' },
+      { icon: PiggyBank, label: 'Chart of Accounts', path: '/accounts' },
+      { icon: BookOpen, label: 'Vouchers', path: '/vouchers' },
+      { icon: BookOpen, label: 'Day Book', path: '/day-book' },
+      { icon: BarChart3, label: 'Trial Balance', path: '/trial-balance' },
+      { icon: BarChart3, label: 'Profit & Loss', path: '/profit-loss' },
+      { icon: BarChart3, label: 'Balance Sheet', path: '/balance-sheet' },
+      { icon: FileText, label: 'Ledger Statement', path: '/ledger-statement' },
     ],
   },
   {
     title: 'Settings',
     items: [
-      { icon: Settings, label: 'Settings', path: '/settings', color: 'from-gray-500 to-slate-500' },
+      { icon: Settings, label: 'Settings', path: '/settings' },
     ],
   },
 ];
@@ -77,30 +76,27 @@ export default function MobileMoreMenu() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader title="Menu" variant="minimal" />
+      <MobileSimpleHeader title="Menu" />
 
-      <div className="px-4 py-4 space-y-5 animate-fade-in">
-        {menuGroups.map((group, groupIndex) => (
-          <div key={group.title} className="animate-slide-up-fade" style={{ animationDelay: `${groupIndex * 100}ms` }}>
-            <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
+      <div className="px-4 py-4 space-y-4">
+        {menuGroups.map((group) => (
+          <div key={group.title}>
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2 px-1">
               {group.title}
             </h2>
-            <div className="bg-card rounded-2xl border border-border overflow-hidden shadow-mobile-sm">
+            <div className="bg-card rounded-xl border border-border overflow-hidden">
               {group.items.map((item, index) => (
                 <button
                   key={item.path}
                   onClick={() => navigate(item.path)}
                   className={cn(
-                    "w-full flex items-center justify-between p-3.5 hover:bg-accent/50 active:bg-accent transition-colors tap-scale",
-                    index !== group.items.length - 1 && "border-b border-border/50"
+                    "w-full flex items-center justify-between p-3 active:bg-muted transition-colors",
+                    index !== group.items.length - 1 && "border-b border-border"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-9 h-9 rounded-xl flex items-center justify-center bg-gradient-to-br shadow-sm",
-                      item.color
-                    )}>
-                      <item.icon className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                      <item.icon className="w-4 h-4 text-muted-foreground" />
                     </div>
                     <span className="text-sm font-medium">{item.label}</span>
                   </div>
@@ -114,15 +110,13 @@ export default function MobileMoreMenu() {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 p-4 rounded-2xl bg-destructive/10 text-destructive font-medium hover:bg-destructive/20 tap-scale transition-all animate-slide-up-fade"
-          style={{ animationDelay: '400ms' }}
+          className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-destructive/10 text-destructive text-sm font-medium"
         >
           <LogOut className="w-4 h-4" />
           <span>Sign Out</span>
         </button>
 
-        {/* Spacer for bottom nav */}
-        <div className="h-4" />
+        <div className="h-20" />
       </div>
     </MobileLayout>
   );

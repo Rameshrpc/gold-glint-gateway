@@ -2,14 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Phone, Plus, User, MapPin, Mail } from 'lucide-react';
+import { Phone, User, MapPin } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
-import { MobileSearchBar, MobileBottomSheet, MobileDataCard, MobileFormField } from './shared';
-import { cn } from '@/lib/utils';
+import { MobileSearchBar, MobileBottomSheet, MobileDataCard } from './shared';
 import { toast } from 'sonner';
-import { vibrateLight } from '@/lib/haptics';
 
 interface Customer {
   id: string;
@@ -31,7 +29,6 @@ export default function MobileCustomers() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
-  const [showAddSheet, setShowAddSheet] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   const filters = [
@@ -94,170 +91,141 @@ export default function MobileCustomers() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader title="Customers" variant="minimal" />
+      <MobileSimpleHeader 
+        title="Customers" 
+        showAdd
+        onAddClick={() => navigate('/customers?action=new')}
+      />
 
-      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4">
         {/* Search and Filters */}
         <MobileSearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by name, phone, code..."
+          placeholder="Search customers..."
           filters={filters}
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
         />
 
         {/* Customers List */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {isLoading ? (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {Array(4).fill(0).map((_, i) => (
-                <div key={i} className="h-24 rounded-2xl shimmer" />
+                <div key={i} className="h-20 rounded-xl bg-muted animate-pulse" />
               ))}
             </div>
           ) : filteredCustomers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center animate-fade-in">
-              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <User className="w-10 h-10 text-muted-foreground/50" />
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <User className="w-8 h-8 text-muted-foreground" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">
-                {searchQuery ? 'No results found' : 'No customers yet'}
+              <h3 className="text-base font-semibold mb-1">
+                {searchQuery ? 'No results' : 'No customers'}
               </h3>
-              <p className="text-sm text-muted-foreground mb-6">
-                {searchQuery ? 'Try a different search term' : 'Add your first customer to get started'}
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchQuery ? 'Try a different search' : 'Add your first customer'}
               </p>
               <button
-                onClick={() => setShowAddSheet(true)}
-                className="px-6 py-3 rounded-full gradient-gold text-white font-medium shadow-mobile-md tap-scale"
+                onClick={() => navigate('/customers?action=new')}
+                className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
               >
                 Add Customer
               </button>
             </div>
           ) : (
-            filteredCustomers.map((customer, index) => (
-              <div
+            filteredCustomers.map((customer) => (
+              <MobileDataCard
                 key={customer.id}
-                className="animate-slide-up-fade"
-                style={{ animationDelay: `${index * 30}ms` }}
+                title={customer.full_name}
+                subtitle={customer.customer_code}
+                icon={<User className="w-4 h-4 text-muted-foreground" />}
+                badge={{
+                  label: customer.is_active ? 'Active' : 'Inactive',
+                  variant: customer.is_active ? 'success' : 'default',
+                }}
+                onClick={() => setSelectedCustomer(customer)}
               >
-                <MobileDataCard
-                  title={customer.full_name}
-                  subtitle={customer.customer_code}
-                  icon={<User className="w-5 h-5 text-muted-foreground" />}
-                  badge={{
-                    label: customer.is_active ? 'Active' : 'Inactive',
-                    variant: customer.is_active ? 'success' : 'default',
-                  }}
-                  onClick={() => setSelectedCustomer(customer)}
-                  accentColor={customer.is_active ? 'gold' : 'default'}
-                >
-                  <div className="space-y-1.5 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>{customer.phone}</span>
-                    </div>
-                    {customer.city && (
-                      <div className="flex items-center gap-2">
-                        <MapPin className="w-3.5 h-3.5" />
-                        <span>{customer.city}</span>
-                      </div>
-                    )}
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Phone className="w-3 h-3" />
+                    <span>{customer.phone}</span>
                   </div>
-                </MobileDataCard>
-              </div>
+                  {customer.city && (
+                    <div className="flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      <span>{customer.city}</span>
+                    </div>
+                  )}
+                </div>
+              </MobileDataCard>
             ))
           )}
         </div>
 
-        {/* Bottom spacer */}
         <div className="h-20" />
       </PullToRefreshContainer>
-
-      {/* FAB for new customer */}
-      <button
-        onClick={() => { vibrateLight(); setShowAddSheet(true); }}
-        className="fixed right-4 bottom-24 w-14 h-14 rounded-full gradient-gold text-white shadow-lg flex items-center justify-center tap-scale z-40 animate-bounce-in shadow-glow"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
 
       {/* Customer Details Sheet */}
       <MobileBottomSheet
         isOpen={!!selectedCustomer}
         onClose={() => setSelectedCustomer(null)}
         title="Customer Details"
-        snapPoints={['half', 'full']}
       >
         {selectedCustomer && (
           <div className="p-4 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                <User className="w-8 h-8 text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                <User className="w-6 h-6 text-muted-foreground" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold">{selectedCustomer.full_name}</h3>
+                <h3 className="font-semibold">{selectedCustomer.full_name}</h3>
                 <p className="text-sm text-muted-foreground">{selectedCustomer.customer_code}</p>
               </div>
             </div>
 
-            <div className="space-y-3 bg-muted/50 rounded-xl p-4">
-              <div className="flex items-center gap-3">
+            <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 text-sm">
                 <Phone className="w-4 h-4 text-muted-foreground" />
                 <span>{selectedCustomer.phone}</span>
               </div>
               {selectedCustomer.email && (
-                <div className="flex items-center gap-3">
-                  <Mail className="w-4 h-4 text-muted-foreground" />
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="w-4 h-4 text-muted-foreground">@</span>
                   <span>{selectedCustomer.email}</span>
                 </div>
               )}
               {selectedCustomer.address && (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm">
                   <MapPin className="w-4 h-4 text-muted-foreground" />
                   <span>{selectedCustomer.address}{selectedCustomer.city ? `, ${selectedCustomer.city}` : ''}</span>
                 </div>
               )}
             </div>
 
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
-                onClick={() => navigate(`/loans?customer=${selectedCustomer.id}`)}
-                className="flex-1 py-3 rounded-xl gradient-gold text-white font-medium tap-scale"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  navigate(`/loans?customer=${selectedCustomer.id}`);
+                }}
+                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium"
               >
                 View Loans
               </button>
               <button
-                onClick={() => navigate(`/customers?id=${selectedCustomer.id}`)}
-                className="flex-1 py-3 rounded-xl bg-muted font-medium tap-scale"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  navigate(`/customers?id=${selectedCustomer.id}`);
+                }}
+                className="flex-1 py-2.5 rounded-lg bg-muted text-sm font-medium"
               >
                 Edit
               </button>
             </div>
           </div>
         )}
-      </MobileBottomSheet>
-
-      {/* Add Customer Sheet */}
-      <MobileBottomSheet
-        isOpen={showAddSheet}
-        onClose={() => setShowAddSheet(false)}
-        title="Add Customer"
-        snapPoints={['full']}
-      >
-        <div className="p-4">
-          <p className="text-center text-muted-foreground py-8">
-            For full customer creation, please use the desktop version.
-          </p>
-          <button
-            onClick={() => {
-              setShowAddSheet(false);
-              navigate('/customers');
-            }}
-            className="w-full py-3 rounded-xl gradient-gold text-white font-medium tap-scale"
-          >
-            Go to Full Form
-          </button>
-        </div>
       </MobileBottomSheet>
     </MobileLayout>
   );
