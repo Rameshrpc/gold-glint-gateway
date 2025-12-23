@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Users, Phone, Mail, Pencil, Trash2, CreditCard, User } from 'lucide-react';
-import { triggerHaptic } from '@/lib/haptics';
+import { vibrateSuccess } from '@/lib/haptics';
 
 interface Loyalty {
   id: string;
@@ -274,7 +274,7 @@ export default function MobileLoyalties() {
         toast.success('Employee created');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowForm(false);
       resetForm();
       fetchLoyalties();
@@ -317,7 +317,7 @@ export default function MobileLoyalties() {
         toast.success('Account added');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowAccountForm(false);
       resetAccountForm();
       fetchBankAccounts(selectedLoyalty.id);
@@ -332,7 +332,7 @@ export default function MobileLoyalties() {
     try {
       const { error } = await supabase.from('loyalties').delete().eq('id', id);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Employee deleted');
       fetchLoyalties();
     } catch (error: any) {
@@ -344,7 +344,7 @@ export default function MobileLoyalties() {
     try {
       const { error } = await supabase.from('loyalty_bank_accounts').delete().eq('id', accountId);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Account deleted');
       if (selectedLoyalty) {
         fetchBankAccounts(selectedLoyalty.id);
@@ -508,8 +508,8 @@ export default function MobileLoyalties() {
 
       {/* Search Sheet */}
       <MobileBottomSheet
-        open={showSearch}
-        onOpenChange={setShowSearch}
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
         title="Search Employees"
       >
         <div className="p-4">
@@ -524,8 +524,8 @@ export default function MobileLoyalties() {
 
       {/* Add/Edit Form Sheet */}
       <MobileBottomSheet
-        open={showForm}
-        onOpenChange={setShowForm}
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         title={editingLoyalty ? 'Edit Employee' : 'Add Employee'}
       >
         <div className="p-4 max-h-[70vh] overflow-y-auto">
@@ -719,8 +719,8 @@ export default function MobileLoyalties() {
 
       {/* Bank Accounts Sheet */}
       <MobileBottomSheet
-        open={showBankAccounts}
-        onOpenChange={setShowBankAccounts}
+        isOpen={showBankAccounts}
+        onClose={() => setShowBankAccounts(false)}
         title={`Bank Accounts - ${selectedLoyalty?.full_name || ''}`}
       >
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
@@ -782,8 +782,8 @@ export default function MobileLoyalties() {
 
       {/* Add Bank Account Form */}
       <MobileBottomSheet
-        open={showAccountForm}
-        onOpenChange={setShowAccountForm}
+        isOpen={showAccountForm}
+        onClose={() => setShowAccountForm(false)}
         title="Add Bank Account"
       >
         <div className="p-4 space-y-4">

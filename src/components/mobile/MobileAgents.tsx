@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, UserCog, Phone, Mail, Pencil, Trash2, IndianRupee } from 'lucide-react';
-import { triggerHaptic } from '@/lib/haptics';
+import { vibrateSuccess } from '@/lib/haptics';
 
 interface Branch {
   id: string;
@@ -136,7 +136,7 @@ export default function MobileAgents() {
         toast.success('Agent created');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowForm(false);
       resetForm();
       fetchData();
@@ -164,7 +164,7 @@ export default function MobileAgents() {
     try {
       const { error } = await supabase.from('agents').delete().eq('id', id);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Agent deleted');
       fetchData();
     } catch (error: any) {
@@ -323,8 +323,8 @@ export default function MobileAgents() {
 
       {/* Search Sheet */}
       <MobileBottomSheet
-        open={showSearch}
-        onOpenChange={setShowSearch}
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
         title="Search Agents"
       >
         <div className="p-4">
@@ -339,8 +339,8 @@ export default function MobileAgents() {
 
       {/* Add/Edit Form Sheet */}
       <MobileBottomSheet
-        open={showForm}
-        onOpenChange={setShowForm}
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         title={editingAgent ? 'Edit Agent' : 'Add Agent'}
       >
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">

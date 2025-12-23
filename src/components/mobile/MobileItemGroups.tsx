@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Layers, Pencil, Trash2 } from 'lucide-react';
-import { triggerHaptic } from '@/lib/haptics';
+import { vibrateSuccess } from '@/lib/haptics';
 
 interface ItemGroup {
   id: string;
@@ -81,7 +81,7 @@ export default function MobileItemGroups() {
         }
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Default groups created');
       fetchItemGroups();
     } catch (error: any) {
@@ -119,7 +119,7 @@ export default function MobileItemGroups() {
         toast.success('Item group created');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowForm(false);
       resetForm();
       fetchItemGroups();
@@ -143,7 +143,7 @@ export default function MobileItemGroups() {
     try {
       const { error } = await supabase.from('item_groups').delete().eq('id', id);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Item group deleted');
       fetchItemGroups();
     } catch (error: any) {
@@ -266,8 +266,8 @@ export default function MobileItemGroups() {
 
       {/* Add/Edit Form Sheet */}
       <MobileBottomSheet
-        open={showForm}
-        onOpenChange={setShowForm}
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         title={editingGroup ? 'Edit Item Group' : 'Add Item Group'}
       >
         <div className="p-4 space-y-4">
