@@ -76,11 +76,11 @@ export default function MobileTrialBalance() {
     expense: 'Expenses'
   };
   const typeColors: Record<string, string> = {
-    asset: 'bg-blue-500',
+    asset: 'bg-primary',
     liability: 'bg-orange-500',
-    equity: 'bg-purple-500',
-    income: 'bg-green-500',
-    expense: 'bg-red-500'
+    equity: 'bg-violet-500',
+    income: 'bg-emerald-500',
+    expense: 'bg-destructive'
   };
 
   const toggleType = (type: string) => {

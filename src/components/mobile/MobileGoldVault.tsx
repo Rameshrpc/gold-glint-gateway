@@ -169,37 +169,37 @@ export default function MobileGoldVault() {
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-gradient-to-br from-amber-50 to-orange-100 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-4 border border-amber-200/50">
+          <div className="bg-card rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-2">
-              <Vault className="w-4 h-4 text-amber-600" />
-              <span className="text-xs font-medium text-amber-700 dark:text-amber-400">In Vault</span>
+              <Vault className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">In Vault</span>
             </div>
-            <p className="text-xl font-bold text-amber-900 dark:text-amber-100">{vaultTotals.loans}</p>
-            <p className="text-xs text-amber-600">{formatWeight(vaultTotals.weight)}</p>
+            <p className="text-xl font-bold">{vaultTotals.loans}</p>
+            <p className="text-xs text-muted-foreground">{formatWeight(vaultTotals.weight)}</p>
           </div>
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-2xl p-4 border border-blue-200/50">
+          <div className="bg-card rounded-xl p-4 border border-border">
             <div className="flex items-center gap-2 mb-2">
-              <Package className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-medium text-blue-700 dark:text-blue-400">Repledged</span>
+              <Package className="w-4 h-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Repledged</span>
             </div>
-            <p className="text-xl font-bold text-blue-900 dark:text-blue-100">{repledgeTotals.packets}</p>
-            <p className="text-xs text-blue-600">{formatWeight(repledgeTotals.weight)}</p>
+            <p className="text-xl font-bold">{repledgeTotals.packets}</p>
+            <p className="text-xs text-muted-foreground">{formatWeight(repledgeTotals.weight)}</p>
           </div>
         </div>
 
         {/* Tab Switcher */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'vault' | 'repledged')} className="w-full">
-          <TabsList className="w-full h-12 bg-muted/50 p-1 rounded-xl">
+          <TabsList className="w-full h-11 bg-muted p-1 rounded-lg">
             <TabsTrigger 
               value="vault" 
-              className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
             >
               <Vault className="w-4 h-4 mr-2" />
               In Vault ({vaultTotals.loans})
             </TabsTrigger>
             <TabsTrigger 
               value="repledged"
-              className="flex-1 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              className="flex-1 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm text-sm"
             >
               <Package className="w-4 h-4 mr-2" />
               Repledged ({repledgeTotals.packets})

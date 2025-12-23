@@ -86,10 +86,10 @@ export default function MobileDayBook() {
   const totalCredit = filteredEntries.reduce((sum, e) => sum + e.credit_amount, 0);
 
   const voucherTypeColors: Record<string, string> = {
-    payment: 'bg-red-100 text-red-700',
-    receipt: 'bg-green-100 text-green-700',
-    journal: 'bg-blue-100 text-blue-700',
-    contra: 'bg-purple-100 text-purple-700'
+    payment: 'bg-destructive/10 text-destructive',
+    receipt: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    journal: 'bg-primary/10 text-primary',
+    contra: 'bg-secondary text-secondary-foreground'
   };
 
   const toggleVoucher = (key: string) => {
