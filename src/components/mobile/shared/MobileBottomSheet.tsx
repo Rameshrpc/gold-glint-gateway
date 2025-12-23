@@ -7,6 +7,7 @@ interface MobileBottomSheetProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  footer?: ReactNode;
   snapPoints?: ('half' | 'full')[];
   showHandle?: boolean;
   className?: string;
@@ -17,6 +18,7 @@ export default function MobileBottomSheet({
   onClose,
   title,
   children,
+  footer,
   snapPoints = ['half'],
   showHandle = true,
   className,
@@ -80,6 +82,11 @@ export default function MobileBottomSheet({
 
   if (!isOpen) return null;
 
+  // Calculate content height based on header and footer presence
+  const headerHeight = title ? 60 : 20;
+  const footerHeight = footer ? 80 : 0;
+  const contentHeight = `calc(100% - ${headerHeight + footerHeight}px)`;
+
   return (
     <>
       {/* Backdrop */}
@@ -95,7 +102,7 @@ export default function MobileBottomSheet({
       <div
         ref={sheetRef}
         className={cn(
-          'fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl transition-all safe-area-bottom',
+          'fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl transition-all safe-area-bottom flex flex-col',
           isDragging ? 'transition-none' : 'duration-300 ease-out',
           className
         )}
@@ -109,14 +116,14 @@ export default function MobileBottomSheet({
       >
         {/* Handle */}
         {showHandle && (
-          <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing">
+          <div className="flex justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing flex-shrink-0">
             <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
           </div>
         )}
 
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border flex-shrink-0">
             <h2 className="text-lg font-semibold">{title}</h2>
             <button
               onClick={onClose}
@@ -129,13 +136,18 @@ export default function MobileBottomSheet({
 
         {/* Content */}
         <div
-          className={cn(
-            'overflow-y-auto',
-            title ? 'h-[calc(100%-60px)]' : 'h-[calc(100%-20px)]'
-          )}
+          className="overflow-y-auto flex-1"
+          style={{ height: contentHeight }}
         >
           {children}
         </div>
+
+        {/* Footer - Outside scrollable area */}
+        {footer && (
+          <div className="flex-shrink-0 p-4 bg-background border-t border-border safe-area-inset-bottom">
+            {footer}
+          </div>
+        )}
       </div>
     </>
   );

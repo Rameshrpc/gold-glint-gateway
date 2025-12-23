@@ -376,8 +376,19 @@ export default function MobileBanksNbfc() {
         isOpen={showForm}
         onClose={() => setShowForm(false)}
         title={editingBank ? 'Edit Bank/NBFC' : 'Add Bank/NBFC'}
+        snapPoints={['full']}
+        footer={
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!formData.bank_code || !formData.bank_name || submitting}
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {submitting ? 'Saving...' : (editingBank ? 'Update' : 'Create')} Bank/NBFC
+          </Button>
+        }
       >
-        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Bank Code *</Label>
@@ -519,18 +530,6 @@ export default function MobileBanksNbfc() {
             />
             <Label>Active</Label>
           </div>
-        </div>
-        
-        {/* Fixed Bottom Save Button */}
-        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
-          <Button 
-            onClick={handleSubmit} 
-            className="w-full h-12 text-base font-semibold" 
-            disabled={!formData.bank_code || !formData.bank_name || submitting}
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {submitting ? 'Saving...' : (editingBank ? 'Update' : 'Create')} Bank/NBFC
-          </Button>
         </div>
       </MobileBottomSheet>
     </MobileLayout>

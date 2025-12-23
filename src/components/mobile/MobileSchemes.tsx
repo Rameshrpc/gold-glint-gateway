@@ -329,8 +329,19 @@ export default function MobileSchemes() {
         onClose={() => setShowForm(false)}
         title={editingScheme ? 'Edit Scheme' : 'New Scheme'}
         snapPoints={['full']}
+        footer={
+          <LoadingButton
+            onClick={handleSave}
+            isLoading={isSaving}
+            loadingText="Saving..."
+            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold"
+          >
+            <Save className="w-5 h-5 mr-2" />
+            {editingScheme ? 'Update Scheme' : 'Create Scheme'}
+          </LoadingButton>
+        }
       >
-        <div className="p-4 space-y-4 pb-32">
+        <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <MobileFormField
               label="Scheme Code *"
@@ -445,19 +456,6 @@ export default function MobileSchemes() {
             />
             <Label>Active Scheme</Label>
           </div>
-        </div>
-
-        {/* Fixed bottom action */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t safe-area-inset-bottom">
-          <LoadingButton
-            onClick={handleSave}
-            isLoading={isSaving}
-            loadingText="Saving..."
-            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold"
-          >
-            <Save className="w-5 h-5 mr-2" />
-            {editingScheme ? 'Update Scheme' : 'Create Scheme'}
-          </LoadingButton>
         </div>
       </MobileBottomSheet>
     </MobileLayout>
