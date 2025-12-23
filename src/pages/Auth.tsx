@@ -11,16 +11,31 @@ import { Loader2, Building2 } from 'lucide-react';
 import { z } from 'zod';
 
 const loginSchema = z.object({
-  clientCode: z.string().min(1, 'Client code is required'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  clientCode: z.string()
+    .min(1, 'Client code is required')
+    .max(20, 'Client code is too long')
+    .regex(/^[A-Z0-9]+$/, 'Client code must contain only letters and numbers'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters'),
 });
 
 const signupSchema = z.object({
-  clientCode: z.string().min(1, 'Client code is required'),
-  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  clientCode: z.string()
+    .min(1, 'Client code is required')
+    .max(20, 'Client code is too long')
+    .regex(/^[A-Z0-9]+$/, 'Client code must contain only letters and numbers'),
+  fullName: z.string()
+    .min(2, 'Full name must be at least 2 characters')
+    .max(100, 'Full name is too long'),
+  email: z.string()
+    .min(1, 'Email is required')
+    .email('Please enter a valid email address'),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(72, 'Password is too long'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
