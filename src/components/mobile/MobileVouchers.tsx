@@ -81,19 +81,19 @@ export default function MobileVouchers() {
       <div className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+          <div className="p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center gap-2 mb-1">
               <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
               <span className="text-xs text-muted-foreground">Inflow</span>
             </div>
             <p className="text-xl font-bold text-emerald-600">₹{(totalIn / 1000).toFixed(0)}K</p>
           </div>
-          <div className="p-4 rounded-2xl bg-red-500/10 border border-red-500/20">
+          <div className="p-4 rounded-xl bg-card border border-border">
             <div className="flex items-center gap-2 mb-1">
-              <ArrowUpRight className="w-4 h-4 text-red-500" />
+              <ArrowUpRight className="w-4 h-4 text-destructive" />
               <span className="text-xs text-muted-foreground">Outflow</span>
             </div>
-            <p className="text-xl font-bold text-red-600">₹{(totalOut / 1000).toFixed(0)}K</p>
+            <p className="text-xl font-bold text-destructive">₹{(totalOut / 1000).toFixed(0)}K</p>
           </div>
         </div>
 
@@ -108,9 +108,9 @@ export default function MobileVouchers() {
               key={f.key}
               onClick={() => setFilter(f.key as any)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium transition-all tap-scale",
+                "px-4 py-2 rounded-lg text-sm font-medium transition-all tap-scale",
                 filter === f.key
-                  ? "gradient-gold text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-card border border-border text-muted-foreground"
               )}
             >
@@ -132,13 +132,13 @@ export default function MobileVouchers() {
             </div>
           ) : (
             filteredVouchers.map((voucher, index) => {
-              const config = voucherTypeConfig[voucher.voucher_type] || { label: voucher.voucher_type, color: 'bg-gray-500', icon: 'neutral' };
+              const config = voucherTypeConfig[voucher.voucher_type] || { label: voucher.voucher_type, color: 'bg-muted', icon: 'neutral' };
               const amount = voucher.total_debit || voucher.total_credit;
 
               return (
                 <div
                   key={voucher.id}
-                  className="p-4 rounded-2xl bg-card border border-border animate-slide-up-fade"
+                  className="p-4 rounded-xl bg-card border border-border animate-slide-up-fade"
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-start justify-between">

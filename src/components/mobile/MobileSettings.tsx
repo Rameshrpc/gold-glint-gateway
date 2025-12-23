@@ -144,9 +144,9 @@ export default function MobileSettings() {
 
       <div className="px-4 py-4 space-y-6 animate-fade-in">
         {/* User Card */}
-        <div className="p-4 rounded-2xl bg-card border border-border">
+        <div className="p-4 rounded-xl bg-card border border-border">
           <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl gradient-gold flex items-center justify-center text-white text-xl font-bold">
+            <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold">
               {profile?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'U'}
             </div>
             <div className="flex-1">
@@ -170,7 +170,7 @@ export default function MobileSettings() {
                 {section.title}
               </h3>
             )}
-            <div className="rounded-2xl bg-card border border-border overflow-hidden">
+            <div className="rounded-xl bg-card border border-border overflow-hidden">
               {section.items.map((item, itemIndex) => (
                 <button
                   key={itemIndex}
