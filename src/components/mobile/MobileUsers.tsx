@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Users as UsersIcon, Plus, Phone, Mail, Building2, Shield, UserCheck, UserX } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { MobileSearchBar, MobileBottomSheet, MobileDataCard } from './shared';
 import { Badge } from '@/components/ui/badge';
@@ -163,7 +163,7 @@ export default function MobileUsers() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader title="Users" variant="minimal" />
+      <MobileSimpleHeader title="Users" showBack />
 
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         <MobileSearchBar

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { Scale, RefreshCw, CheckCircle, XCircle } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -91,37 +91,41 @@ export default function MobileTrialBalance() {
   return (
     <MobileLayout hideNav={false}>
       <div className="flex flex-col min-h-screen bg-background">
-        <MobileGradientHeader title="Trial Balance" showBack variant="minimal">
-          <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white">
-                <Calendar className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-auto">
-              <SheetHeader>
-                <SheetTitle>Report Date</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>As of Date</Label>
-                  <Input
-                    type="date"
-                    value={asOfDate}
-                    onChange={(e) => setAsOfDate(e.target.value)}
-                  />
+        <MobileSimpleHeader 
+          title="Trial Balance" 
+          showBack
+          rightContent={
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+              <SheetTrigger asChild>
+                <button className="w-9 h-9 rounded-full flex items-center justify-center active:bg-muted">
+                  <Calendar className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto">
+                <SheetHeader>
+                  <SheetTitle>Report Date</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label>As of Date</Label>
+                    <Input
+                      type="date"
+                      value={asOfDate}
+                      onChange={(e) => setAsOfDate(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => { fetchData(); setFilterOpen(false); }}
+                    disabled={loading}
+                  >
+                    Generate Report
+                  </Button>
                 </div>
-                <Button 
-                  className="w-full" 
-                  onClick={() => { fetchData(); setFilterOpen(false); }}
-                  disabled={loading}
-                >
-                  Generate Report
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </MobileGradientHeader>
+              </SheetContent>
+            </Sheet>
+          }
+        />
 
         <PullToRefreshContainer onRefresh={handleRefresh}>
           <div className="p-4 space-y-4 pb-24">

@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Mail, Phone, Lock, Building2, Check } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -63,12 +63,7 @@ export default function MobileProfile() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Profile" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Profile" showBack />
 
       <div className="px-4 py-4 space-y-6 animate-fade-in">
         {/* Avatar Section */}

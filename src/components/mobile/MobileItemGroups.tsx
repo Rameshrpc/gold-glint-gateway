@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { MobileBottomSheet } from './shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -163,7 +163,7 @@ export default function MobileItemGroups() {
 
   return (
     <MobileLayout hideNav={showForm}>
-      <MobileGradientHeader title="Item Groups" />
+      <MobileSimpleHeader title="Item Groups" showBack />
 
       <div className="p-4 space-y-4">
         {/* Action Buttons */}

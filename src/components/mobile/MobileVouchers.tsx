@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay } from 'date-fns';
 
@@ -76,12 +76,7 @@ export default function MobileVouchers() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Today's Vouchers" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Today's Vouchers" showBack />
 
       <div className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Summary Cards */}

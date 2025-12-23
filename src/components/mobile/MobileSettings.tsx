@@ -5,7 +5,7 @@ import {
   Building2, Users, Shield, HelpCircle 
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -140,12 +140,7 @@ export default function MobileSettings() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Settings" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Settings" showBack />
 
       <div className="px-4 py-4 space-y-6 animate-fade-in">
         {/* User Card */}

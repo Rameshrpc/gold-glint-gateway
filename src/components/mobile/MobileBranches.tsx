@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Building2, Phone, Mail, MapPin, Users } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { MobileSearchBar, MobileBottomSheet, MobileDataCard } from './shared';
 import { Badge } from '@/components/ui/badge';
@@ -117,7 +117,7 @@ export default function MobileBranches() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader title="Branches" variant="minimal" />
+      <MobileSimpleHeader title="Branches" showBack />
 
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         <MobileSearchBar

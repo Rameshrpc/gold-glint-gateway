@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { MobileSearchBar, MobileBottomSheet } from './shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -369,8 +369,9 @@ export default function MobileLoyalties() {
 
   return (
     <MobileLayout hideNav={showForm || showBankAccounts}>
-      <MobileGradientHeader 
+      <MobileSimpleHeader 
         title="Loyalties"
+        showBack
         showSearch
         onSearchClick={() => setShowSearch(true)}
       />

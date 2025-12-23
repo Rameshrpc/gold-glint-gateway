@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { TrendingUp, TrendingDown, Calendar, IndianRupee, Plus, ExternalLink, Copy } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { MobileBottomSheet, MobileFormField } from './shared';
 import { Button } from '@/components/ui/button';
@@ -105,7 +105,7 @@ export default function MobileMarketRates() {
 
   return (
     <MobileLayout>
-      <MobileGradientHeader title="Market Rates" variant="minimal" />
+      <MobileSimpleHeader title="Market Rates" showBack showAdd onAddClick={() => setShowAddSheet(true)} />
 
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Today's Rate Card */}
