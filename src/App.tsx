@@ -65,6 +65,11 @@ import MobileTrialBalance from "./components/mobile/MobileTrialBalance";
 import MobileProfitLoss from "./components/mobile/MobileProfitLoss";
 import MobileBalanceSheet from "./components/mobile/MobileBalanceSheet";
 import MobileLedgerStatement from "./components/mobile/MobileLedgerStatement";
+import MobileItems from "./components/mobile/MobileItems";
+import MobileItemGroups from "./components/mobile/MobileItemGroups";
+import MobileAgents from "./components/mobile/MobileAgents";
+import MobileBanksNbfc from "./components/mobile/MobileBanksNbfc";
+import MobileLoyalties from "./components/mobile/MobileLoyalties";
 
 const queryClient = new QueryClient();
 
@@ -185,17 +190,26 @@ const App = () => (
             } />
             <Route path="/agents" element={
               <ProtectedRoute>
-                <Agents />
+                <DeviceAwareWrapper 
+                  mobile={<MobileAgents />} 
+                  desktop={<Agents />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/items" element={
               <ProtectedRoute>
-                <Items />
+                <DeviceAwareWrapper 
+                  mobile={<MobileItems />} 
+                  desktop={<Items />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/item-groups" element={
               <ProtectedRoute>
-                <ItemGroups />
+                <DeviceAwareWrapper 
+                  mobile={<MobileItemGroups />} 
+                  desktop={<ItemGroups />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/market-rates" element={
@@ -216,12 +230,18 @@ const App = () => (
             } />
             <Route path="/banks-nbfc" element={
               <ProtectedRoute>
-                <BanksNbfc />
+                <DeviceAwareWrapper 
+                  mobile={<MobileBanksNbfc />} 
+                  desktop={<BanksNbfc />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/loyalties" element={
               <ProtectedRoute>
-                <Loyalties />
+                <DeviceAwareWrapper 
+                  mobile={<MobileLoyalties />} 
+                  desktop={<Loyalties />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/gold-vault" element={
