@@ -261,26 +261,26 @@ export default function MobileInterest() {
   return (
     <MobileLayout>
       {renderSuccessOverlay()}
-      <MobileSimpleHeader title="Interest Collection" showBack />
+      <MobileSimpleHeader title="Interest" showBack />
 
-      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4">
         {/* Stats Summary */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 border border-red-200 dark:border-red-800">
+          <div className="bg-destructive/10 rounded-xl p-3 border border-destructive/20">
             <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-4 h-4 text-red-500" />
-              <span className="text-xs font-medium text-red-600 dark:text-red-400">Overdue</span>
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-xs font-medium text-destructive">Overdue</span>
             </div>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">
+            <p className="text-xl font-bold text-destructive">
               {loans.filter(l => l.urgency === 'overdue').length}
             </p>
           </div>
-          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-3 border border-amber-200 dark:border-amber-800">
+          <div className="bg-warning/10 rounded-xl p-3 border border-warning/20">
             <div className="flex items-center gap-2 mb-1">
-              <Clock className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400">Due This Week</span>
+              <Clock className="w-4 h-4 text-warning" />
+              <span className="text-xs font-medium text-warning">Due Soon</span>
             </div>
-            <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+            <p className="text-xl font-bold text-warning">
               {loans.filter(l => l.urgency === 'due-soon').length}
             </p>
           </div>
@@ -290,7 +290,7 @@ export default function MobileInterest() {
         <MobileSearchBar
           value={searchQuery}
           onChange={setSearchQuery}
-          placeholder="Search by loan number, customer..."
+          placeholder="Search loans..."
           filters={filters}
           activeFilter={activeFilter}
           onFilterChange={setActiveFilter}
@@ -432,7 +432,7 @@ export default function MobileInterest() {
               onClick={handleCollectInterest}
               isLoading={isSubmitting}
               loadingText="Processing..."
-              className="w-full py-4 rounded-xl gradient-gold text-white font-semibold shadow-mobile-md"
+              className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold"
             >
               <CheckCircle className="w-5 h-5 mr-2" />
               Collect ₹{amountReceived || selectedLoan.interestDue}

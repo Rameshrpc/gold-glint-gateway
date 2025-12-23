@@ -375,9 +375,9 @@ export default function MobileNewLoan() {
 
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t safe-area-inset-bottom">
         {currentStep === 'confirm' ? (
-          <LoadingButton onClick={handleSubmit} isLoading={isSubmitting} loadingText="Creating..." className="w-full py-6 gradient-gold text-white text-lg">Create Loan</LoadingButton>
+          <LoadingButton onClick={handleSubmit} isLoading={isSubmitting} loadingText="Creating..." className="w-full py-4 bg-primary text-primary-foreground text-lg rounded-xl font-semibold">Create Loan</LoadingButton>
         ) : (
-          <Button onClick={() => { vibrateLight(); goNext(); }} disabled={!canGoNext()} className="w-full py-6 gradient-gold text-white">Continue<ChevronRight className="w-5 h-5 ml-2" /></Button>
+          <Button onClick={() => { vibrateLight(); goNext(); }} disabled={!canGoNext()} className="w-full py-4 bg-primary text-primary-foreground rounded-xl">Continue<ChevronRight className="w-5 h-5 ml-2" /></Button>
         )}
       </div>
 

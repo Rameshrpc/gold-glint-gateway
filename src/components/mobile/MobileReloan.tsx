@@ -267,7 +267,7 @@ export default function MobileReloan() {
           <button
             onClick={handleSearch}
             disabled={isLoading}
-            className="px-4 rounded-2xl gradient-gold text-white font-medium tap-scale"
+            className="px-4 rounded-xl bg-primary text-primary-foreground font-medium"
           >
             {isLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : 'Search'}
           </button>
@@ -372,7 +372,7 @@ export default function MobileReloan() {
             <button
               onClick={handleProcessReloan}
               disabled={processing}
-              className="w-full py-4 rounded-2xl gradient-gold text-white font-semibold tap-scale disabled:opacity-50"
+              className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-semibold disabled:opacity-50"
             >
               {processing ? 'Processing...' : 'Confirm Reloan'}
             </button>

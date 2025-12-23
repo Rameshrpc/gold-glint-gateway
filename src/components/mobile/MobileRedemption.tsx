@@ -228,21 +228,21 @@ export default function MobileRedemption() {
       {renderSuccessOverlay()}
       <MobileSimpleHeader title="Redemption" showBack />
 
-      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
+      <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4">
         {/* Summary Card */}
-        <div className="gradient-gold rounded-2xl p-4 text-white shadow-mobile-lg">
+        <div className="bg-primary/10 rounded-xl p-4 border border-primary/20">
           <div className="flex items-center gap-3 mb-3">
-            <Award className="w-6 h-6" />
-            <span className="font-semibold">Ready for Redemption</span>
+            <Award className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-primary">Ready for Redemption</span>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-white/70 text-xs">Active Loans</p>
-              <p className="text-2xl font-bold">{loans.length}</p>
+              <p className="text-muted-foreground text-xs">Active Loans</p>
+              <p className="text-xl font-bold">{loans.length}</p>
             </div>
             <div>
-              <p className="text-white/70 text-xs">Total Gold</p>
-              <p className="text-2xl font-bold">
+              <p className="text-muted-foreground text-xs">Total Gold</p>
+              <p className="text-xl font-bold">
                 {loans.reduce((sum, l) => sum + l.totalGold, 0).toFixed(1)}g
               </p>
             </div>
@@ -427,9 +427,9 @@ export default function MobileRedemption() {
                 loadingText="Processing..."
                 disabled={!goldVerified}
                 className={cn(
-                  "w-full py-4 rounded-xl font-semibold shadow-mobile-md flex items-center justify-center gap-2",
+                  "w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2",
                   goldVerified 
-                    ? "gradient-gold text-white" 
+                    ? "bg-primary text-primary-foreground" 
                     : "bg-muted text-muted-foreground cursor-not-allowed"
                 )}
               >
