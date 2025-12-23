@@ -232,30 +232,16 @@ export default function MobileBanksNbfc() {
       <div className="p-4 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-5 w-5 text-primary" />
               <span className="text-sm text-muted-foreground">Total</span>
             </div>
             <p className="text-2xl font-bold">{banks.length}</p>
           </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
+          <div className="bg-card rounded-xl p-4 border">
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-5 w-5 text-green-600" />
-              <span className="text-sm text-muted-foreground">Banks</span>
-            </div>
-            <p className="text-2xl font-bold">{banks.filter(b => b.bank_type === 'bank').length}</p>
-          </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-5 w-5 text-amber-600" />
-              <span className="text-sm text-muted-foreground">NBFCs</span>
-            </div>
-            <p className="text-2xl font-bold">{banks.filter(b => b.bank_type === 'nbfc').length}</p>
-          </div>
-          <div className="bg-card rounded-xl p-4 border border-border/50">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-5 w-5 text-blue-600" />
               <span className="text-sm text-muted-foreground">Active</span>
             </div>
             <p className="text-2xl font-bold">{banks.filter(b => b.is_active).length}</p>
