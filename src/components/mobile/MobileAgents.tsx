@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, UserCog, Phone, Mail, Pencil, Trash2, IndianRupee } from 'lucide-react';
+import { Plus, UserCog, Phone, Mail, Pencil, Trash2, IndianRupee, Save } from 'lucide-react';
 import { vibrateSuccess } from '@/lib/haptics';
 
 interface Branch {
@@ -344,7 +344,7 @@ export default function MobileAgents() {
         onClose={() => setShowForm(false)}
         title={editingAgent ? 'Edit Agent' : 'Add Agent'}
       >
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
           {editingAgent && (
             <div className="space-y-2">
               <Label>Agent Code</Label>
@@ -431,8 +431,16 @@ export default function MobileAgents() {
             />
             <Label>Active</Label>
           </div>
-          
-          <Button onClick={handleSubmit} className="w-full" disabled={!formData.full_name}>
+        </div>
+        
+        {/* Fixed Bottom Save Button */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
+          <Button 
+            onClick={handleSubmit} 
+            className="w-full h-12 text-base font-semibold" 
+            disabled={!formData.full_name}
+          >
+            <Save className="w-5 h-5 mr-2" />
             {editingAgent ? 'Update' : 'Create'} Agent
           </Button>
         </div>

@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Plus, Users, Phone, Mail, Pencil, Trash2, CreditCard, User } from 'lucide-react';
+import { Plus, Users, Phone, Mail, Pencil, Trash2, CreditCard, User, Save } from 'lucide-react';
 import { vibrateSuccess } from '@/lib/haptics';
 
 interface Loyalty {
@@ -529,7 +529,7 @@ export default function MobileLoyalties() {
         onClose={() => setShowForm(false)}
         title={editingLoyalty ? 'Edit Employee' : 'Add Employee'}
       >
-        <div className="p-4 max-h-[70vh] overflow-y-auto">
+        <div className="p-4 pb-24 max-h-[70vh] overflow-y-auto">
           <Tabs defaultValue="personal" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="personal">Personal</TabsTrigger>
@@ -707,12 +707,16 @@ export default function MobileLoyalties() {
               </div>
             </TabsContent>
           </Tabs>
-          
+        </div>
+        
+        {/* Fixed Bottom Save Button */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
           <Button 
             onClick={handleSubmit} 
-            className="w-full mt-4" 
+            className="w-full h-12 text-base font-semibold" 
             disabled={!formData.full_name || !formData.phone || submitting}
           >
+            <Save className="w-5 h-5 mr-2" />
             {submitting ? 'Saving...' : (editingLoyalty ? 'Update' : 'Create')} Employee
           </Button>
         </div>
@@ -787,7 +791,7 @@ export default function MobileLoyalties() {
         onClose={() => setShowAccountForm(false)}
         title="Add Bank Account"
       >
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-24 max-h-[70vh] overflow-y-auto">
           <div className="space-y-2">
             <Label>Bank *</Label>
             <Select
@@ -881,12 +885,16 @@ export default function MobileLoyalties() {
             />
             <Label>Primary Account</Label>
           </div>
-          
+        </div>
+        
+        {/* Fixed Bottom Save Button */}
+        <div className="sticky bottom-0 left-0 right-0 p-4 bg-background border-t">
           <Button 
             onClick={handleAddBankAccount} 
-            className="w-full" 
+            className="w-full h-12 text-base font-semibold" 
             disabled={!accountFormData.bank_id || !accountFormData.account_number || submitting}
           >
+            <Save className="w-5 h-5 mr-2" />
             {submitting ? 'Saving...' : 'Add Account'}
           </Button>
         </div>
