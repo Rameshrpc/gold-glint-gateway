@@ -59,14 +59,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentBranch, setCurrentBranch] = useState<Branch | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const clearAuthState = () => {
+    setUser(null);
+    setSession(null);
+    setProfile(null);
+    setRoles([]);
+    setClient(null);
+    setBranches([]);
+    setCurrentBranch(null);
+  };
+
   const fetchUserData = async (userId: string) => {
     try {
       // Fetch profile
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return;
+      }
 
       if (profileData) {
         setProfile(profileData as Profile);
@@ -128,11 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             fetchUserData(session.user.id);
           }, 0);
         } else {
-          setProfile(null);
-          setRoles([]);
-          setClient(null);
-          setBranches([]);
-          setCurrentBranch(null);
+          clearAuthState();
         }
         setLoading(false);
       }
@@ -152,58 +163,128 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string, clientCode: string) => {
-    // First verify client code exists
-    const { data: clientData, error: clientError } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('client_code', clientCode.toUpperCase())
-      .eq('is_active', true)
-      .maybeSingle();
+    try {
+      // First verify client code exists
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('id, client_code')
+        .eq('client_code', clientCode.toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (clientError || !clientData) {
-      return { error: new Error('Invalid client code. Please check and try again.') };
+      if (clientError) {
+        console.error('Client lookup error:', clientError);
+        return { error: new Error('Unable to verify client code. Please try again.') };
+      }
+
+      if (!clientData) {
+        return { error: new Error('Invalid client code. Please check and try again.') };
+      }
+
+      // Attempt sign in
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        // Provide user-friendly error messages
+        if (authError.message.includes('Invalid login credentials')) {
+          return { error: new Error('Invalid email or password. Please check your credentials.') };
+        }
+        if (authError.message.includes('Email not confirmed')) {
+          return { error: new Error('Please confirm your email address before signing in.') };
+        }
+        return { error: authError };
+      }
+
+      if (!authData.user) {
+        return { error: new Error('Sign in failed. Please try again.') };
+      }
+
+      // Verify user belongs to the provided client code
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('client_id')
+        .eq('user_id', authData.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Profile verification error:', profileError);
+        await supabase.auth.signOut({ scope: 'local' });
+        return { error: new Error('Unable to verify your account. Please contact support.') };
+      }
+
+      if (!profileData) {
+        await supabase.auth.signOut({ scope: 'local' });
+        return { error: new Error('Your profile was not found. Please contact support.') };
+      }
+
+      // Verify the profile's client_id matches the provided client code
+      if (profileData.client_id !== clientData.id) {
+        await supabase.auth.signOut({ scope: 'local' });
+        return { error: new Error('Your account does not belong to this organization. Please check the client code.') };
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Sign in error:', error);
+      return { error: new Error('An unexpected error occurred. Please try again.') };
     }
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      return { error };
-    }
-
-    return { error: null };
   };
 
   const signUp = async (email: string, password: string, fullName: string, clientCode: string) => {
-    // First verify client code exists
-    const { data: clientData, error: clientError } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('client_code', clientCode.toUpperCase())
-      .eq('is_active', true)
-      .maybeSingle();
+    try {
+      // First verify client code exists
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('client_code', clientCode.toUpperCase())
+        .eq('is_active', true)
+        .maybeSingle();
 
-    if (clientError || !clientData) {
-      return { error: new Error('Invalid client code. Please contact your administrator.') };
-    }
+      if (clientError) {
+        console.error('Client lookup error:', clientError);
+        return { error: new Error('Unable to verify client code. Please try again.') };
+      }
 
-    const redirectUrl = `${window.location.origin}/`;
+      if (!clientData) {
+        return { error: new Error('Invalid client code. Please contact your administrator.') };
+      }
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      },
-    });
+      const redirectUrl = `${window.location.origin}/`;
 
-    if (authError) {
-      return { error: authError };
-    }
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+        },
+      });
 
-    if (authData.user) {
+      if (authError) {
+        // Handle specific auth errors
+        if (authError.message.includes('already registered')) {
+          return { error: new Error('This email is already registered. Please login instead.') };
+        }
+        if (authError.message.includes('Password should be at least')) {
+          return { error: new Error('Password must be at least 6 characters long.') };
+        }
+        if (authError.message.includes('valid email')) {
+          return { error: new Error('Please enter a valid email address.') };
+        }
+        return { error: authError };
+      }
+
+      if (!authData.user) {
+        return { error: new Error('Account creation failed. Please try again.') };
+      }
+
+      // Check if email confirmation is pending
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        return { error: new Error('This email is already registered. Please login instead.') };
+      }
+
       // Create profile for the new user
       const { error: profileError } = await supabase
         .from('profiles')
@@ -215,6 +296,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
       if (profileError) {
+        console.error('Profile creation error:', profileError);
+        // Don't delete the auth user - they can try to complete setup later
         return { error: new Error('Account created but profile setup failed. Please contact support.') };
       }
 
@@ -228,10 +311,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) {
         console.error('Role assignment error:', roleError);
+        // Profile was created, but role assignment failed
+        // The user can still login, admin will need to assign role manually
+        return { error: new Error('Account created but role assignment failed. Please contact your administrator.') };
       }
-    }
 
-    return { error: null };
+      // Check if email confirmation is required
+      if (!authData.user.email_confirmed_at) {
+        // User was created but needs email confirmation
+        // Note: If auto-confirm is enabled, this won't trigger
+        console.log('Email confirmation may be required');
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Sign up error:', error);
+      return { error: new Error('An unexpected error occurred. Please try again.') };
+    }
   };
 
   const signOut = async () => {
@@ -241,13 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Sign out error:', error);
     } finally {
       // Always clear local state regardless of API result
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      setRoles([]);
-      setClient(null);
-      setBranches([]);
-      setCurrentBranch(null);
+      clearAuthState();
     }
   };
 
