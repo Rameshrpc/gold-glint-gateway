@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { MobileSearchBar, MobileBottomSheet } from './shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -239,18 +239,12 @@ export default function MobileItems() {
 
   return (
     <MobileLayout hideNav={showForm}>
-      <MobileGradientHeader 
+      <MobileSimpleHeader 
         title="Items Master"
+        showBack
         showSearch
         onSearchClick={() => setShowSearch(true)}
-      >
-        <button 
-          onClick={() => setShowFilter(true)}
-          className="p-2 rounded-full bg-background/10 active:bg-background/20"
-        >
-          <Filter className="h-5 w-5 text-foreground" />
-        </button>
-      </MobileGradientHeader>
+      />
 
       <div className="p-4 space-y-4">
         {/* Action Buttons */}

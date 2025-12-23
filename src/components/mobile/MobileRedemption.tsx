@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Award, Calendar, Scale, Banknote, CheckCircle2, Printer } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import LoadingButton from './LoadingButton';
 import SuccessAnimation from './SuccessAnimation';
@@ -226,7 +226,7 @@ export default function MobileRedemption() {
   return (
     <MobileLayout>
       {renderSuccessOverlay()}
-      <MobileGradientHeader title="Redemption" variant="minimal" />
+      <MobileSimpleHeader title="Redemption" showBack />
 
       <PullToRefreshContainer onRefresh={handleRefresh} className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Summary Card */}

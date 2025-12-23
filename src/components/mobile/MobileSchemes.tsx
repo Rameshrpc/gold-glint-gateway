@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Percent, Calendar, IndianRupee, Package } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { cn } from '@/lib/utils';
 
 interface Scheme {
@@ -54,12 +54,7 @@ export default function MobileSchemes() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Loan Schemes" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Loan Schemes" showBack />
 
       <div className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Header */}

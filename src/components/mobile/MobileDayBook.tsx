@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { FileText, RefreshCw, Calendar, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,59 +100,63 @@ export default function MobileDayBook() {
   return (
     <MobileLayout hideNav={false}>
       <div className="flex flex-col min-h-screen bg-background">
-        <MobileGradientHeader title="Day Book" showBack variant="minimal">
-          <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white">
-                <Filter className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="h-auto max-h-[70vh]">
-              <SheetHeader>
-                <SheetTitle>Report Parameters</SheetTitle>
-              </SheetHeader>
-              <div className="space-y-4 py-4">
-                <div>
-                  <Label>From Date</Label>
-                  <Input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => setFromDate(e.target.value)}
-                  />
+        <MobileSimpleHeader 
+          title="Day Book" 
+          showBack
+          rightContent={
+            <Sheet open={filterOpen} onOpenChange={setFilterOpen}>
+              <SheetTrigger asChild>
+                <button className="w-9 h-9 rounded-full flex items-center justify-center active:bg-muted">
+                  <Filter className="h-5 w-5 text-muted-foreground" />
+                </button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="h-auto max-h-[70vh]">
+                <SheetHeader>
+                  <SheetTitle>Report Parameters</SheetTitle>
+                </SheetHeader>
+                <div className="space-y-4 py-4">
+                  <div>
+                    <Label>From Date</Label>
+                    <Input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => setFromDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>To Date</Label>
+                    <Input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => setToDate(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Voucher Type</Label>
+                    <Select value={voucherTypeFilter} onValueChange={setVoucherTypeFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="All Types" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {voucherTypes.map(type => (
+                          <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => { fetchData(); setFilterOpen(false); }}
+                    disabled={loading}
+                  >
+                    Generate Report
+                  </Button>
                 </div>
-                <div>
-                  <Label>To Date</Label>
-                  <Input
-                    type="date"
-                    value={toDate}
-                    onChange={(e) => setToDate(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>Voucher Type</Label>
-                  <Select value={voucherTypeFilter} onValueChange={setVoucherTypeFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Types" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      {voucherTypes.map(type => (
-                        <SelectItem key={type} value={type} className="capitalize">{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button 
-                  className="w-full" 
-                  onClick={() => { fetchData(); setFilterOpen(false); }}
-                  disabled={loading}
-                >
-                  Generate Report
-                </Button>
-              </div>
-            </SheetContent>
-          </Sheet>
-        </MobileGradientHeader>
+              </SheetContent>
+            </Sheet>
+          }
+        />
 
         <PullToRefreshContainer onRefresh={handleRefresh}>
           <div className="p-4 space-y-4 pb-24">

@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Gavel, AlertTriangle, ChevronRight, Package, Calendar, Search } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { cn } from '@/lib/utils';
 import { format, differenceInDays } from 'date-fns';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
@@ -80,12 +80,7 @@ export default function MobileAuction() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Auction" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Auction" showBack />
 
       <div className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Header Stats */}

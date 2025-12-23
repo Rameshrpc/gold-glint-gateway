@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, RefreshCw, ArrowLeft, Package, ChevronRight, CheckCircle, AlertTriangle } from 'lucide-react';
 import MobileLayout from './MobileLayout';
-import MobileGradientHeader from './MobileGradientHeader';
+import MobileSimpleHeader from './MobileSimpleHeader';
 import { MobileBottomSheet } from './shared';
 import MobilePrintSheet from './sheets/MobilePrintSheet';
 import { cn } from '@/lib/utils';
@@ -248,12 +248,7 @@ export default function MobileReloan() {
 
   return (
     <MobileLayout hideNav>
-      <MobileGradientHeader 
-        title="Reloan" 
-        variant="minimal"
-        showBack
-        onBackClick={() => navigate(-1)}
-      />
+      <MobileSimpleHeader title="Reloan" showBack />
 
       <div className="px-4 py-4 space-y-4 animate-fade-in">
         {/* Search */}
