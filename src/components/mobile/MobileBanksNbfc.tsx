@@ -14,7 +14,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { getOrCreateBankAccount } from '@/hooks/useVoucherGeneration';
 import { toast } from 'sonner';
 import { Plus, Building2, Pencil, Trash2 } from 'lucide-react';
-import { triggerHaptic } from '@/lib/haptics';
+import { vibrateSuccess } from '@/lib/haptics';
 
 interface BankNbfc {
   id: string;
@@ -178,7 +178,7 @@ export default function MobileBanksNbfc() {
         toast.success('Bank/NBFC created');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowForm(false);
       resetForm();
       fetchBanks();
@@ -197,7 +197,7 @@ export default function MobileBanksNbfc() {
     try {
       const { error } = await supabase.from('banks_nbfc').delete().eq('id', id);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Bank/NBFC deleted');
       fetchBanks();
     } catch (error: any) {
@@ -370,8 +370,8 @@ export default function MobileBanksNbfc() {
 
       {/* Search Sheet */}
       <MobileBottomSheet
-        open={showSearch}
-        onOpenChange={setShowSearch}
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
         title="Search Banks"
       >
         <div className="p-4">
@@ -386,8 +386,8 @@ export default function MobileBanksNbfc() {
 
       {/* Add/Edit Form Sheet */}
       <MobileBottomSheet
-        open={showForm}
-        onOpenChange={setShowForm}
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         title={editingBank ? 'Edit Bank/NBFC' : 'Add Bank/NBFC'}
       >
         <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">

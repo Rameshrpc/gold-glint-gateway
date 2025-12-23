@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Plus, Package, Sparkles, Pencil, Trash2, Filter } from 'lucide-react';
-import { triggerHaptic } from '@/lib/haptics';
+import { vibrateSuccess } from '@/lib/haptics';
 
 interface ItemGroup {
   id: string;
@@ -140,7 +140,7 @@ export default function MobileItems() {
         }
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success(`Added ${addedCount} Tamil gold items`);
       fetchData();
     } catch (error: any) {
@@ -182,7 +182,7 @@ export default function MobileItems() {
         toast.success('Item created');
       }
 
-      triggerHaptic('success');
+      vibrateSuccess();
       setShowForm(false);
       resetForm();
       fetchData();
@@ -208,7 +208,7 @@ export default function MobileItems() {
     try {
       const { error } = await supabase.from('items').delete().eq('id', id);
       if (error) throw error;
-      triggerHaptic('success');
+      vibrateSuccess();
       toast.success('Item deleted');
       fetchData();
     } catch (error: any) {
@@ -356,8 +356,8 @@ export default function MobileItems() {
 
       {/* Search Sheet */}
       <MobileBottomSheet
-        open={showSearch}
-        onOpenChange={setShowSearch}
+        isOpen={showSearch}
+        onClose={() => setShowSearch(false)}
         title="Search Items"
       >
         <div className="p-4">
@@ -372,8 +372,8 @@ export default function MobileItems() {
 
       {/* Filter Sheet */}
       <MobileBottomSheet
-        open={showFilter}
-        onOpenChange={setShowFilter}
+        isOpen={showFilter}
+        onClose={() => setShowFilter(false)}
         title="Filter by Group"
       >
         <div className="p-4 space-y-3">
@@ -405,8 +405,8 @@ export default function MobileItems() {
 
       {/* Add/Edit Form Sheet */}
       <MobileBottomSheet
-        open={showForm}
-        onOpenChange={setShowForm}
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
         title={editingItem ? 'Edit Item' : 'Add Item'}
       >
         <div className="p-4 space-y-4">
