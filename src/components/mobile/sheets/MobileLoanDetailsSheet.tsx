@@ -110,9 +110,6 @@ export default function MobileLoanDetailsSheet({ loanId, onClose, onRefresh, onP
           updated_at: new Date().toISOString(),
         })
         .eq('id', loan.id);
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', loan.id);
 
       if (error) throw error;
       toast.success('Loan updated');
