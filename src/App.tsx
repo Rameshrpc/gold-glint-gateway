@@ -41,38 +41,6 @@ import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
-// Mobile Components
-import DeviceAwareWrapper from "./components/DeviceAwareWrapper";
-import MobileDashboard from "./components/mobile/MobileDashboard";
-import MobileLoans from "./components/mobile/MobileLoans";
-import MobileMoreMenu from "./components/mobile/MobileMoreMenu";
-import MobileCustomers from "./components/mobile/MobileCustomers";
-import MobileInterest from "./components/mobile/MobileInterest";
-import MobileRedemption from "./components/mobile/MobileRedemption";
-import MobileNewLoan from "./components/mobile/MobileNewLoan";
-import MobileReloan from "./components/mobile/MobileReloan";
-import MobileAuction from "./components/mobile/MobileAuction";
-import MobileSchemes from "./components/mobile/MobileSchemes";
-import MobileVouchers from "./components/mobile/MobileVouchers";
-import MobileSettings from "./components/mobile/MobileSettings";
-import MobileProfile from "./components/mobile/MobileProfile";
-import MobileUsers from "./components/mobile/MobileUsers";
-import MobileBranches from "./components/mobile/MobileBranches";
-import MobileMarketRates from "./components/mobile/MobileMarketRates";
-import MobileGoldVault from "./components/mobile/MobileGoldVault";
-import MobileDayBook from "./components/mobile/MobileDayBook";
-import MobileTrialBalance from "./components/mobile/MobileTrialBalance";
-import MobileProfitLoss from "./components/mobile/MobileProfitLoss";
-import MobileBalanceSheet from "./components/mobile/MobileBalanceSheet";
-import MobileLedgerStatement from "./components/mobile/MobileLedgerStatement";
-import MobileItems from "./components/mobile/MobileItems";
-import MobileItemGroups from "./components/mobile/MobileItemGroups";
-import MobileAgents from "./components/mobile/MobileAgents";
-import MobileBanksNbfc from "./components/mobile/MobileBanksNbfc";
-import MobileLoyalties from "./components/mobile/MobileLoyalties";
-import MobileChartOfAccounts from "./components/mobile/MobileChartOfAccounts";
-import MobileAgentCommissions from "./components/mobile/MobileAgentCommissions";
-import MobileCommissionReports from "./components/mobile/MobileCommissionReports";
 
 const queryClient = new QueryClient();
 
@@ -89,277 +57,45 @@ const App = () => (
             <Route path="/setup" element={<Setup />} />
             
             {/* Protected Routes */}
-            <Route path="/dashboard" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileDashboard />} 
-                  desktop={<Dashboard />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/profile" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileProfile />} 
-                  desktop={<Profile />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/customers" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileCustomers />} 
-                  desktop={<Customers />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/branches" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileBranches />} 
-                  desktop={<Branches />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/clients" element={
-              <ProtectedRoute>
-                <Clients />
-              </ProtectedRoute>
-            } />
-            <Route path="/users" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileUsers />} 
-                  desktop={<Users />} 
-                />
-              </ProtectedRoute>
-            } />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
+            <Route path="/branches" element={<ProtectedRoute><Branches /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><Clients /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             
             {/* Loans & Operations */}
-            <Route path="/loans" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileLoans />} 
-                  desktop={<Loans />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/new-loan" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileNewLoan />} 
-                  desktop={<Loans />} 
-                />
-              </ProtectedRoute>
-            } />
-            
-            {/* Mobile More Menu */}
-            <Route path="/more" element={
-              <ProtectedRoute>
-                <MobileMoreMenu />
-              </ProtectedRoute>
-            } />
-            <Route path="/schemes" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileSchemes />} 
-                  desktop={<Schemes />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/interest" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileInterest />} 
-                  desktop={<Interest />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/redemption" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileRedemption />} 
-                  desktop={<Redemption />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/reloan" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileReloan />} 
-                  desktop={<Reloan />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/agents" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileAgents />} 
-                  desktop={<Agents />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/items" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileItems />} 
-                  desktop={<Items />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/item-groups" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileItemGroups />} 
-                  desktop={<ItemGroups />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/market-rates" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileMarketRates />} 
-                  desktop={<MarketRates />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/auction" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileAuction />} 
-                  desktop={<Auction />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/banks-nbfc" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileBanksNbfc />} 
-                  desktop={<BanksNbfc />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/loyalties" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileLoyalties />} 
-                  desktop={<Loyalties />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/gold-vault" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileGoldVault />} 
-                  desktop={<GoldVault />} 
-                />
-              </ProtectedRoute>
-            } />
+            <Route path="/loans" element={<ProtectedRoute><Loans /></ProtectedRoute>} />
+            <Route path="/new-loan" element={<ProtectedRoute><Loans /></ProtectedRoute>} />
+            <Route path="/schemes" element={<ProtectedRoute><Schemes /></ProtectedRoute>} />
+            <Route path="/interest" element={<ProtectedRoute><Interest /></ProtectedRoute>} />
+            <Route path="/redemption" element={<ProtectedRoute><Redemption /></ProtectedRoute>} />
+            <Route path="/reloan" element={<ProtectedRoute><Reloan /></ProtectedRoute>} />
+            <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+            <Route path="/items" element={<ProtectedRoute><Items /></ProtectedRoute>} />
+            <Route path="/item-groups" element={<ProtectedRoute><ItemGroups /></ProtectedRoute>} />
+            <Route path="/market-rates" element={<ProtectedRoute><MarketRates /></ProtectedRoute>} />
+            <Route path="/auction" element={<ProtectedRoute><Auction /></ProtectedRoute>} />
+            <Route path="/banks-nbfc" element={<ProtectedRoute><BanksNbfc /></ProtectedRoute>} />
+            <Route path="/loyalties" element={<ProtectedRoute><Loyalties /></ProtectedRoute>} />
+            <Route path="/gold-vault" element={<ProtectedRoute><GoldVault /></ProtectedRoute>} />
             
             {/* Financial Reports */}
             <Route path="/reports" element={<Navigate to="/trial-balance" replace />} />
-            <Route path="/trial-balance" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileTrialBalance />} 
-                  desktop={<TrialBalance />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/profit-loss" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileProfitLoss />} 
-                  desktop={<ProfitAndLoss />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/balance-sheet" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileBalanceSheet />} 
-                  desktop={<BalanceSheet />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/ledger-statement" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileLedgerStatement />} 
-                  desktop={<LedgerStatement />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/day-book" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileDayBook />} 
-                  desktop={<DayBook />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/accounts" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileChartOfAccounts />} 
-                  desktop={<ChartOfAccounts />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/agent-commissions" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileAgentCommissions />} 
-                  desktop={<AgentCommissions />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/commission-reports" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileCommissionReports />} 
-                  desktop={<CommissionReports />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/vouchers" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileVouchers />} 
-                  desktop={<Vouchers />} 
-                />
-              </ProtectedRoute>
-            } />
-            <Route path="/backfill-vouchers" element={
-              <ProtectedRoute>
-                <BackfillVouchers />
-              </ProtectedRoute>
-            } />
-            <Route path="/notifications" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="Notifications" description="Manage alerts and reminders" />
-              </ProtectedRoute>
-            } />
-            <Route path="/whatsapp" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="WhatsApp" description="Send WhatsApp messages to customers" />
-              </ProtectedRoute>
-            } />
-            <Route path="/sms" element={
-              <ProtectedRoute>
-                <PlaceholderPage title="SMS" description="Send SMS notifications to customers" />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <DeviceAwareWrapper 
-                  mobile={<MobileSettings />} 
-                  desktop={<Settings />} 
-                />
-              </ProtectedRoute>
-            } />
-
+            <Route path="/trial-balance" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
+            <Route path="/profit-loss" element={<ProtectedRoute><ProfitAndLoss /></ProtectedRoute>} />
+            <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheet /></ProtectedRoute>} />
+            <Route path="/ledger-statement" element={<ProtectedRoute><LedgerStatement /></ProtectedRoute>} />
+            <Route path="/day-book" element={<ProtectedRoute><DayBook /></ProtectedRoute>} />
+            <Route path="/accounts" element={<ProtectedRoute><ChartOfAccounts /></ProtectedRoute>} />
+            <Route path="/agent-commissions" element={<ProtectedRoute><AgentCommissions /></ProtectedRoute>} />
+            <Route path="/commission-reports" element={<ProtectedRoute><CommissionReports /></ProtectedRoute>} />
+            <Route path="/vouchers" element={<ProtectedRoute><Vouchers /></ProtectedRoute>} />
+            <Route path="/backfill-vouchers" element={<ProtectedRoute><BackfillVouchers /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><PlaceholderPage title="Notifications" description="Manage alerts and reminders" /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute><PlaceholderPage title="WhatsApp" description="Send WhatsApp messages to customers" /></ProtectedRoute>} />
+            <Route path="/sms" element={<ProtectedRoute><PlaceholderPage title="SMS" description="Send SMS notifications to customers" /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
