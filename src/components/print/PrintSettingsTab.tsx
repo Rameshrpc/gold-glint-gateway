@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { usePrintSettings, PrintContentBlock } from '@/hooks/usePrintSettings';
-import { Loader2, Plus, Trash2, Edit2, Save, X, GripVertical, Upload, ImageIcon } from 'lucide-react';
+import { useClientTerms, useSaveClientTerms } from '@/hooks/useClientTerms';
+import { Loader2, Plus, Trash2, Edit2, Save, X, GripVertical, Upload, ImageIcon, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +31,13 @@ export function PrintSettingsTab() {
     getBlocksByType,
   } = usePrintSettings();
   
+  
+  // Terms & Conditions state
+  const { data: terms = [], isLoading: loadingTerms } = useClientTerms('loan');
+  const { mutate: saveTerms, isPending: savingTerms } = useSaveClientTerms();
+  const [editingTerms, setEditingTerms] = useState<string[]>([]);
+  const [isEditingTermsMode, setIsEditingTermsMode] = useState(false);
+
   const [editingBlock, setEditingBlock] = useState<PrintContentBlock | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newBlockType, setNewBlockType] = useState<PrintContentBlock['block_type']>('gold_declaration');
@@ -114,6 +122,43 @@ export function PrintSettingsTab() {
     setNewBlockTamil('');
     setIsAddDialogOpen(false);
   };
+  // Initialize editing terms from loaded data
+  const startEditingTerms = () => {
+    setEditingTerms(terms.map(t => t.terms_text));
+    setIsEditingTermsMode(true);
+  };
+
+  const addNewTerm = () => {
+    setEditingTerms([...editingTerms, '']);
+  };
+
+  const updateTerm = (index: number, value: string) => {
+    const updated = [...editingTerms];
+    updated[index] = value;
+    setEditingTerms(updated);
+  };
+
+  const removeTerm = (index: number) => {
+    setEditingTerms(editingTerms.filter((_, i) => i !== index));
+  };
+
+  const handleSaveTerms = () => {
+    const validTerms = editingTerms.filter(t => t.trim() !== '');
+    saveTerms({ 
+      termType: 'loan', 
+      terms: validTerms, 
+      language: 'bilingual' 
+    }, {
+      onSuccess: () => {
+        setIsEditingTermsMode(false);
+      }
+    });
+  };
+
+  const cancelEditingTerms = () => {
+    setEditingTerms([]);
+    setIsEditingTermsMode(false);
+  };
   
   return (
     <div className="space-y-6">
@@ -121,6 +166,7 @@ export function PrintSettingsTab() {
         <TabsList className="flex-wrap">
           <TabsTrigger value="general">General</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="terms">Terms & Conditions</TabsTrigger>
           <TabsTrigger value="content">Editable Content</TabsTrigger>
           <TabsTrigger value="footer">Header & Footer</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
@@ -334,6 +380,115 @@ export function PrintSettingsTab() {
                   </TableRow>
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        {/* Terms & Conditions Editor */}
+        <TabsContent value="terms">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Terms & Conditions
+                </CardTitle>
+                <CardDescription>
+                  Manage the full terms and conditions page for loan documents (format: "English text / Tamil text")
+                </CardDescription>
+              </div>
+              {!isEditingTermsMode ? (
+                <Button onClick={startEditingTerms} variant="outline">
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Terms
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button onClick={cancelEditingTerms} variant="outline" size="sm">
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSaveTerms} disabled={savingTerms} size="sm">
+                    {savingTerms ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                    Save Terms
+                  </Button>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {loadingTerms ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : isEditingTermsMode ? (
+                <div className="space-y-4">
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground mb-4">
+                    <p><strong>Format:</strong> Enter each term in the format: <code className="bg-muted px-1 rounded">English text / Tamil translation</code></p>
+                    <p className="mt-1">Example: <code className="bg-muted px-1 rounded">The borrower agrees to pay interest monthly. / கடன்காரர் மாதாந்திர வட்டி செலுத்த ஒப்புக்கொள்கிறார்.</code></p>
+                  </div>
+                  
+                  {editingTerms.map((term, index) => (
+                    <div key={index} className="flex gap-3 items-start">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium shrink-0 mt-2">
+                        {index + 1}
+                      </div>
+                      <Textarea
+                        value={term}
+                        onChange={(e) => updateTerm(index, e.target.value)}
+                        placeholder="Enter term in format: English text / Tamil text"
+                        className="flex-1 min-h-[80px]"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeTerm(index)}
+                        className="shrink-0 mt-2"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                  
+                  <Button variant="outline" onClick={addNewTerm} className="w-full mt-4">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Term
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {terms.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p className="font-medium">No Terms & Conditions configured</p>
+                      <p className="text-sm mt-1">Click "Edit Terms" to add your loan terms and conditions</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {terms.map((term, index) => {
+                        const parts = term.terms_text.split(' / ');
+                        const english = parts[0]?.trim() || term.terms_text;
+                        const tamil = parts.length > 1 ? parts.slice(1).join(' / ').trim() : '';
+                        
+                        return (
+                          <div key={term.id} className="p-3 border rounded-lg">
+                            <div className="flex items-start gap-3">
+                              <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+                                {index + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm">{english}</p>
+                                {tamil && (
+                                  <p className="text-sm text-muted-foreground mt-1">{tamil}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

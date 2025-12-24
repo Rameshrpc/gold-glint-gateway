@@ -13,6 +13,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
+import { getCustomerDocumentUrl, getLoanAssetUrl } from '@/lib/storage-utils';
 
 import { LoanReceiptPDF } from './documents/LoanReceiptPDF';
 import { KYCDocumentsPDF } from './documents/KYCDocumentsPDF';
@@ -263,11 +264,18 @@ export function LoanPrintDialog({
         }
       }
 
-      // Generate KYC Documents
+      // Generate KYC Documents - convert relative paths to full URLs
       if (selection.kycDocuments) {
+        const customerWithFullUrls = {
+          ...customer,
+          aadhaar_front_url: getCustomerDocumentUrl(customer.aadhaar_front_url),
+          aadhaar_back_url: getCustomerDocumentUrl(customer.aadhaar_back_url),
+          pan_card_url: getCustomerDocumentUrl(customer.pan_card_url),
+        };
+        
         const doc = (
           <KYCDocumentsPDF
-            customer={customer}
+            customer={customerWithFullUrls}
             loanNumber={loan.loan_number}
             companyName={companyName}
             language={language}
@@ -281,11 +289,13 @@ export function LoanPrintDialog({
         }
       }
 
-      // Generate Jewel Image
+      // Generate Jewel Image - convert relative path to full URL
       if (selection.jewelImage) {
+        const jewelPhotoFullUrl = getLoanAssetUrl(loan.jewel_photo_url);
+        
         const doc = (
           <JewelImagePDF
-            jewelPhotoUrl={loan.jewel_photo_url}
+            jewelPhotoUrl={jewelPhotoFullUrl}
             goldItems={goldItems}
             loanNumber={loan.loan_number}
             loanDate={loan.loan_date}
