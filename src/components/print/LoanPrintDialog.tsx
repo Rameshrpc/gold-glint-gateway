@@ -45,6 +45,8 @@ interface Customer {
   aadhaar_front_url?: string | null;
   aadhaar_back_url?: string | null;
   pan_card_url?: string | null;
+  nominee_name?: string | null;
+  nominee_relation?: string | null;
 }
 
 interface Loan {
@@ -242,12 +244,25 @@ export function LoanPrintDialog({
 
       // Generate Terms & Conditions
       if (selection.termsConditions && terms.length > 0) {
+        // Pass customer with nominee info and loan with principal for placeholder replacement
+        const customerForTerms = {
+          ...customer,
+          nominee_name: customer.nominee_name,
+          nominee_relation: customer.nominee_relation,
+        };
+        
+        const loanForTerms = {
+          ...loan,
+          principal_amount: loan.principal_amount,
+        };
+        
         const doc = (
           <TermsConditionsPDF
-            loan={loan}
-            customer={customer}
+            loan={loanForTerms}
+            customer={customerForTerms}
             companyName={companyName}
             branchName={branchName}
+            branchAddress={branchName}
             language={language}
             paperSize={paperSize}
             terms={terms}

@@ -1,10 +1,11 @@
 import React from 'react';
-import { Document, Page, View, Text } from '@react-pdf/renderer';
+import { Document, Page, View, Text, StyleSheet } from '@react-pdf/renderer';
 import { pdfStyles, PAPER_SIZES, formatDatePrint } from '../shared/PDFStyles';
 import { PDFHeader } from '../shared/PDFHeader';
 import { PDFSignatures } from '../shared/PDFFooter';
-import { BilingualLabel, BilingualParagraph, LanguageMode } from '@/lib/bilingual-utils';
+import { LanguageMode } from '@/lib/bilingual-utils';
 import { fontsRegistered } from '@/lib/pdf-fonts';
+import { amountToWordsOnly } from '@/lib/amount-to-words';
 
 // Ensure fonts are loaded
 const _fonts = fontsRegistered;
@@ -28,11 +29,14 @@ interface Customer {
   customer_code: string;
   full_name: string;
   phone: string;
+  nominee_name?: string | null;
+  nominee_relation?: string | null;
 }
 
 interface Loan {
   loan_number: string;
   loan_date: string;
+  principal_amount?: number;
 }
 
 interface TermsConditionsPDFProps {
@@ -52,16 +56,96 @@ interface TermsConditionsPDFProps {
   logoUrl?: string | null;
 }
 
-// Parse bilingual term text (format: "English text / Tamil text")
-function parseBilingualTerm(termText: string): { english: string; tamil: string } {
-  const parts = termText.split(' / ');
-  if (parts.length >= 2) {
-    return {
-      english: parts[0].trim(),
-      tamil: parts.slice(1).join(' / ').trim(),
-    };
+// Custom styles for terms
+const termStyles = StyleSheet.create({
+  termContainer: {
+    marginBottom: 8,
+    paddingBottom: 6,
+  },
+  termNumber: {
+    fontFamily: 'Roboto',
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginBottom: 2,
+  },
+  termText: {
+    fontFamily: 'NotoSansTamil',
+    fontSize: 9,
+    lineHeight: 1.5,
+    textAlign: 'justify',
+  },
+  fieldsSection: {
+    marginTop: 20,
+    gap: 10,
+  },
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  fieldLabel: {
+    fontFamily: 'NotoSansTamil',
+    fontSize: 9,
+    width: 80,
+  },
+  fieldValue: {
+    fontFamily: 'Roboto',
+    fontSize: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    borderBottomStyle: 'dotted',
+    paddingBottom: 2,
+    flex: 1,
+    minWidth: 150,
+  },
+});
+
+// Replace placeholders with actual data
+function replacePlaceholders(
+  text: string,
+  loan: Loan,
+  customer: Customer,
+  branchAddress?: string
+): string {
+  let result = text;
+  
+  // Replace loan amount placeholder
+  if (loan.principal_amount) {
+    const amountFormatted = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+    }).format(loan.principal_amount);
+    
+    const amountWords = amountToWordsOnly(loan.principal_amount).toUpperCase();
+    const fullAmount = `${amountFormatted} (${amountWords})`;
+    
+    // Replace various amount patterns
+    result = result.replace(/\{LOAN_AMOUNT\}/gi, fullAmount);
+    result = result.replace(/ரூ\.\s*[\d,]+\.\d{2}\s*\([^)]+\)/g, fullAmount);
   }
-  return { english: termText, tamil: termText };
+  
+  // Replace customer name
+  result = result.replace(/\{CUSTOMER_NAME\}/gi, customer.full_name);
+  
+  // Replace nominee placeholders
+  const nomineeName = customer.nominee_name || '_______________';
+  const nomineeRelation = customer.nominee_relation || 'Father';
+  
+  result = result.replace(/\{NOMINEE_NAME\}/gi, nomineeName);
+  result = result.replace(/\{NOMINEE_RELATION\}/gi, nomineeRelation);
+  result = result.replace(/திரு\.\s*\(Father\)/g, `திரு. ${nomineeName} (${nomineeRelation})`);
+  
+  // Replace place/address
+  if (branchAddress) {
+    result = result.replace(/\{PLACE\}/gi, branchAddress);
+  }
+  
+  // Replace date
+  result = result.replace(/\{DATE\}/gi, formatDatePrint(loan.loan_date));
+  result = result.replace(/\{LOAN_DATE\}/gi, formatDatePrint(loan.loan_date));
+  
+  return result;
 }
 
 export function TermsConditionsPDF({
@@ -110,86 +194,48 @@ export function TermsConditionsPDF({
         
         {/* Document Title */}
         <View style={pdfStyles.documentTitle}>
-          <BilingualLabel
-            english="TERMS & CONDITIONS"
-            tamil="விதிமுறைகள் & நிபந்தனைகள்"
-            mode={language}
-            fontSize={14}
-            fontWeight="bold"
-          />
-        </View>
-
-        {/* Customer & Loan Reference */}
-        <View style={pdfStyles.section}>
-          <View style={pdfStyles.twoColumn}>
-            <View style={pdfStyles.column}>
-              <View style={pdfStyles.row}>
-                <Text style={pdfStyles.rowLabel}>Customer:</Text>
-                <Text style={pdfStyles.rowValue}>{customer.full_name}</Text>
-              </View>
-            </View>
-            <View style={pdfStyles.column}>
-              <View style={pdfStyles.row}>
-                <Text style={pdfStyles.rowLabel}>Loan No:</Text>
-                <Text style={pdfStyles.rowValue}>{loan.loan_number}</Text>
-              </View>
-            </View>
-          </View>
+          <Text style={{ fontFamily: 'NotoSansTamil', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
+            நிபந்தனைகளும், அறிவிப்புகளும்
+          </Text>
+          <Text style={{ fontFamily: 'Roboto', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
+            TERMS & CONDITIONS
+          </Text>
         </View>
 
         {/* Terms Section */}
         <View style={pdfStyles.section}>
-          <View style={pdfStyles.sectionTitle}>
-            <BilingualLabel
-              english="Loan Terms & Conditions"
-              tamil="கடன் விதிமுறைகள் & நிபந்தனைகள்"
-              mode={language}
-              fontSize={11}
-              fontWeight="bold"
-            />
-          </View>
-          
           {sortedTerms.map((term, index) => {
-            const parsed = parseBilingualTerm(term.terms_text);
+            // Replace placeholders with actual data
+            const processedText = replacePlaceholders(
+              term.terms_text,
+              loan,
+              customer,
+              branchAddress
+            );
+            
             return (
-              <BilingualParagraph
-                key={term.id}
-                english={parsed.english}
-                tamil={parsed.tamil}
-                mode={language}
-                clauseNumber={index + 1}
-                fontSize={9}
-                showDivider={index < sortedTerms.length - 1}
-              />
+              <View key={term.id} style={termStyles.termContainer} wrap={false}>
+                <Text style={termStyles.termText}>
+                  {index + 1}. {processedText}
+                </Text>
+              </View>
             );
           })}
         </View>
 
-        {/* Acknowledgment */}
-        {acknowledgments.length > 0 && (
-          <View style={[pdfStyles.section, { marginTop: 16 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-              <View style={pdfStyles.checkbox} />
-              <View style={{ flex: 1 }}>
-                {acknowledgments.map((ack) => (
-                  <BilingualLabel
-                    key={ack.id}
-                    english={ack.content_english}
-                    tamil={ack.content_tamil}
-                    mode={language}
-                    fontSize={9}
-                  />
-                ))}
-              </View>
-            </View>
+        {/* Fields Section - Place, Date, Name, Signature */}
+        <View style={termStyles.fieldsSection}>
+          <View style={termStyles.fieldRow}>
+            <Text style={termStyles.fieldLabel}>இடம்:</Text>
+            <Text style={termStyles.fieldValue}>{branchAddress || ''}</Text>
           </View>
-        )}
-
-        {/* Date field */}
-        <View style={{ marginTop: 20 }}>
-          <View style={pdfStyles.row}>
-            <Text style={pdfStyles.rowLabel}>Date:</Text>
-            <Text style={pdfStyles.rowValue}>{formatDatePrint(loan.loan_date)}</Text>
+          <View style={termStyles.fieldRow}>
+            <Text style={termStyles.fieldLabel}>தேதி:</Text>
+            <Text style={termStyles.fieldValue}>{formatDatePrint(loan.loan_date)}</Text>
+          </View>
+          <View style={termStyles.fieldRow}>
+            <Text style={termStyles.fieldLabel}>பெயர்:</Text>
+            <Text style={termStyles.fieldValue}>{customer.full_name}</Text>
           </View>
         </View>
 
