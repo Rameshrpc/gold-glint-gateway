@@ -51,3 +51,26 @@ export const vibrateHeavy = (): void => {
     navigator.vibrate(50);
   }
 };
+
+/**
+ * Unified haptic trigger function
+ */
+export const triggerHaptic = (type: 'light' | 'medium' | 'heavy' | 'success' | 'error'): void => {
+  switch (type) {
+    case 'light':
+      vibrateLight();
+      break;
+    case 'medium':
+      vibrateMedium();
+      break;
+    case 'heavy':
+      vibrateHeavy();
+      break;
+    case 'success':
+      vibrateSuccess();
+      break;
+    case 'error':
+      vibrateError();
+      break;
+  }
+};

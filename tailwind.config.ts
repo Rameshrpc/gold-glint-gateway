@@ -195,6 +195,12 @@ export default {
         "slide-up-fade": "slide-up-fade 0.4s ease-out forwards",
         "icon-pop": "icon-pop 0.3s ease-out",
         wiggle: "wiggle 0.3s ease-in-out",
+        "fab-pulse": "pulse-glow 2s ease-in-out infinite",
+      },
+      // Premium spacing for mobile touch targets
+      spacing: {
+        '18': '4.5rem',
+        '22': '5.5rem',
       },
     },
   },
