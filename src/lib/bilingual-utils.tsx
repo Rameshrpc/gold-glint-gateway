@@ -96,16 +96,14 @@ export function BilingualLabel({
     );
   }
 
-  // Bilingual mode - side by side
+  // Bilingual mode - use stacked layout to prevent overlapping
+  // Long text doesn't fit side-by-side in PDFs
   return (
-    <View style={bilingualStyles.labelRow}>
+    <View style={bilingualStyles.stackedContainer}>
       <Text style={[bilingualStyles.englishText, { fontSize, fontWeight, color }]}>
         {english}
       </Text>
-      <Text style={[bilingualStyles.separator, { fontSize, color }]}>
-        {separator}
-      </Text>
-      <Text style={[bilingualStyles.tamilText, { fontSize, fontWeight, color }]}>
+      <Text style={[bilingualStyles.tamilText, { fontSize: fontSize - 1, fontWeight, color, marginTop: 1 }]}>
         {tamil}
       </Text>
     </View>
