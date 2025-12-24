@@ -9,11 +9,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NavLink } from '@/components/NavLink';
+import { MobileHeader } from './MobileHeader';
+import { FloatingActionButton } from './FloatingActionButton';
+import { QuickActionsSheet } from './QuickActionsSheet';
 import { 
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
-  Settings, Menu, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
+  Settings, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
   Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, RefreshCw, Layers,
-  Landmark, Gift, Vault, Receipt, Coins, Database, TrendingUp
+  Landmark, Gift, Vault, Receipt, Coins, Database, TrendingUp, Menu
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -134,6 +137,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   } = useAuth();
   const { hasModuleAccess } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(['Dashboard', 'Operations']);
 
   const handleSignOut = async () => {
@@ -190,16 +194,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Mobile Header */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 border-b bg-white flex items-center px-4">
-        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-          <Menu className="h-5 w-5" />
-        </Button>
-        <div className="flex-1 flex items-center justify-center">
-          <Building2 className="h-6 w-6 text-amber-600 mr-2" />
-          <span className="font-bold text-amber-600">Zenith One</span>
-        </div>
-      </header>
+      {/* Premium Mobile Header */}
+      <MobileHeader
+        onMenuClick={() => setSidebarOpen(true)}
+        branchName={currentBranch?.branch_name}
+        userName={profile?.full_name || 'User'}
+        notificationCount={0}
+        onNotificationClick={() => navigate('/notifications')}
+        onProfileClick={() => navigate('/profile')}
+      />
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -362,10 +365,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
-        <div className="p-4 lg:p-6">
+        <div className="p-4 lg:p-6 pb-24 lg:pb-6">
           {children}
         </div>
       </main>
+
+      {/* Premium Mobile FAB */}
+      <FloatingActionButton 
+        onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+        isOpen={quickActionsOpen}
+      />
+
+      {/* Quick Actions Bottom Sheet */}
+      <QuickActionsSheet 
+        open={quickActionsOpen} 
+        onOpenChange={setQuickActionsOpen} 
+      />
     </div>
   );
 }
