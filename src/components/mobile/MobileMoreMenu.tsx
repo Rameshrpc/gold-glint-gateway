@@ -16,7 +16,8 @@ import {
   BarChart3,
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Coins
 } from 'lucide-react';
 import MobileLayout from './MobileLayout';
 import MobileSimpleHeader from './MobileSimpleHeader';
@@ -41,6 +42,8 @@ const menuGroups = [
     title: 'Operations',
     items: [
       { icon: FileText, label: 'Agents', path: '/agents' },
+      { icon: Users, label: 'Agent Commissions', path: '/agent-commissions' },
+      { icon: BarChart3, label: 'Commission Reports', path: '/commission-reports' },
       { icon: BookOpen, label: 'Gold Vault', path: '/gold-vault' },
       { icon: Calculator, label: 'Auction', path: '/auction' },
     ],

@@ -7,6 +7,7 @@ import MobileLayout from './MobileLayout';
 import MobileSimpleHeader from './MobileSimpleHeader';
 import LoanCard from './LoanCard';
 import MobilePrintSheet from './sheets/MobilePrintSheet';
+import MobileLoanDetailsSheet from './sheets/MobileLoanDetailsSheet';
 import PullToRefreshContainer from './PullToRefreshContainer';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +40,7 @@ export default function MobileLoans() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('active');
   const [showSearch, setShowSearch] = useState(false);
   const [printLoanId, setPrintLoanId] = useState<string | null>(null);
+  const [detailsLoanId, setDetailsLoanId] = useState<string | null>(null);
 
   const filters: { key: FilterType; label: string; count?: number }[] = [
     { key: 'all', label: 'All', count: loans.length },
@@ -197,7 +199,7 @@ export default function MobileLoans() {
               <LoanCard
                 key={loan.id}
                 loan={loan}
-                onClick={() => navigate(`/loans?id=${loan.id}`)}
+                onClick={() => setDetailsLoanId(loan.id)}
                 onInterestClick={() => navigate(`/interest?loan=${loan.loan_number}`)}
                 onRedeemClick={() => navigate(`/redemption?loan=${loan.loan_number}`)}
                 onPrintClick={() => setPrintLoanId(loan.id)}
@@ -208,6 +210,18 @@ export default function MobileLoans() {
 
         <div className="h-20" />
       </PullToRefreshContainer>
+
+      {/* Loan Details Sheet */}
+      <MobileLoanDetailsSheet
+        loanId={detailsLoanId}
+        onClose={() => setDetailsLoanId(null)}
+        onRefresh={handleRefresh}
+        onPrint={() => {
+          if (detailsLoanId) {
+            setPrintLoanId(detailsLoanId);
+          }
+        }}
+      />
 
       {/* Print Sheet */}
       {printLoanId && (
