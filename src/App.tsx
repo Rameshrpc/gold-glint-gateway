@@ -70,6 +70,9 @@ import MobileItemGroups from "./components/mobile/MobileItemGroups";
 import MobileAgents from "./components/mobile/MobileAgents";
 import MobileBanksNbfc from "./components/mobile/MobileBanksNbfc";
 import MobileLoyalties from "./components/mobile/MobileLoyalties";
+import MobileChartOfAccounts from "./components/mobile/MobileChartOfAccounts";
+import MobileAgentCommissions from "./components/mobile/MobileAgentCommissions";
+import MobileCommissionReports from "./components/mobile/MobileCommissionReports";
 
 const queryClient = new QueryClient();
 
@@ -297,17 +300,26 @@ const App = () => (
             } />
             <Route path="/accounts" element={
               <ProtectedRoute>
-                <ChartOfAccounts />
+                <DeviceAwareWrapper 
+                  mobile={<MobileChartOfAccounts />} 
+                  desktop={<ChartOfAccounts />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/agent-commissions" element={
               <ProtectedRoute>
-                <AgentCommissions />
+                <DeviceAwareWrapper 
+                  mobile={<MobileAgentCommissions />} 
+                  desktop={<AgentCommissions />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/commission-reports" element={
               <ProtectedRoute>
-                <CommissionReports />
+                <DeviceAwareWrapper 
+                  mobile={<MobileCommissionReports />} 
+                  desktop={<CommissionReports />} 
+                />
               </ProtectedRoute>
             } />
             <Route path="/vouchers" element={
