@@ -214,8 +214,19 @@ export default function Users() {
     setRolesDialogOpen(true);
   };
 
+  // Check if any selected role requires a branch assignment
+  const branchStaffRoles: AppRole[] = ['branch_manager', 'loan_officer', 'appraiser'];
+  const requiresBranch = selectedRoles.some(role => branchStaffRoles.includes(role));
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate branch is selected for branch staff roles
+    if (requiresBranch && !selectedBranchId) {
+      toast.error('Branch is required for Branch Manager, Loan Officer, and Appraiser roles');
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -492,10 +503,12 @@ export default function Users() {
                 )}
                 {(selectedClientId || editingUser) && (
                   <div className="space-y-2">
-                    <Label htmlFor="branch">Branch</Label>
-                    <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                    <Label htmlFor="branch">
+                      Branch {requiresBranch && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Select value={selectedBranchId} onValueChange={setSelectedBranchId} required={requiresBranch}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select branch (optional)" />
+                        <SelectValue placeholder={requiresBranch ? "Select branch (required)" : "Select branch (optional)"} />
                       </SelectTrigger>
                       <SelectContent>
                         {branches.map((branch) => (
@@ -505,6 +518,11 @@ export default function Users() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {requiresBranch && (
+                      <p className="text-xs text-muted-foreground">
+                        Required for Branch Manager, Loan Officer, and Appraiser roles
+                      </p>
+                    )}
                   </div>
                 )}
                 {!editingUser && (
