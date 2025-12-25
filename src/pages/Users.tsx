@@ -32,7 +32,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Users as UsersIcon, Plus, Loader2, Search, Edit, Shield } from 'lucide-react';
+import { Users as UsersIcon, Plus, Loader2, Search, Edit, Shield, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 type AppRole = 'super_admin' | 'moderator' | 'tenant_admin' | 'branch_manager' | 'loan_officer' | 'appraiser' | 'collection_agent' | 'auditor';
@@ -86,10 +86,14 @@ export default function Users() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rolesDialogOpen, setRolesDialogOpen] = useState(false);
+  const [passwordResetDialogOpen, setPasswordResetDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserWithRoles | null>(null);
+  const [userToResetPassword, setUserToResetPassword] = useState<UserWithRoles | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterClientId, setFilterClientId] = useState<string>('all');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -320,6 +324,51 @@ export default function Users() {
     } catch (error) {
       toast.error('Failed to update user status');
     }
+  };
+
+  const openPasswordResetDialog = (user: UserWithRoles) => {
+    setUserToResetPassword(user);
+    setNewPassword('');
+    setConfirmPassword('');
+    setPasswordResetDialogOpen(true);
+  };
+
+  const handlePasswordReset = async () => {
+    if (!userToResetPassword) return;
+    
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters');
+      return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    
+    setSubmitting(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-user-password', {
+        body: {
+          userId: userToResetPassword.user_id,
+          newPassword: newPassword,
+        },
+      });
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      toast.success(`Password reset successfully for ${userToResetPassword.full_name}`);
+      setPasswordResetDialogOpen(false);
+      setUserToResetPassword(null);
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to reset password');
+    }
+    
+    setSubmitting(false);
   };
 
   // Filter available roles based on admin type
@@ -576,6 +625,58 @@ export default function Users() {
           </DialogContent>
         </Dialog>
 
+        {/* Password Reset Dialog */}
+        <Dialog open={passwordResetDialogOpen} onOpenChange={(open) => { setPasswordResetDialogOpen(open); if (!open) { setUserToResetPassword(null); setNewPassword(''); setConfirmPassword(''); } }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                Set a new password for {userToResetPassword?.full_name}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password *</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter new password"
+                  minLength={6}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  minLength={6}
+                />
+              </div>
+              {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-sm text-destructive">Passwords do not match</p>
+              )}
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" className="flex-1" onClick={() => setPasswordResetDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePasswordReset} 
+                  className="flex-1 bg-amber-600 hover:bg-amber-700" 
+                  disabled={submitting || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  Reset Password
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -639,6 +740,16 @@ export default function Users() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
+                        {isPlatformAdmin() && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openPasswordResetDialog(user)}
+                            title="Reset password"
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

@@ -343,6 +343,60 @@ export default function Customers() {
       return;
     }
 
+    // Validate all mandatory fields
+    if (!fullName.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
+    if (!phone.trim()) {
+      toast.error('Phone number is required');
+      return;
+    }
+    if (!email.trim()) {
+      toast.error('Email is required');
+      return;
+    }
+    if (!dateOfBirth) {
+      toast.error('Date of birth is required');
+      return;
+    }
+    if (!gender) {
+      toast.error('Gender is required');
+      return;
+    }
+    if (!occupation.trim()) {
+      toast.error('Occupation is required');
+      return;
+    }
+    if (!monthlyIncome) {
+      toast.error('Monthly income is required');
+      return;
+    }
+    if (!address.trim()) {
+      toast.error('Street address is required');
+      return;
+    }
+    if (!city.trim()) {
+      toast.error('City is required');
+      return;
+    }
+    if (!state.trim()) {
+      toast.error('State is required');
+      return;
+    }
+    if (!pincode.trim()) {
+      toast.error('Pincode is required');
+      return;
+    }
+    if (!nomineeName.trim()) {
+      toast.error('Nominee name is required');
+      return;
+    }
+    if (!nomineeRelation) {
+      toast.error('Nominee relation is required');
+      return;
+    }
+
     // Validate mandatory documents for new customers
     if (!editingCustomer) {
       if (!profilePhotoFile) {
@@ -873,30 +927,32 @@ export default function Customers() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="email">Email</Label>
+                          <Label htmlFor="email">Email *</Label>
                           <Input
                             id="email"
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="Enter email"
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                          <Label htmlFor="dateOfBirth">Date of Birth *</Label>
                           <Input
                             id="dateOfBirth"
                             type="date"
                             value={dateOfBirth}
                             onChange={(e) => setDateOfBirth(e.target.value)}
+                            required
                           />
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="gender">Gender</Label>
-                          <Select value={gender} onValueChange={setGender}>
+                          <Label htmlFor="gender">Gender *</Label>
+                          <Select value={gender} onValueChange={setGender} required>
                             <SelectTrigger>
                               <SelectValue placeholder="Select gender" />
                             </SelectTrigger>
@@ -908,24 +964,26 @@ export default function Customers() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="occupation">Occupation</Label>
+                          <Label htmlFor="occupation">Occupation *</Label>
                           <Input
                             id="occupation"
                             value={occupation}
                             onChange={(e) => setOccupation(e.target.value)}
                             placeholder="Enter occupation"
+                            required
                           />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="monthlyIncome">Monthly Income (₹)</Label>
+                        <Label htmlFor="monthlyIncome">Monthly Income (₹) *</Label>
                         <Input
                           id="monthlyIncome"
                           type="number"
                           value={monthlyIncome}
                           onChange={(e) => setMonthlyIncome(e.target.value)}
                           placeholder="Enter monthly income"
+                          required
                         />
                       </div>
                     </div>
@@ -934,42 +992,46 @@ export default function Customers() {
                     <div className="space-y-4">
                       <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Address</h3>
                       <div className="space-y-2">
-                        <Label htmlFor="address">Street Address</Label>
+                        <Label htmlFor="address">Street Address *</Label>
                         <Textarea
                           id="address"
                           value={address}
                           onChange={(e) => setAddress(e.target.value)}
                           placeholder="Enter full address"
                           rows={2}
+                          required
                         />
                       </div>
 
                       <div className="grid grid-cols-3 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="city">City</Label>
+                          <Label htmlFor="city">City *</Label>
                           <Input
                             id="city"
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
                             placeholder="City"
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="state">State</Label>
+                          <Label htmlFor="state">State *</Label>
                           <Input
                             id="state"
                             value={state}
                             onChange={(e) => setState(e.target.value)}
                             placeholder="State"
+                            required
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="pincode">Pincode</Label>
+                          <Label htmlFor="pincode">Pincode *</Label>
                           <Input
                             id="pincode"
                             value={pincode}
                             onChange={(e) => setPincode(e.target.value)}
                             placeholder="Pincode"
+                            required
                           />
                         </div>
                       </div>
@@ -1013,11 +1075,11 @@ export default function Customers() {
 
                     {/* Nominee Details */}
                     <div className="space-y-4">
-                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Nominee Details</h3>
+                      <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Nominee Details <span className="text-destructive">(Mandatory)</span></h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="nomineeRelation">Nominee Relation</Label>
-                          <Select value={nomineeRelation} onValueChange={setNomineeRelation}>
+                          <Label htmlFor="nomineeRelation">Nominee Relation *</Label>
+                          <Select value={nomineeRelation} onValueChange={setNomineeRelation} required>
                             <SelectTrigger>
                               <SelectValue placeholder="Select relation" />
                             </SelectTrigger>
@@ -1031,12 +1093,13 @@ export default function Customers() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="nomineeName">Nominee Name</Label>
+                          <Label htmlFor="nomineeName">Nominee Name *</Label>
                           <Input
                             id="nomineeName"
                             value={nomineeName}
                             onChange={(e) => setNomineeName(e.target.value)}
                             placeholder="Enter nominee name"
+                            required
                           />
                         </div>
                       </div>
