@@ -9,9 +9,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NavLink } from '@/components/NavLink';
-import { MobileHeader } from './MobileHeader';
-import { FloatingActionButton } from './FloatingActionButton';
-import { QuickActionsSheet } from './QuickActionsSheet';
 import { 
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
@@ -137,7 +134,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   } = useAuth();
   const { hasModuleAccess } = usePermissions();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const [openGroups, setOpenGroups] = useState<string[]>(['Dashboard', 'Operations']);
 
   const handleSignOut = async () => {
@@ -194,15 +190,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Premium Mobile Header */}
-      <MobileHeader
-        onMenuClick={() => setSidebarOpen(true)}
-        branchName={currentBranch?.branch_name}
-        userName={profile?.full_name || 'User'}
-        notificationCount={0}
-        onNotificationClick={() => navigate('/notifications')}
-        onProfileClick={() => navigate('/profile')}
-      />
+      {/* Simple Mobile Header */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-40 h-14 bg-background border-b flex items-center px-4 justify-between">
+        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
+          <Menu className="h-5 w-5" />
+        </Button>
+        
+        {/* Branch Selector */}
+        {branches.length > 0 && (
+          <Select 
+            value={currentBranch?.id || ''} 
+            onValueChange={value => {
+              const branch = branches.find(b => b.id === value);
+              setCurrentBranch(branch || null);
+            }}
+          >
+            <SelectTrigger className="w-[140px] h-9">
+              <SelectValue placeholder="Branch" />
+            </SelectTrigger>
+            <SelectContent>
+              {branches.map(branch => (
+                <SelectItem key={branch.id} value={branch.id}>
+                  {branch.branch_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        
+        {/* User Avatar */}
+        <Avatar className="h-9 w-9 cursor-pointer" onClick={() => navigate('/profile')}>
+          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+            {profile?.full_name ? getInitials(profile.full_name) : 'U'}
+          </AvatarFallback>
+        </Avatar>
+      </header>
 
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
@@ -365,22 +387,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
-        <div className="p-4 lg:p-6 pb-24 lg:pb-6">
+        <div className="p-4 lg:p-6">
           {children}
         </div>
       </main>
-
-      {/* Premium Mobile FAB */}
-      <FloatingActionButton 
-        onClick={() => setQuickActionsOpen(!quickActionsOpen)}
-        isOpen={quickActionsOpen}
-      />
-
-      {/* Quick Actions Bottom Sheet */}
-      <QuickActionsSheet 
-        open={quickActionsOpen} 
-        onOpenChange={setQuickActionsOpen} 
-      />
     </div>
   );
 }
