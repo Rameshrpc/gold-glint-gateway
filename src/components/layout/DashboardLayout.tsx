@@ -177,16 +177,20 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const getRoleBadge = () => {
-    if (hasRole('super_admin')) return 'Super Admin';
-    if (hasRole('moderator')) return 'Moderator';
-    if (hasRole('tenant_admin')) return 'Admin';
-    if (hasRole('branch_manager')) return 'Manager';
-    if (hasRole('loan_officer')) return 'Officer';
-    if (hasRole('appraiser')) return 'Appraiser';
-    if (hasRole('collection_agent')) return 'Collection';
-    if (hasRole('auditor')) return 'Auditor';
-    return 'User';
+    if (hasRole('super_admin')) return { label: 'Super Admin', color: 'text-red-400' };
+    if (hasRole('moderator')) return { label: 'Moderator', color: 'text-orange-400' };
+    if (hasRole('tenant_admin')) return { label: 'Admin', color: 'text-amber-300' };
+    if (hasRole('branch_manager')) return { label: 'Manager', color: 'text-green-400' };
+    if (hasRole('loan_officer')) return { label: 'Officer', color: 'text-blue-400' };
+    if (hasRole('appraiser')) return { label: 'Appraiser', color: 'text-purple-400' };
+    if (hasRole('collection_agent')) return { label: 'Collection', color: 'text-cyan-400' };
+    if (hasRole('auditor')) return { label: 'Auditor', color: 'text-gray-400' };
+    // No roles assigned - this is a problem
+    if (roles.length === 0) return { label: '⚠️ No Role', color: 'text-red-500' };
+    return { label: 'User', color: 'text-amber-200/70' };
   };
+
+  const roleBadge = getRoleBadge();
 
   return (
     <div className="min-h-screen bg-background">
@@ -353,7 +357,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 </Avatar>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium truncate">{profile?.full_name || 'User'}</p>
-                  <p className="text-xs text-amber-200/70">{getRoleBadge()}</p>
+                  <p className={`text-xs ${roleBadge.color}`}>{roleBadge.label}</p>
                 </div>
                 <ChevronDown className="h-4 w-4 text-amber-200/70" />
               </Button>
@@ -387,6 +391,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
+        {/* No Role Warning Banner */}
+        {roles.length === 0 && (
+          <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2">
+            <p className="text-sm text-destructive text-center">
+              ⚠️ Your account has no roles assigned. Please contact an administrator to get proper access.
+            </p>
+          </div>
+        )}
         <div className="p-4 lg:p-6">
           {children}
         </div>

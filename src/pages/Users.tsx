@@ -214,8 +214,8 @@ export default function Users() {
     setRolesDialogOpen(true);
   };
 
-  // Check if any selected role requires a branch assignment
-  const branchStaffRoles: AppRole[] = ['branch_manager', 'loan_officer', 'appraiser'];
+  // Branch staff roles that require branch_id (must match DB trigger)
+  const branchStaffRoles: AppRole[] = ['branch_manager', 'loan_officer', 'appraiser', 'collection_agent'];
   const requiresBranch = selectedRoles.some(role => branchStaffRoles.includes(role));
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -223,7 +223,7 @@ export default function Users() {
     
     // Validate branch is selected for branch staff roles
     if (requiresBranch && !selectedBranchId) {
-      toast.error('Branch is required for Branch Manager, Loan Officer, and Appraiser roles');
+      toast.error('Branch is required for Branch Manager, Loan Officer, Appraiser, and Collection Agent roles');
       return;
     }
     
@@ -266,7 +266,7 @@ export default function Users() {
     // Check if user has branch roles but no branch selected
     const userHasBranchRole = editingUser.roles.some(role => branchStaffRoles.includes(role));
     if (userHasBranchRole && !selectedBranchId) {
-      toast.error('Branch is required because this user has Branch Manager, Loan Officer, or Appraiser roles');
+      toast.error('Branch is required because this user has branch staff roles (Branch Manager, Loan Officer, Appraiser, or Collection Agent)');
       return;
     }
     
@@ -301,7 +301,7 @@ export default function Users() {
     // Check if trying to assign branch roles without a branch
     const hasBranchRole = selectedRoles.some(role => branchStaffRoles.includes(role));
     if (hasBranchRole && !editingUser.branch_id) {
-      toast.error('Cannot assign Branch Manager, Loan Officer, or Appraiser roles without a branch. Please edit the user and assign a branch first.');
+      toast.error('Cannot assign branch staff roles without a branch. Please edit the user and assign a branch first.');
       return;
     }
     
@@ -536,7 +536,7 @@ export default function Users() {
                     </Select>
                     {requiresBranch && (
                       <p className="text-xs text-muted-foreground">
-                        Required for Branch Manager, Loan Officer, and Appraiser roles
+                        Required for branch staff roles (Branch Manager, Loan Officer, Appraiser, Collection Agent)
                       </p>
                     )}
                   </div>
@@ -630,7 +630,7 @@ export default function Users() {
               {!editingUser?.branch_id && selectedRoles.some(r => branchStaffRoles.includes(r)) && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                   <p className="text-sm text-destructive font-medium">
-                    ⚠️ This user has no branch assigned. You cannot assign Branch Manager, Loan Officer, or Appraiser roles until you edit the user and set a branch.
+                    ⚠️ This user has no branch assigned. You cannot assign branch staff roles until you edit the user and set a branch.
                   </p>
                 </div>
               )}
@@ -776,15 +776,23 @@ export default function Users() {
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {user.roles.slice(0, 2).map((role) => (
-                          <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
-                            {role.replace('_', ' ')}
+                        {user.roles.length === 0 ? (
+                          <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                            ⚠️ No Role
                           </Badge>
-                        ))}
-                        {user.roles.length > 2 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{user.roles.length - 2}
-                          </Badge>
+                        ) : (
+                          <>
+                            {user.roles.slice(0, 2).map((role) => (
+                              <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
+                                {role.replace('_', ' ')}
+                              </Badge>
+                            ))}
+                            {user.roles.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{user.roles.length - 2}
+                              </Badge>
+                            )}
+                          </>
                         )}
                       </div>
                     </TableCell>
