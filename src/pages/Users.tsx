@@ -262,6 +262,14 @@ export default function Users() {
   const handleUpdateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+    
+    // Check if user has branch roles but no branch selected
+    const userHasBranchRole = editingUser.roles.some(role => branchStaffRoles.includes(role));
+    if (userHasBranchRole && !selectedBranchId) {
+      toast.error('Branch is required because this user has Branch Manager, Loan Officer, or Appraiser roles');
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -289,6 +297,14 @@ export default function Users() {
 
   const handleUpdateRoles = async () => {
     if (!editingUser) return;
+    
+    // Check if trying to assign branch roles without a branch
+    const hasBranchRole = selectedRoles.some(role => branchStaffRoles.includes(role));
+    if (hasBranchRole && !editingUser.branch_id) {
+      toast.error('Cannot assign Branch Manager, Loan Officer, or Appraiser roles without a branch. Please edit the user and assign a branch first.');
+      return;
+    }
+    
     setSubmitting(true);
 
     try {
@@ -610,25 +626,42 @@ export default function Users() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
+              {/* Warning if user has no branch but trying to assign branch roles */}
+              {!editingUser?.branch_id && selectedRoles.some(r => branchStaffRoles.includes(r)) && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-sm text-destructive font-medium">
+                    ⚠️ This user has no branch assigned. You cannot assign Branch Manager, Loan Officer, or Appraiser roles until you edit the user and set a branch.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
-                {availableRoles.map((role) => (
-                  <div key={role.value} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`role-${role.value}`}
-                      checked={selectedRoles.includes(role.value)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedRoles([...selectedRoles, role.value]);
-                        } else {
-                          setSelectedRoles(selectedRoles.filter(r => r !== role.value));
-                        }
-                      }}
-                    />
-                    <Label htmlFor={`role-${role.value}`} className="text-sm font-normal">
-                      {role.label}
-                    </Label>
-                  </div>
-                ))}
+                {availableRoles.map((role) => {
+                  const isBranchRole = branchStaffRoles.includes(role.value);
+                  const isDisabled = isBranchRole && !editingUser?.branch_id;
+                  return (
+                    <div key={role.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`role-${role.value}`}
+                        checked={selectedRoles.includes(role.value)}
+                        disabled={isDisabled}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedRoles([...selectedRoles, role.value]);
+                          } else {
+                            setSelectedRoles(selectedRoles.filter(r => r !== role.value));
+                          }
+                        }}
+                      />
+                      <Label 
+                        htmlFor={`role-${role.value}`} 
+                        className={`text-sm font-normal ${isDisabled ? 'text-muted-foreground' : ''}`}
+                      >
+                        {role.label}
+                        {isDisabled && ' (needs branch)'}
+                      </Label>
+                    </div>
+                  );
+                })}
               </div>
               <div className="flex gap-2 pt-4">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setRolesDialogOpen(false)}>
@@ -735,7 +768,11 @@ export default function Users() {
                       </TableCell>
                     )}
                     <TableCell className="hidden sm:table-cell">
-                      {user.branches?.branch_name || '-'}
+                      {user.branches?.branch_name || (
+                        user.roles.some(r => branchStaffRoles.includes(r)) 
+                          ? <span className="text-destructive text-xs">⚠️ Missing</span> 
+                          : '-'
+                      )}
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
