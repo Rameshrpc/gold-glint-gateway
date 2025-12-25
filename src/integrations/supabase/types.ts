@@ -3336,6 +3336,7 @@ export type Database = {
         Args: { p_client_id: string; p_voucher_type: string }
         Returns: string
       }
+      get_user_branch_id: { Args: { _user_id: string }; Returns: string }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
