@@ -42,6 +42,13 @@ import DayBook from "./pages/DayBook";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotFound from "./pages/NotFound";
 
+// Customer Portal
+import { CustomerAuthProvider } from "@/hooks/useCustomerAuth";
+import { CustomerProtectedRoute } from "@/components/customer-portal/CustomerProtectedRoute";
+import CustomerPortalAuth from "./pages/customer-portal/CustomerPortalAuth";
+import CustomerDashboard from "./pages/customer-portal/CustomerDashboard";
+import CustomerLoanDetails from "./pages/customer-portal/CustomerLoanDetails";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -98,6 +105,13 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
+          </Routes>
+
+          {/* Customer Portal Routes - Separate Auth Context */}
+          <Routes>
+            <Route path="/customer-portal" element={<CustomerAuthProvider><CustomerPortalAuth /></CustomerAuthProvider>} />
+            <Route path="/customer-portal/dashboard" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute></CustomerAuthProvider>} />
+            <Route path="/customer-portal/loan/:loanId" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerLoanDetails /></CustomerProtectedRoute></CustomerAuthProvider>} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
