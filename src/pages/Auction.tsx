@@ -249,7 +249,7 @@ const Auction = () => {
     // Check if loan is repledged
     const repledgeStatus = await checkRepledgeStatus(loan.id);
     if (repledgeStatus.isRepledged) {
-      showRepledgeWarning(repledgeStatus.packetNumber!);
+      showRepledgeWarning(repledgeStatus);
       return;
     }
     
