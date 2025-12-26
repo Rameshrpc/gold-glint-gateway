@@ -582,7 +582,11 @@ export async function generateReloanVoucher(params: {
   // Net settlement
   netAmount: number;
   direction: 'to_customer' | 'from_customer';
-  paymentMode: string;
+  paymentEntries?: Array<{
+    mode: string;
+    amount: number;
+    sourceBankId?: string;
+  }>;
 }): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
   const entries: VoucherEntry[] = [];
   
@@ -675,23 +679,69 @@ export async function generateReloanVoucher(params: {
     });
   }
 
-  // --- NET SETTLEMENT ---
-  if (params.direction === 'to_customer') {
-    // We pay customer: Credit Cash
-    entries.push({
-      accountCode: 'CASH-001',
-      debitAmount: 0,
-      creditAmount: params.netAmount,
-      narration: `Net payment to customer - ${params.paymentMode}`,
-    });
+  // --- NET SETTLEMENT with multiple payment modes ---
+  if (params.paymentEntries && params.paymentEntries.length > 0) {
+    for (const payment of params.paymentEntries) {
+      if (payment.amount <= 0) continue;
+      
+      let accountCode = 'CASH-001';
+      let narration = '';
+      
+      if (payment.mode !== 'cash' && payment.sourceBankId) {
+        // Get bank info to create proper account code
+        const { data: bank } = await supabase
+          .from('banks_nbfc')
+          .select('bank_code, bank_name')
+          .eq('id', payment.sourceBankId)
+          .single();
+        
+        if (bank) {
+          accountCode = `BANK-${bank.bank_code}`;
+          // Ensure the bank account exists
+          await getOrCreateBankAccount(params.clientId, payment.sourceBankId, bank.bank_name, bank.bank_code);
+          narration = `${payment.mode.toUpperCase()} ${params.direction === 'to_customer' ? 'disbursed to' : 'received from'} customer via ${bank.bank_name}`;
+        }
+      } else {
+        narration = `Cash ${params.direction === 'to_customer' ? 'disbursed to' : 'received from'} customer`;
+      }
+
+      if (params.direction === 'to_customer') {
+        // We pay customer: Credit Cash/Bank
+        entries.push({
+          accountCode,
+          debitAmount: 0,
+          creditAmount: payment.amount,
+          narration,
+        });
+      } else {
+        // Customer pays us: Debit Cash/Bank
+        entries.push({
+          accountCode,
+          debitAmount: payment.amount,
+          creditAmount: 0,
+          narration,
+        });
+      }
+    }
   } else {
-    // Customer pays us: Debit Cash
-    entries.push({
-      accountCode: 'CASH-001',
-      debitAmount: params.netAmount,
-      creditAmount: 0,
-      narration: `Net received from customer - ${params.paymentMode}`,
-    });
+    // Fallback: single cash entry (backward compatibility)
+    if (params.direction === 'to_customer') {
+      // We pay customer: Credit Cash
+      entries.push({
+        accountCode: 'CASH-001',
+        debitAmount: 0,
+        creditAmount: params.netAmount,
+        narration: `Net payment to customer - cash`,
+      });
+    } else {
+      // Customer pays us: Debit Cash
+      entries.push({
+        accountCode: 'CASH-001',
+        debitAmount: params.netAmount,
+        creditAmount: 0,
+        narration: `Net received from customer - cash`,
+      });
+    }
   }
 
   return generateVoucher({

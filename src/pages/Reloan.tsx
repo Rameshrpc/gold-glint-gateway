@@ -28,9 +28,8 @@ import {
 } from '@/lib/interestCalculations';
 
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
-import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
-import { generateReloanVoucher } from '@/hooks/useVoucherGeneration';
+import { generateReloanVoucher, getOrCreateBankAccount } from '@/hooks/useVoucherGeneration';
 
 interface LoanWithDetails {
   id: string;
@@ -145,13 +144,29 @@ export default function Reloan() {
   const [userDocumentChargesPercent, setUserDocumentChargesPercent] = useState('');
   const [approvedLoanAmount, setApprovedLoanAmount] = useState('');
   
-  // Payment form
-  const [paymentMode, setPaymentMode] = useState('cash');
-  const [paymentReference, setPaymentReference] = useState('');
+  // Payment entries (multiple payment modes)
+  interface PaymentEntry {
+    mode: string;
+    amount: string;
+    reference: string;
+    sourceType: 'cash' | 'company' | 'employee';
+    sourceBankId: string;
+    sourceAccountId: string;
+    selectedLoyaltyId: string;
+  }
+
+  const createEmptyPaymentEntry = (): PaymentEntry => ({
+    mode: 'cash',
+    amount: '',
+    reference: '',
+    sourceType: 'cash',
+    sourceBankId: '',
+    sourceAccountId: '',
+    selectedLoyaltyId: '',
+  });
+
+  const [paymentEntries, setPaymentEntries] = useState<PaymentEntry[]>([createEmptyPaymentEntry()]);
   const [remarks, setRemarks] = useState('');
-  
-  // Source account tracking
-  const sourceAccount = useSourceAccount();
   
   // Verification
   const [oldLoanSettled, setOldLoanSettled] = useState(false);
@@ -280,7 +295,7 @@ export default function Reloan() {
     setSelectedLoan(loan);
     setSearchResults([]);
     setSearchQuery('');
-    sourceAccount.resetSourceAccount();
+    setPaymentEntries([createEmptyPaymentEntry()]);
     
     // Fetch gold items
     const { data } = await supabase
@@ -441,6 +456,61 @@ export default function Reloan() {
     };
   }, [oldLoanCalc, newLoanCalc]);
 
+  // Payment entries helper functions
+  const updatePaymentEntry = (index: number, field: keyof PaymentEntry, value: string) => {
+    setPaymentEntries(prev => prev.map((entry, i) => {
+      if (i === index) {
+        const updated = { ...entry, [field]: value };
+        // Reset source fields when mode changes to cash
+        if (field === 'mode' && value === 'cash') {
+          updated.sourceType = 'cash';
+          updated.sourceBankId = '';
+          updated.sourceAccountId = '';
+          updated.selectedLoyaltyId = '';
+        } else if (field === 'mode' && value !== 'cash' && entry.sourceType === 'cash') {
+          updated.sourceType = 'company';
+        }
+        return updated;
+      }
+      return entry;
+    }));
+  };
+
+  const addPaymentEntry = () => {
+    setPaymentEntries(prev => [...prev, createEmptyPaymentEntry()]);
+  };
+
+  const removePaymentEntry = (index: number) => {
+    if (paymentEntries.length > 1) {
+      setPaymentEntries(prev => prev.filter((_, i) => i !== index));
+    }
+  };
+
+  // Calculate payment totals and validation
+  const totalCollected = useMemo(() => {
+    return paymentEntries.reduce((sum, entry) => sum + (parseFloat(entry.amount) || 0), 0);
+  }, [paymentEntries]);
+
+  const isPaymentMatched = useMemo(() => {
+    if (!netSettlement) return false;
+    return Math.abs(totalCollected - netSettlement.netAmount) < 0.01;
+  }, [totalCollected, netSettlement]);
+
+  const paymentDifference = useMemo(() => {
+    if (!netSettlement) return 0;
+    return netSettlement.netAmount - totalCollected;
+  }, [netSettlement, totalCollected]);
+
+  // Pre-fill payment amount when netSettlement changes
+  useEffect(() => {
+    if (netSettlement && paymentEntries.length === 1 && !paymentEntries[0].amount) {
+      setPaymentEntries([{
+        ...paymentEntries[0],
+        amount: netSettlement.netAmount.toString(),
+      }]);
+    }
+  }, [netSettlement]);
+
   const generateLoanNumber = () => {
     const prefix = 'GL';
     const date = format(new Date(), 'yyyyMMdd');
@@ -467,6 +537,27 @@ export default function Reloan() {
       return;
     }
 
+    // Validate payment entries
+    if (!isPaymentMatched) {
+      toast.error(`Payment amount (${formatIndianCurrency(totalCollected)}) must match net settlement (${formatIndianCurrency(netSettlement.netAmount)})`);
+      return;
+    }
+
+    // Validate each payment entry
+    for (const entry of paymentEntries) {
+      const amount = parseFloat(entry.amount) || 0;
+      if (amount <= 0) continue; // Skip empty entries
+      
+      if (entry.mode !== 'cash' && entry.sourceType !== 'cash' && !entry.sourceBankId) {
+        toast.error('Please select a source account for non-cash payments');
+        return;
+      }
+    }
+
+    // Get primary payment mode for records
+    const primaryPaymentMode = paymentEntries[0]?.mode || 'cash';
+    const primaryReference = paymentEntries[0]?.reference || null;
+
     setSubmitting(true);
     try {
       const today = format(new Date(), 'yyyy-MM-dd');
@@ -484,6 +575,11 @@ export default function Reloan() {
       const redemptionNumber = `RED${format(new Date(), 'yyMMdd')}${String((redemptionCount || 0) + 1).padStart(5, '0')}`;
 
       // 1. Create redemption record for old loan (is_reloan_redemption = true)
+      // Store payment breakdown in remarks
+      const paymentBreakdown = paymentEntries.length > 1 
+        ? `\n\nPayment Breakdown: ${JSON.stringify(paymentEntries.filter(e => parseFloat(e.amount) > 0).map(e => ({ mode: e.mode, amount: parseFloat(e.amount), reference: e.reference })))}`
+        : '';
+
       const { data: redemptionResult, error: redemptionError } = await supabase
         .from('redemptions')
         .insert({
@@ -498,12 +594,12 @@ export default function Reloan() {
           rebate_amount: oldLoanCalc.breakdown.rebate,
           total_settlement: oldLoanCalc.breakdown.total,
           amount_received: oldLoanCalc.breakdown.total,
-          payment_mode: paymentMode,
-          payment_reference: paymentReference || null,
+          payment_mode: primaryPaymentMode,
+          payment_reference: primaryReference,
           gold_released: false, // Gold is NOT released in reloan
           identity_verified: true,
           processed_by: profile.id,
-          remarks: `Reloan - New Loan: ${newLoanNumber}`,
+          remarks: `Reloan - New Loan: ${newLoanNumber}${paymentBreakdown}`,
           is_reloan_redemption: true,
         })
         .select()
@@ -547,9 +643,9 @@ export default function Reloan() {
         last_interest_paid_date: today,
         created_by: profile.id,
         appraised_by: profile.id,
-        disbursement_mode: paymentMode,
+        disbursement_mode: primaryPaymentMode,
         document_charges: newLoanCalc.documentCharges,
-        payment_reference: paymentReference || null,
+        payment_reference: primaryReference,
         remarks: `Reloan from ${selectedLoan.loan_number}. ${remarks || ''}`.trim(),
         is_reloan: true,
         previous_loan_id: selectedLoan.id,
@@ -594,21 +690,33 @@ export default function Reloan() {
         .update({ new_loan_id: newLoanResult.id })
         .eq('id', redemptionResult.id);
 
-      // 6. Create disbursement record with source account
-      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
-      await supabase
-        .from('loan_disbursements')
-        .insert({
-          loan_id: newLoanResult.id,
-          payment_mode: paymentMode,
-          amount: newLoanCalc.netCashToCustomer,
-          reference_number: paymentReference || null,
-          source_type: sourceData.source_type,
-          source_bank_id: sourceData.source_bank_id,
-          source_account_id: sourceData.source_account_id,
-        });
+      // 6. Create disbursement records for each payment entry
+      for (const entry of paymentEntries) {
+        const amount = parseFloat(entry.amount) || 0;
+        if (amount <= 0) continue;
+        
+        await supabase
+          .from('loan_disbursements')
+          .insert({
+            loan_id: newLoanResult.id,
+            payment_mode: entry.mode,
+            amount: amount,
+            reference_number: entry.reference || null,
+            source_type: entry.mode === 'cash' ? 'cash' : entry.sourceType,
+            source_bank_id: entry.sourceBankId || null,
+            source_account_id: entry.sourceAccountId || null,
+          });
+      }
 
-      // Generate accounting voucher for reloan
+      // Generate accounting voucher for reloan with multiple payment entries
+      const voucherPaymentEntries = paymentEntries
+        .filter(e => parseFloat(e.amount) > 0)
+        .map(e => ({
+          mode: e.mode,
+          amount: parseFloat(e.amount),
+          sourceBankId: e.sourceBankId || undefined,
+        }));
+
       const voucherResult = await generateReloanVoucher({
         clientId: client.id,
         branchId: currentBranch?.id || selectedLoan.branch_id,
@@ -629,7 +737,7 @@ export default function Reloan() {
         newAdvanceInterestActual: newLoanCalc.advanceCalc.actualInterest,
         netAmount: netSettlement.netAmount,
         direction: netSettlement.direction,
-        paymentMode: paymentMode,
+        paymentEntries: voucherPaymentEntries,
       });
 
       if (!voucherResult.success && voucherResult.error) {
@@ -646,14 +754,12 @@ export default function Reloan() {
       setTenureDays('');
       setUserDocumentChargesPercent('');
       setApprovedLoanAmount('');
-      setPaymentMode('cash');
-      setPaymentReference('');
+      setPaymentEntries([createEmptyPaymentEntry()]);
       setRemarks('');
       setOldLoanSettled(false);
       setGoldVerified(false);
       setJewelPhotoUrl(null);
       setAppraiserSheetUrl(null);
-      sourceAccount.resetSourceAccount();
       
       fetchRecentReloans();
     } catch (error: any) {
@@ -1081,60 +1187,152 @@ export default function Reloan() {
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-primary" />
-                  Payment & Verification
+                  Payment {netSettlement?.direction === 'to_customer' ? 'Disbursement' : 'Collection'} & Verification
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-3">
-                  <div className="space-y-2">
-                    <Label>Payment Mode</Label>
-                    <Select value={paymentMode} onValueChange={setPaymentMode}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {PAYMENT_MODES.map((mode) => (
-                          <SelectItem key={mode.value} value={mode.value}>
-                            {mode.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                {/* Payment Entries */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">
+                      {netSettlement?.direction === 'to_customer' ? 'Disbursement Modes' : 'Collection Modes'}
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addPaymentEntry}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Payment Mode
+                    </Button>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Reference Number</Label>
-                    <Input
-                      value={paymentReference}
-                      onChange={(e) => setPaymentReference(e.target.value)}
-                      placeholder="Transaction reference"
-                    />
-                  </div>
+                  {paymentEntries.map((entry, index) => (
+                    <div key={index} className="p-4 border rounded-lg space-y-4 bg-muted/30">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-muted-foreground">
+                          Payment #{index + 1}
+                        </span>
+                        {paymentEntries.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removePaymentEntry(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
 
-                  <div className="space-y-2">
-                    <Label>Remarks</Label>
-                    <Textarea
-                      value={remarks}
-                      onChange={(e) => setRemarks(e.target.value)}
-                      placeholder="Optional notes"
-                      className="h-10"
-                    />
-                  </div>
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>Mode</Label>
+                          <Select
+                            value={entry.mode}
+                            onValueChange={(v) => updatePaymentEntry(index, 'mode', v)}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PAYMENT_MODES.map((mode) => (
+                                <SelectItem key={mode.value} value={mode.value}>
+                                  {mode.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Amount (₹)</Label>
+                          <Input
+                            type="number"
+                            value={entry.amount}
+                            onChange={(e) => updatePaymentEntry(index, 'amount', e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Reference</Label>
+                          <Input
+                            value={entry.reference}
+                            onChange={(e) => updatePaymentEntry(index, 'reference', e.target.value)}
+                            placeholder={entry.mode === 'cash' ? 'N/A for cash' : 'Transaction ID'}
+                            disabled={entry.mode === 'cash'}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Source Account Selection for non-cash payments */}
+                      {entry.mode !== 'cash' && (
+                        <SourceAccountSelector
+                          clientId={client?.id || ''}
+                          paymentMode={entry.mode}
+                          sourceType={entry.sourceType}
+                          setSourceType={(v) => updatePaymentEntry(index, 'sourceType', v as string)}
+                          sourceBankId={entry.sourceBankId}
+                          setSourceBankId={(v) => updatePaymentEntry(index, 'sourceBankId', v)}
+                          sourceAccountId={entry.sourceAccountId}
+                          setSourceAccountId={(v) => updatePaymentEntry(index, 'sourceAccountId', v)}
+                          selectedLoyaltyId={entry.selectedLoyaltyId}
+                          setSelectedLoyaltyId={(v) => updatePaymentEntry(index, 'selectedLoyaltyId', v)}
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
 
-                {/* Source Account Selection for non-cash payments */}
-                <SourceAccountSelector
-                  clientId={client?.id || ''}
-                  paymentMode={paymentMode}
-                  sourceType={sourceAccount.sourceType}
-                  setSourceType={sourceAccount.setSourceType}
-                  sourceBankId={sourceAccount.sourceBankId}
-                  setSourceBankId={sourceAccount.setSourceBankId}
-                  sourceAccountId={sourceAccount.sourceAccountId}
-                  setSourceAccountId={sourceAccount.setSourceAccountId}
-                  selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
-                  setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
-                />
+                {/* Payment Tally */}
+                {netSettlement && (
+                  <div className={`p-4 rounded-lg border-2 ${isPaymentMatched ? 'border-green-500 bg-green-50 dark:bg-green-950/30' : 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'}`}>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          {netSettlement.direction === 'to_customer' ? 'Amount to Disburse' : 'Amount to Collect'}
+                        </p>
+                        <p className="text-lg font-bold">{formatIndianCurrency(netSettlement.netAmount)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">
+                          {netSettlement.direction === 'to_customer' ? 'Total Disbursement' : 'Total Collected'}
+                        </p>
+                        <p className={`text-lg font-bold ${isPaymentMatched ? 'text-green-600' : 'text-amber-600'}`}>
+                          {formatIndianCurrency(totalCollected)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        {isPaymentMatched ? (
+                          <Badge className="bg-green-500">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Matched
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-amber-500 text-amber-600">
+                            <AlertTriangle className="h-4 w-4 mr-1" />
+                            {paymentDifference > 0 ? `Short: ${formatIndianCurrency(paymentDifference)}` : `Excess: ${formatIndianCurrency(Math.abs(paymentDifference))}`}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Remarks */}
+                <div className="space-y-2">
+                  <Label>Remarks</Label>
+                  <Textarea
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                    placeholder="Optional notes"
+                    className="h-16"
+                  />
+                </div>
+
                 <Separator />
 
                 <div className="flex flex-wrap gap-6">
@@ -1167,20 +1365,21 @@ export default function Reloan() {
                     onClick={() => {
                       setSelectedLoan(null);
                       setGoldItems([]);
+                      setPaymentEntries([createEmptyPaymentEntry()]);
                     }}
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={handleProcessReloan}
-                    disabled={submitting || !oldLoanSettled || !goldVerified || !canProcessReloan}
+                    disabled={submitting || !oldLoanSettled || !goldVerified || !canProcessReloan || !isPaymentMatched}
                     className="bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700"
                   >
                     <RefreshCw className={`h-4 w-4 mr-2 ${submitting ? 'animate-spin' : ''}`} />
                     Process Reloan
                     {netSettlement && (
                       <span className="ml-2">
-                        ({netSettlement.direction === 'to_customer' ? '+' : '-'}{formatIndianCurrency(netSettlement.netAmount)})
+                        ({netSettlement.direction === 'to_customer' ? '+' : '-'}{formatIndianCurrency(totalCollected)})
                       </span>
                     )}
                   </Button>
