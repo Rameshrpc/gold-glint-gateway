@@ -1,5 +1,5 @@
 import React from 'react';
-import { Document, Page, View, Text, Image } from '@react-pdf/renderer';
+import { Document, Page, View, Text, Image, StyleSheet } from '@react-pdf/renderer';
 import { pdfStyles, PAPER_SIZES, formatCurrencyPrint, formatDatePrint, formatWeightPrint } from '../shared/PDFStyles';
 import { PDFHeader } from '../shared/PDFHeader';
 import { PDFFooter } from '../shared/PDFFooter';
@@ -58,7 +58,151 @@ interface LoanReceiptPDFProps {
   sloganEnglish?: string | null;
   sloganTamil?: string | null;
   logoUrl?: string | null;
+  copyType?: 'customer' | 'office';
 }
+
+// Compact styles for single-page receipt
+const compactStyles = StyleSheet.create({
+  page: {
+    padding: 20,
+    fontFamily: 'Roboto',
+    fontSize: 9,
+    color: '#000',
+    backgroundColor: '#fff',
+  },
+  copyBadge: {
+    position: 'absolute',
+    top: 10,
+    right: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    backgroundColor: '#000',
+    borderRadius: 3,
+  },
+  copyBadgeText: {
+    color: '#fff',
+    fontSize: 7,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  section: {
+    marginBottom: 6,
+  },
+  sectionTitle: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    marginBottom: 3,
+    paddingBottom: 1,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#ccc',
+  },
+  twoColumn: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  column: {
+    flex: 1,
+  },
+  table: {
+    marginVertical: 4,
+    borderWidth: 1,
+    borderColor: '#000',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#000',
+    padding: 3,
+  },
+  tableHeaderCell: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#ccc',
+    padding: 3,
+    minHeight: 16,
+  },
+  tableCell: {
+    fontSize: 7,
+    textAlign: 'center',
+  },
+  tableCellLeft: {
+    fontSize: 7,
+    textAlign: 'left',
+  },
+  amountBox: {
+    marginTop: 6,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#000',
+    backgroundColor: '#f9f9f9',
+  },
+  amountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  amountValue: {
+    fontSize: 8,
+    fontWeight: 'bold',
+  },
+  amountTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#000',
+  },
+  amountTotalValue: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  signatureSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingTop: 10,
+  },
+  signatureBox: {
+    width: '30%',
+    alignItems: 'center',
+  },
+  signatureLine: {
+    width: '100%',
+    borderTopWidth: 1,
+    borderTopColor: '#000',
+    marginBottom: 4,
+  },
+  signatureLabel: {
+    fontSize: 7,
+    textAlign: 'center',
+    color: '#555',
+  },
+  documentTitle: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 6,
+    paddingVertical: 4,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: '#000',
+    textTransform: 'uppercase',
+  },
+  pageNumber: {
+    position: 'absolute',
+    bottom: 10,
+    right: 20,
+    fontSize: 7,
+    color: '#999',
+  },
+});
 
 export function LoanReceiptPDF({
   loan,
@@ -75,6 +219,7 @@ export function LoanReceiptPDF({
   sloganEnglish,
   sloganTamil,
   logoUrl,
+  copyType,
 }: LoanReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
@@ -84,9 +229,18 @@ export function LoanReceiptPDF({
   
   const displayPrincipal = loan.shown_principal || loan.principal_amount;
   
+  const copyLabel = copyType === 'customer' ? 'Customer Copy' : copyType === 'office' ? 'Office Copy' : null;
+  
   return (
     <Document>
-      <Page size={[pageSize.width, pageSize.height]} style={pdfStyles.page}>
+      <Page size={[pageSize.width, pageSize.height]} style={compactStyles.page}>
+        {/* Copy Badge */}
+        {copyLabel && (
+          <View style={compactStyles.copyBadge}>
+            <Text style={compactStyles.copyBadgeText}>{copyLabel}</Text>
+          </View>
+        )}
+        
         <PDFHeader
           companyName={companyName}
           branchName={branchName}
@@ -101,214 +255,259 @@ export function LoanReceiptPDF({
         />
         
         {/* Document Title */}
-        <View style={pdfStyles.documentTitle}>
+        <View style={compactStyles.documentTitle}>
           <BilingualLabel
             english="GOLD LOAN RECEIPT"
             tamil="தங்க கடன் ரசீது"
             mode={language}
-            fontSize={14}
+            fontSize={11}
             fontWeight="bold"
           />
         </View>
         
         {/* Customer Information */}
-        <View style={pdfStyles.section}>
-          <View style={pdfStyles.sectionTitle}>
+        <View style={compactStyles.section}>
+          <View style={compactStyles.sectionTitle}>
             <BilingualLabel
               english="Customer Information"
               tamil="வாடிக்கையாளர் தகவல்"
               mode={language}
-              fontSize={11}
+              fontSize={9}
               fontWeight="bold"
             />
           </View>
           
-          <View style={pdfStyles.twoColumn}>
-            <View style={pdfStyles.column}>
+          <View style={compactStyles.twoColumn}>
+            <View style={compactStyles.column}>
               <BilingualValueRow
                 labelEn="Customer ID"
                 labelTa="வாடிக்கையாளர் எண்"
                 value={customer.customer_code}
                 mode={language}
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Name"
                 labelTa="பெயர்"
                 value={customer.full_name}
                 mode={language}
+                fontSize={8}
               />
             </View>
-            <View style={pdfStyles.column}>
+            <View style={compactStyles.column}>
               <BilingualValueRow
                 labelEn="Phone"
                 labelTa="தொலைபேசி"
                 value={customer.phone}
                 mode={language}
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Address"
                 labelTa="முகவரி"
                 value={[customer.address, customer.city, customer.state].filter(Boolean).join(', ') || '-'}
                 mode={language}
+                fontSize={8}
               />
             </View>
           </View>
         </View>
         
         {/* Loan Details */}
-        <View style={pdfStyles.section}>
-          <View style={pdfStyles.sectionTitle}>
+        <View style={compactStyles.section}>
+          <View style={compactStyles.sectionTitle}>
             <BilingualLabel
               english="Loan Details"
               tamil="கடன் விவரங்கள்"
               mode={language}
-              fontSize={11}
+              fontSize={9}
               fontWeight="bold"
             />
           </View>
           
-          <View style={pdfStyles.twoColumn}>
-            <View style={pdfStyles.column}>
+          <View style={compactStyles.twoColumn}>
+            <View style={compactStyles.column}>
               <BilingualValueRow
                 labelEn="Loan Number"
                 labelTa="கடன் எண்"
                 value={loan.loan_number}
                 mode={language}
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Loan Date"
                 labelTa="கடன் தேதி"
                 value={formatDatePrint(loan.loan_date)}
                 mode={language}
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Maturity Date"
                 labelTa="முதிர்வு தேதி"
                 value={formatDatePrint(loan.maturity_date)}
                 mode={language}
+                fontSize={8}
               />
             </View>
-            <View style={pdfStyles.column}>
+            <View style={compactStyles.column}>
               <BilingualValueRow
                 labelEn="Principal Amount"
                 labelTa="அசல் தொகை"
                 value={formatCurrencyPrint(displayPrincipal)}
                 mode={language}
                 valueStyle="bold"
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Interest Rate"
                 labelTa="வட்டி விகிதம்"
                 value={`${loan.interest_rate}% p.m.`}
                 mode={language}
+                fontSize={8}
               />
               <BilingualValueRow
                 labelEn="Tenure"
                 labelTa="காலம்"
                 value={`${loan.tenure_days} days`}
                 mode={language}
+                fontSize={8}
               />
             </View>
           </View>
         </View>
         
         {/* Gold Items Pledged */}
-        <View style={pdfStyles.section}>
-          <View style={pdfStyles.sectionTitle}>
+        <View style={compactStyles.section}>
+          <View style={compactStyles.sectionTitle}>
             <BilingualLabel
               english="Gold Items Pledged"
               tamil="அடமானம் வைக்கப்பட்ட தங்க பொருட்கள்"
               mode={language}
-              fontSize={11}
+              fontSize={9}
               fontWeight="bold"
             />
           </View>
           
-          <View style={pdfStyles.table}>
-            <View style={pdfStyles.tableHeader}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '6%' }]}>S.No</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '24%', textAlign: 'left' }]}>Item / பொருள்</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>Gross Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>Net Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>Purity</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '20%' }]}>Value</Text>
+          <View style={compactStyles.table}>
+            <View style={compactStyles.tableHeader}>
+              <Text style={[compactStyles.tableHeaderCell, { width: '6%' }]}>S.No</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '24%', textAlign: 'left' }]}>Item / பொருள்</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>Gross Wt</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>Net Wt</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '16%' }]}>Purity</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '20%' }]}>Value</Text>
             </View>
             
             {goldItems.map((item, index) => (
-              <View key={item.id} style={pdfStyles.tableRow}>
-                <Text style={[pdfStyles.tableCell, { width: '6%' }]}>{index + 1}</Text>
-                <Text style={[pdfStyles.tableCellLeft, { width: '24%' }]}>{item.item_type}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '17%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '17%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '16%' }]}>{item.purity}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '20%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
+              <View key={item.id || index} style={compactStyles.tableRow}>
+                <Text style={[compactStyles.tableCell, { width: '6%' }]}>{index + 1}</Text>
+                <Text style={[compactStyles.tableCellLeft, { width: '24%' }]}>{item.item_type}</Text>
+                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '16%' }]}>{item.purity}</Text>
+                <Text style={[compactStyles.tableCell, { width: '20%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
               </View>
             ))}
             
             {/* Totals row */}
-            <View style={[pdfStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '30%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>-</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '20%' }]}>{formatCurrencyPrint(totalAppraisedValue)}</Text>
+            <View style={[compactStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
+              <Text style={[compactStyles.tableHeaderCell, { width: '30%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '16%' }]}>-</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '20%' }]}>{formatCurrencyPrint(totalAppraisedValue)}</Text>
             </View>
           </View>
         </View>
         
         {/* Amount Summary */}
-        <View style={pdfStyles.amountBox}>
-          <View style={pdfStyles.sectionTitle}>
+        <View style={compactStyles.amountBox}>
+          <View style={compactStyles.sectionTitle}>
             <BilingualLabel
               english="Amount Summary"
               tamil="தொகை சுருக்கம்"
               mode={language}
-              fontSize={11}
+              fontSize={9}
               fontWeight="bold"
             />
           </View>
           
-          <View style={pdfStyles.amountRow}>
-            <BilingualLabel english="Principal Amount" tamil="அசல் தொகை" mode={language} fontSize={10} />
-            <Text style={pdfStyles.amountValue}>{formatCurrencyPrint(displayPrincipal)}</Text>
+          <View style={compactStyles.amountRow}>
+            <BilingualLabel english="Principal Amount" tamil="அசல் தொகை" mode={language} fontSize={8} />
+            <Text style={compactStyles.amountValue}>{formatCurrencyPrint(displayPrincipal)}</Text>
           </View>
           
           {(loan.processing_fee || 0) > 0 && (
-            <View style={pdfStyles.amountRow}>
-              <BilingualLabel english="Processing Fee" tamil="செயலாக்க கட்டணம்" mode={language} fontSize={10} color="#666" />
-              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.processing_fee || 0)}</Text>
+            <View style={compactStyles.amountRow}>
+              <BilingualLabel english="Processing Fee" tamil="செயலாக்க கட்டணம்" mode={language} fontSize={8} color="#666" />
+              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.processing_fee || 0)}</Text>
             </View>
           )}
           
           {(loan.document_charges || 0) > 0 && (
-            <View style={pdfStyles.amountRow}>
-              <BilingualLabel english="Document Charges" tamil="ஆவண கட்டணங்கள்" mode={language} fontSize={10} color="#666" />
-              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.document_charges || 0)}</Text>
+            <View style={compactStyles.amountRow}>
+              <BilingualLabel english="Document Charges" tamil="ஆவண கட்டணங்கள்" mode={language} fontSize={8} color="#666" />
+              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.document_charges || 0)}</Text>
             </View>
           )}
           
           {(loan.advance_interest_shown || 0) > 0 && (
-            <View style={pdfStyles.amountRow}>
-              <BilingualLabel english="Advance Interest" tamil="முன்கூட்டியே வட்டி" mode={language} fontSize={10} color="#666" />
-              <Text style={[pdfStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.advance_interest_shown || 0)}</Text>
+            <View style={compactStyles.amountRow}>
+              <BilingualLabel english="Advance Interest" tamil="முன்கூட்டியே வட்டி" mode={language} fontSize={8} color="#666" />
+              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.advance_interest_shown || 0)}</Text>
             </View>
           )}
           
-          <View style={pdfStyles.amountTotal}>
-            <BilingualLabel english="Net Disbursed Amount" tamil="நிகர வழங்கப்பட்ட தொகை" mode={language} fontSize={12} fontWeight="bold" />
-            <Text style={pdfStyles.amountTotalValue}>{formatCurrencyPrint(loan.net_disbursed)}</Text>
+          <View style={compactStyles.amountTotal}>
+            <BilingualLabel english="Net Disbursed Amount" tamil="நிகர வழங்கப்பட்ட தொகை" mode={language} fontSize={10} fontWeight="bold" />
+            <Text style={compactStyles.amountTotalValue}>{formatCurrencyPrint(loan.net_disbursed)}</Text>
           </View>
         </View>
         
         {/* Signatures */}
-        <PDFFooter
-          footerEnglish={footerEnglish}
-          footerTamil={footerTamil}
-          language={language}
-          showSignatures={true}
-        />
+        <View style={compactStyles.signatureSection}>
+          <View style={compactStyles.signatureBox}>
+            <View style={compactStyles.signatureLine} />
+            <BilingualLabel
+              english="Customer Signature"
+              tamil="வாடிக்கையாளர் கையொப்பம்"
+              mode={language}
+              fontSize={7}
+              color="#555"
+            />
+          </View>
+          <View style={compactStyles.signatureBox}>
+            <View style={compactStyles.signatureLine} />
+            <BilingualLabel
+              english="Redemption Signature"
+              tamil="மீட்பு கையொப்பம்"
+              mode={language}
+              fontSize={7}
+              color="#555"
+            />
+          </View>
+          <View style={compactStyles.signatureBox}>
+            <View style={compactStyles.signatureLine} />
+            <BilingualLabel
+              english="Authorized Signature"
+              tamil="அங்கீகரிக்கப்பட்ட கையொப்பம்"
+              mode={language}
+              fontSize={7}
+              color="#555"
+            />
+          </View>
+        </View>
         
-        <Text style={pdfStyles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
+        {/* Footer Text */}
+        {(footerEnglish || footerTamil) && (
+          <View style={{ marginTop: 10 }}>
+            <Text style={{ fontSize: 7, textAlign: 'center', color: '#666' }}>
+              {language === 'tamil-only' as string ? footerTamil : language === 'english-only' as string ? footerEnglish : `${footerEnglish || ''} | ${footerTamil || ''}`}
+            </Text>
+          </View>
+        )}
+        
+        <Text style={compactStyles.pageNumber} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} fixed />
       </Page>
     </Document>
   );

@@ -13,7 +13,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
-import { getCustomerDocumentUrl, getLoanAssetUrl } from '@/lib/storage-utils';
+import { getSignedCustomerDocumentUrl, getSignedLoanDocumentUrl } from '@/lib/storage-utils';
 
 import { LoanReceiptPDF } from './documents/LoanReceiptPDF';
 import { KYCDocumentsPDF } from './documents/KYCDocumentsPDF';
@@ -193,9 +193,10 @@ export function LoanPrintDialog({
       
       const blobs: Blob[] = [];
 
-      // Generate Loan Receipt
+      // Generate Loan Receipt - Customer Copy and Office Copy
       if (selection.loanReceipt) {
-        const doc = (
+        // Generate customer copy
+        const customerDoc = (
           <LoanReceiptPDF
             loan={loan}
             customer={customer}
@@ -209,11 +210,33 @@ export function LoanPrintDialog({
             sloganEnglish={effectiveSettings.company_slogan_english}
             sloganTamil={effectiveSettings.company_slogan_tamil}
             logoUrl={effectiveSettings.logo_url}
+            copyType="customer"
           />
         );
-        for (let i = 0; i < copies.loanReceipt; i++) {
-          const blob = await pdf(doc).toBlob();
-          blobs.push(blob);
+        const customerBlob = await pdf(customerDoc).toBlob();
+        blobs.push(customerBlob);
+        
+        // Generate office copy if copies > 1
+        if (copies.loanReceipt > 1) {
+          const officeDoc = (
+            <LoanReceiptPDF
+              loan={loan}
+              customer={customer}
+              goldItems={goldItems}
+              companyName={companyName}
+              branchName={branchName}
+              language={language}
+              paperSize={paperSize}
+              footerEnglish={effectiveSettings.footer_english}
+              footerTamil={effectiveSettings.footer_tamil}
+              sloganEnglish={effectiveSettings.company_slogan_english}
+              sloganTamil={effectiveSettings.company_slogan_tamil}
+              logoUrl={effectiveSettings.logo_url}
+              copyType="office"
+            />
+          );
+          const officeBlob = await pdf(officeDoc).toBlob();
+          blobs.push(officeBlob);
         }
       }
 
@@ -279,18 +302,25 @@ export function LoanPrintDialog({
         }
       }
 
-      // Generate KYC Documents - convert relative paths to full URLs
+      // Generate KYC Documents - fetch signed URLs for private bucket
       if (selection.kycDocuments) {
-        const customerWithFullUrls = {
+        // Fetch signed URLs for all customer documents in parallel
+        const [aadhaarFrontUrl, aadhaarBackUrl, panCardUrl] = await Promise.all([
+          getSignedCustomerDocumentUrl(customer.aadhaar_front_url),
+          getSignedCustomerDocumentUrl(customer.aadhaar_back_url),
+          getSignedCustomerDocumentUrl(customer.pan_card_url),
+        ]);
+        
+        const customerWithSignedUrls = {
           ...customer,
-          aadhaar_front_url: getCustomerDocumentUrl(customer.aadhaar_front_url),
-          aadhaar_back_url: getCustomerDocumentUrl(customer.aadhaar_back_url),
-          pan_card_url: getCustomerDocumentUrl(customer.pan_card_url),
+          aadhaar_front_url: aadhaarFrontUrl,
+          aadhaar_back_url: aadhaarBackUrl,
+          pan_card_url: panCardUrl,
         };
         
         const doc = (
           <KYCDocumentsPDF
-            customer={customerWithFullUrls}
+            customer={customerWithSignedUrls}
             loanNumber={loan.loan_number}
             companyName={companyName}
             language={language}
@@ -304,13 +334,14 @@ export function LoanPrintDialog({
         }
       }
 
-      // Generate Jewel Image - convert relative path to full URL
+      // Generate Jewel Image - fetch signed URL for private bucket
       if (selection.jewelImage) {
-        const jewelPhotoFullUrl = getLoanAssetUrl(loan.jewel_photo_url);
+        // Fetch signed URL for jewel photo
+        const jewelPhotoSignedUrl = await getSignedLoanDocumentUrl(loan.jewel_photo_url);
         
         const doc = (
           <JewelImagePDF
-            jewelPhotoUrl={jewelPhotoFullUrl}
+            jewelPhotoUrl={jewelPhotoSignedUrl}
             goldItems={goldItems}
             loanNumber={loan.loan_number}
             loanDate={loan.loan_date}
