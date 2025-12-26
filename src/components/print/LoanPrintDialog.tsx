@@ -66,6 +66,7 @@ interface Loan {
   jewel_photo_url?: string | null;
   rebate_days?: number | null;
   rebate_amount?: number | null;
+  differential_capitalized?: number | null;
 }
 
 interface LoanPrintDialogProps {
