@@ -5,6 +5,7 @@ import { PDFHeader } from '../shared/PDFHeader';
 import { PDFFooter } from '../shared/PDFFooter';
 import { BilingualLabel, BilingualValueRow, LanguageMode } from '@/lib/bilingual-utils';
 import { fontsRegistered } from '@/lib/pdf-fonts';
+import { calculateRebateSchedule } from '@/lib/interestCalculations';
 
 // Ensure fonts are loaded
 const _fonts = fontsRegistered;
@@ -44,6 +45,7 @@ interface Loan {
   advance_interest_shown?: number | null;
   rebate_days?: number | null;
   rebate_amount?: number | null;
+  differential_capitalized?: number | null;
 }
 
 interface LoanReceiptPDFProps {
@@ -165,6 +167,53 @@ const compactStyles = StyleSheet.create({
   amountTotalValue: {
     fontSize: 10,
     fontWeight: 'bold',
+  },
+  // Early Release Benefit styles
+  earlyReleaseBox: {
+    marginTop: 6,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#d97706',
+    backgroundColor: '#fffbeb',
+    borderRadius: 3,
+  },
+  earlyReleaseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    paddingBottom: 3,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#d97706',
+  },
+  earlyReleaseTitle: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#b45309',
+  },
+  earlyReleaseSubtitle: {
+    fontSize: 6,
+    color: '#78716c',
+    marginTop: 1,
+  },
+  earlyReleaseRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e5e7eb',
+  },
+  earlyReleaseDays: {
+    fontSize: 7,
+    color: '#374151',
+  },
+  earlyReleaseAmount: {
+    fontSize: 7,
+    fontWeight: 'bold',
+    color: '#059669',
+  },
+  noRebateText: {
+    fontSize: 7,
+    color: '#9ca3af',
   },
   signatureSection: {
     flexDirection: 'row',
@@ -463,6 +512,51 @@ export function LoanReceiptPDF({
           </View>
         )}
         
+        {/* Early Release Benefit - show if differential_capitalized exists */}
+        {loan.differential_capitalized && loan.differential_capitalized > 0 && (() => {
+          const rebateSchedule = calculateRebateSchedule(loan.differential_capitalized);
+          return (
+            <View style={compactStyles.earlyReleaseBox}>
+              <View style={compactStyles.earlyReleaseHeader}>
+                <View>
+                  <BilingualLabel
+                    english="Early Release Benefit"
+                    tamil="முன்கூட்டிய விடுவிப்பு சலுகை"
+                    mode={language}
+                    fontSize={8}
+                    fontWeight="bold"
+                    color="#b45309"
+                  />
+                  <Text style={compactStyles.earlyReleaseSubtitle}>
+                    Rebate on early loan closure / கடன் முன்கூட்டியே முடிக்கும் போது தள்ளுபடி
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Rebate schedule rows */}
+              <View style={compactStyles.earlyReleaseRow}>
+                <Text style={compactStyles.earlyReleaseDays}>Within 1-30 days / 1-30 நாட்களுக்குள்</Text>
+                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[0].rebateAmount)}</Text>
+              </View>
+              <View style={compactStyles.earlyReleaseRow}>
+                <Text style={compactStyles.earlyReleaseDays}>Within 30-45 days / 30-45 நாட்களுக்குள்</Text>
+                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[1].rebateAmount)}</Text>
+              </View>
+              <View style={compactStyles.earlyReleaseRow}>
+                <Text style={compactStyles.earlyReleaseDays}>Within 45-60 days / 45-60 நாட்களுக்குள்</Text>
+                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[2].rebateAmount)}</Text>
+              </View>
+              <View style={compactStyles.earlyReleaseRow}>
+                <Text style={compactStyles.earlyReleaseDays}>Within 60-75 days / 60-75 நாட்களுக்குள்</Text>
+                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[3].rebateAmount)}</Text>
+              </View>
+              <View style={[compactStyles.earlyReleaseRow, { borderBottomWidth: 0 }]}>
+                <Text style={compactStyles.earlyReleaseDays}>After 75 days / 75 நாட்களுக்கு பிறகு</Text>
+                <Text style={compactStyles.noRebateText}>No rebate / தள்ளுபடி இல்லை</Text>
+              </View>
+            </View>
+          );
+        })()}
         
         {/* Signatures */}
         <View style={compactStyles.signatureSection}>
