@@ -1132,6 +1132,69 @@ export type Database = {
           },
         ]
       }
+      customer_sessions: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          customer_id: string
+          id: string
+          is_verified: boolean | null
+          last_otp_request_at: string | null
+          otp_code: string | null
+          otp_expires_at: string | null
+          otp_request_count: number | null
+          phone: string
+          session_expires_at: string | null
+          session_token: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          is_verified?: boolean | null
+          last_otp_request_at?: string | null
+          otp_code?: string | null
+          otp_expires_at?: string | null
+          otp_request_count?: number | null
+          phone: string
+          session_expires_at?: string | null
+          session_token?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          is_verified?: boolean | null
+          last_otp_request_at?: string | null
+          otp_code?: string | null
+          otp_expires_at?: string | null
+          otp_request_count?: number | null
+          phone?: string
+          session_expires_at?: string | null
+          session_token?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_sessions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           aadhaar_back_url: string | null
@@ -3336,6 +3399,10 @@ export type Database = {
         Args: { p_client_id: string; p_voucher_type: string }
         Returns: string
       }
+      get_customer_from_session: {
+        Args: { p_session_token: string }
+        Returns: string
+      }
       get_user_branch_id: { Args: { _user_id: string }; Returns: string }
       get_user_client_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -3383,6 +3450,14 @@ export type Database = {
       user_has_branch_access: {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
+      }
+      validate_customer_session: {
+        Args: { p_session_token: string }
+        Returns: {
+          client_id: string
+          customer_id: string
+          is_valid: boolean
+        }[]
       }
     }
     Enums: {
