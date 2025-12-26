@@ -435,21 +435,51 @@ export default function GoldVault() {
           .eq('id', packet.id);
       }
 
-      // Create repledge items for each loan
-      const items = selectedLoanData.map(loan => ({
+      // Create repledge_gold_items entries for each selected gold item
+      const goldItemEntries = itemsWithPrincipal.map(item => ({
         client_id: client.id,
         packet_id: packet.id,
-        loan_id: loan.id,
-        principal_amount: loan.principal_amount,
-        gold_weight_grams: loan.gold_items?.reduce((sum, g) => sum + g.net_weight_grams, 0) || 0,
-        appraised_value: loan.gold_items?.reduce((sum, g) => sum + g.appraised_value, 0) || 0,
+        loan_id: item.loan_id,
+        gold_item_id: item.gold_item_id,
+        weight_grams: item.weight_grams,
+        appraised_value: item.appraised_value,
+        principal_allocated: item.principal_allocated,
         status: 'repledged',
-        repledged_date: new Date().toISOString().split('T')[0]
+        repledged_date: new Date().toISOString().split('T')[0],
+        added_by: profile?.id || null
       }));
+
+      const { error: goldItemsError } = await supabase
+        .from('repledge_gold_items')
+        .insert(goldItemEntries);
+
+      if (goldItemsError) throw goldItemsError;
+
+      // Update gold_items to mark them as repledged
+      const goldItemIds = selectedGoldItems.map(i => i.gold_item_id);
+      await supabase
+        .from('gold_items')
+        .update({ is_repledged: true, repledge_packet_id: packet.id })
+        .in('id', goldItemIds);
+
+      // Also create legacy repledge_items for backward compatibility (grouped by loan)
+      const loanGroups = affectedLoanIds.map(loanId => {
+        const loanItems = itemsWithPrincipal.filter(i => i.loan_id === loanId);
+        return {
+          client_id: client.id,
+          packet_id: packet.id,
+          loan_id: loanId,
+          principal_amount: loanItems.reduce((s, i) => s + i.principal_allocated, 0),
+          gold_weight_grams: loanItems.reduce((s, i) => s + i.weight_grams, 0),
+          appraised_value: loanItems.reduce((s, i) => s + i.appraised_value, 0),
+          status: 'repledged',
+          repledged_date: new Date().toISOString().split('T')[0]
+        };
+      });
 
       const { error: itemsError } = await supabase
         .from('repledge_items')
-        .insert(items);
+        .insert(loanGroups);
 
       if (itemsError) throw itemsError;
 
@@ -928,54 +958,12 @@ export default function GoldVault() {
                 </div>
               )}
 
-              {/* Loan Selection */}
-              <div className="space-y-2">
-                <Label>Select Loans to Repledge *</Label>
-                <Card className="max-h-60 overflow-y-auto">
-                  <CardContent className="p-3">
-                    {availableLoans.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        No available loans to repledge
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {availableLoans.map(loan => {
-                          const weight = loan.gold_items?.reduce((s, g) => s + g.net_weight_grams, 0) || 0;
-                          return (
-                            <div key={loan.id} className="flex items-center gap-3 p-2 rounded hover:bg-muted/50">
-                              <Checkbox
-                                checked={selectedLoans.includes(loan.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedLoans([...selectedLoans, loan.id]);
-                                  } else {
-                                    setSelectedLoans(selectedLoans.filter(id => id !== loan.id));
-                                  }
-                                }}
-                              />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm">{loan.loan_number}</span>
-                                  <span className="text-muted-foreground">|</span>
-                                  <span>{loan.customer?.full_name}</span>
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {formatCurrency(loan.principal_amount)} • {weight.toFixed(2)}g gold
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                {selectedLoans.length > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Selected: {selectedLoans.length} loans
-                  </p>
-                )}
-              </div>
+              {/* Gold Item Selection */}
+              <GoldItemSelector
+                clientId={client.id}
+                selectedItems={selectedGoldItems}
+                onSelectionChange={setSelectedGoldItems}
+              />
 
               {/* Bank Loan Details */}
               <div className="pt-4 border-t">
