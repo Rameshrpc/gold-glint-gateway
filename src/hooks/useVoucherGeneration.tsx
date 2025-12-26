@@ -481,6 +481,7 @@ export async function generateLoanDisbursementVoucher(params: {
   loanId: string;
   loanNumber: string;
   principalAmount: number;
+  actualPrincipal: number; // Principal on Record (includes capitalized differential)
   netDisbursed: number;
   processingFee: number;
   documentCharges: number;
@@ -490,10 +491,11 @@ export async function generateLoanDisbursementVoucher(params: {
 }): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
   const entries: VoucherEntry[] = [];
   
-  // Debit: Loan Principal Receivable (full principal)
+  // Debit: Loan Principal Receivable (actual principal = principal on record)
+  // This includes the capitalized differential interest, ensuring the voucher balances
   entries.push({
     accountCode: 'LOAN-RECV',
-    debitAmount: params.principalAmount,
+    debitAmount: params.actualPrincipal,
     creditAmount: 0,
     narration: `Loan principal for ${params.loanNumber}`,
   });

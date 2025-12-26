@@ -715,6 +715,7 @@ export default function Loans() {
         loanId: loanResult.id,
         loanNumber: loanResult.loan_number,
         principalAmount: loanCalculation.finalApprovedAmount,
+        actualPrincipal: loanCalculation.principalOnRecord, // Principal on Record (includes capitalized differential)
         netDisbursed: loanCalculation.netCashToCustomer,
         processingFee: loanCalculation.processingFee,
         documentCharges: loanCalculation.documentCharges,
