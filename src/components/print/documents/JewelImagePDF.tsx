@@ -81,20 +81,29 @@ export function JewelImagePDF({
           </View>
         </View>
         
-        {/* Jewel Image */}
-        <View style={pdfStyles.imageContainer}>
+        {/* Jewel Image - Horizontal/Landscape layout */}
+        <View style={{ alignItems: 'center', marginVertical: 12 }}>
           {jewelPhotoUrl ? (
-            <Image src={jewelPhotoUrl} style={pdfStyles.jewelImage} />
+            <Image 
+              src={jewelPhotoUrl} 
+              style={{ 
+                width: 480, 
+                height: 280, 
+                objectFit: 'contain',
+                borderWidth: 1,
+                borderColor: '#000',
+              }} 
+            />
           ) : (
-            <View style={[pdfStyles.jewelImage, { 
-              width: 300, 
-              height: 300, 
+            <View style={{ 
+              width: 480, 
+              height: 280, 
               justifyContent: 'center', 
               alignItems: 'center', 
               backgroundColor: '#f5f5f5',
               borderWidth: 1,
               borderColor: '#ccc',
-            }]}>
+            }}>
               <Text style={{ fontSize: 12, color: '#999' }}>No jewel image available</Text>
               <Text style={{ fontSize: 9, color: '#999', marginTop: 4 }}>நகை படம் இல்லை</Text>
             </View>
@@ -116,7 +125,9 @@ export function JewelImagePDF({
           <View style={pdfStyles.table}>
             <View style={pdfStyles.tableHeader}>
               <Text style={[pdfStyles.tableHeaderCell, { width: '8%' }]}>S.No</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '27%', textAlign: 'left' }]}>Item / பொருள்</Text>
+              <View style={[pdfStyles.tableHeaderCell, { width: '27%', textAlign: 'left' }]}>
+                <BilingualLabel english="Item" tamil="பொருள்" mode={language} fontSize={8} fontWeight="bold" />
+              </View>
               <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>Gross Wt</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>Net Wt</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '13%' }]}>Purity</Text>
@@ -124,7 +135,7 @@ export function JewelImagePDF({
             </View>
             
             {goldItems.map((item, index) => (
-              <View key={item.id} style={pdfStyles.tableRow}>
+              <View key={item.id || index} style={pdfStyles.tableRow}>
                 <Text style={[pdfStyles.tableCell, { width: '8%' }]}>{index + 1}</Text>
                 <Text style={[pdfStyles.tableCellLeft, { width: '27%' }]}>
                   {item.item_type}
@@ -139,7 +150,9 @@ export function JewelImagePDF({
             
             {/* Totals row */}
             <View style={[pdfStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '35%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
+              <View style={[pdfStyles.tableHeaderCell, { width: '35%', textAlign: 'right' }]}>
+                <BilingualLabel english="Total" tamil="மொத்தம்" mode={language} fontSize={8} fontWeight="bold" />
+              </View>
               <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '16%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
               <Text style={[pdfStyles.tableHeaderCell, { width: '13%' }]}>-</Text>

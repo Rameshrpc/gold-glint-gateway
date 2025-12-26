@@ -40,7 +40,10 @@ interface Loan {
   document_charges?: number | null;
   net_disbursed: number;
   shown_principal?: number | null;
+  actual_principal?: number | null;
   advance_interest_shown?: number | null;
+  rebate_days?: number | null;
+  rebate_amount?: number | null;
 }
 
 interface LoanReceiptPDFProps {
@@ -227,7 +230,7 @@ export function LoanReceiptPDF({
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
   const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
   
-  const displayPrincipal = loan.shown_principal || loan.principal_amount;
+  const displayPrincipal = loan.actual_principal || loan.principal_amount;
   
   const copyLabel = copyType === 'customer' ? 'Customer Copy' : copyType === 'office' ? 'Office Copy' : null;
   
@@ -391,7 +394,9 @@ export function LoanReceiptPDF({
           <View style={compactStyles.table}>
             <View style={compactStyles.tableHeader}>
               <Text style={[compactStyles.tableHeaderCell, { width: '6%' }]}>S.No</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '24%', textAlign: 'left' }]}>Item / பொருள்</Text>
+              <View style={[compactStyles.tableHeaderCell, { width: '24%', textAlign: 'left' }]}>
+                <BilingualLabel english="Item" tamil="பொருள்" mode={language} fontSize={7} fontWeight="bold" />
+              </View>
               <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>Gross Wt</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>Net Wt</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '16%' }]}>Purity</Text>
@@ -411,7 +416,9 @@ export function LoanReceiptPDF({
             
             {/* Totals row */}
             <View style={[compactStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
-              <Text style={[compactStyles.tableHeaderCell, { width: '30%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
+              <View style={[compactStyles.tableHeaderCell, { width: '30%', textAlign: 'right' }]}>
+                <BilingualLabel english="Total" tamil="மொத்தம்" mode={language} fontSize={7} fontWeight="bold" />
+              </View>
               <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '16%' }]}>-</Text>
@@ -420,49 +427,42 @@ export function LoanReceiptPDF({
           </View>
         </View>
         
-        {/* Amount Summary */}
-        <View style={compactStyles.amountBox}>
-          <View style={compactStyles.sectionTitle}>
-            <BilingualLabel
-              english="Amount Summary"
-              tamil="தொகை சுருக்கம்"
-              mode={language}
-              fontSize={9}
-              fontWeight="bold"
-            />
-          </View>
-          
-          <View style={compactStyles.amountRow}>
-            <BilingualLabel english="Principal Amount" tamil="அசல் தொகை" mode={language} fontSize={8} />
-            <Text style={compactStyles.amountValue}>{formatCurrencyPrint(displayPrincipal)}</Text>
-          </View>
-          
-          {(loan.processing_fee || 0) > 0 && (
-            <View style={compactStyles.amountRow}>
-              <BilingualLabel english="Processing Fee" tamil="செயலாக்க கட்டணம்" mode={language} fontSize={8} color="#666" />
-              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.processing_fee || 0)}</Text>
+        {/* Rebate Details - only show if rebate exists */}
+        {((loan.rebate_days && loan.rebate_days > 0) || (loan.rebate_amount && loan.rebate_amount > 0)) && (
+          <View style={compactStyles.section}>
+            <View style={compactStyles.sectionTitle}>
+              <BilingualLabel
+                english="Rebate Details"
+                tamil="தள்ளுபடி விவரங்கள்"
+                mode={language}
+                fontSize={9}
+                fontWeight="bold"
+              />
             </View>
-          )}
-          
-          {(loan.document_charges || 0) > 0 && (
-            <View style={compactStyles.amountRow}>
-              <BilingualLabel english="Document Charges" tamil="ஆவண கட்டணங்கள்" mode={language} fontSize={8} color="#666" />
-              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.document_charges || 0)}</Text>
+            <View style={compactStyles.twoColumn}>
+              <View style={compactStyles.column}>
+                <BilingualValueRow
+                  labelEn="Rebate Days"
+                  labelTa="தள்ளுபடி நாட்கள்"
+                  value={`${loan.rebate_days || 0} days`}
+                  mode={language}
+                  fontSize={8}
+                />
+              </View>
+              <View style={compactStyles.column}>
+                <BilingualValueRow
+                  labelEn="Rebate Amount"
+                  labelTa="தள்ளுபடி தொகை"
+                  value={formatCurrencyPrint(loan.rebate_amount || 0)}
+                  mode={language}
+                  valueStyle="bold"
+                  fontSize={8}
+                />
+              </View>
             </View>
-          )}
-          
-          {(loan.advance_interest_shown || 0) > 0 && (
-            <View style={compactStyles.amountRow}>
-              <BilingualLabel english="Advance Interest" tamil="முன்கூட்டியே வட்டி" mode={language} fontSize={8} color="#666" />
-              <Text style={[compactStyles.amountValue, { color: '#c00' }]}>- {formatCurrencyPrint(loan.advance_interest_shown || 0)}</Text>
-            </View>
-          )}
-          
-          <View style={compactStyles.amountTotal}>
-            <BilingualLabel english="Net Disbursed Amount" tamil="நிகர வழங்கப்பட்ட தொகை" mode={language} fontSize={10} fontWeight="bold" />
-            <Text style={compactStyles.amountTotalValue}>{formatCurrencyPrint(loan.net_disbursed)}</Text>
           </View>
-        </View>
+        )}
+        
         
         {/* Signatures */}
         <View style={compactStyles.signatureSection}>

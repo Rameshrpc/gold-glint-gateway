@@ -96,24 +96,24 @@ const kycStyles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
   },
-  // Smaller image dimensions to fit 3 on one page
+  // Portrait image dimensions to match vertical document photos
   cardImage: {
-    width: 220,
-    height: 140,
-    objectFit: 'cover',
+    width: 160,
+    height: 230,
+    objectFit: 'contain',
     borderWidth: 1,
     borderColor: '#000',
   },
   cardImageSmall: {
-    width: 180,
-    height: 115,
-    objectFit: 'cover',
+    width: 140,
+    height: 200,
+    objectFit: 'contain',
     borderWidth: 1,
     borderColor: '#000',
   },
   noImagePlaceholder: {
-    width: 180,
-    height: 115,
+    width: 140,
+    height: 200,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#f5f5f5',
@@ -252,7 +252,7 @@ export function KYCDocumentsPDF({
           {customer.pan_card_url ? (
             <Image src={customer.pan_card_url} style={kycStyles.cardImage} />
           ) : (
-            <View style={[kycStyles.noImagePlaceholder, { width: 220, height: 140 }]}>
+            <View style={[kycStyles.noImagePlaceholder, { width: 160, height: 230 }]}>
               <Text style={kycStyles.noImageText}>No image available</Text>
             </View>
           )}
