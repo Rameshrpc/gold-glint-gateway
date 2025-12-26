@@ -527,32 +527,36 @@ export function LoanReceiptPDF({
                     fontWeight="bold"
                     color="#b45309"
                   />
-                  <Text style={compactStyles.earlyReleaseSubtitle}>
-                    Rebate on early loan closure / கடன் முன்கூட்டியே முடிக்கும் போது தள்ளுபடி
-                  </Text>
+                  <BilingualLabel
+                    english="Rebate on early loan closure"
+                    tamil="கடன் முன்கூட்டியே முடிக்கும் போது தள்ளுபடி"
+                    mode={language}
+                    fontSize={6}
+                    color="#666"
+                  />
                 </View>
               </View>
               
               {/* Rebate schedule rows */}
               <View style={compactStyles.earlyReleaseRow}>
-                <Text style={compactStyles.earlyReleaseDays}>Within 1-30 days / 1-30 நாட்களுக்குள்</Text>
+                <BilingualLabel english="Within 1-30 days" tamil="1-30 நாட்களுக்குள்" mode={language} fontSize={6} />
                 <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[0].rebateAmount)}</Text>
               </View>
               <View style={compactStyles.earlyReleaseRow}>
-                <Text style={compactStyles.earlyReleaseDays}>Within 30-45 days / 30-45 நாட்களுக்குள்</Text>
+                <BilingualLabel english="Within 30-45 days" tamil="30-45 நாட்களுக்குள்" mode={language} fontSize={6} />
                 <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[1].rebateAmount)}</Text>
               </View>
               <View style={compactStyles.earlyReleaseRow}>
-                <Text style={compactStyles.earlyReleaseDays}>Within 45-60 days / 45-60 நாட்களுக்குள்</Text>
+                <BilingualLabel english="Within 45-60 days" tamil="45-60 நாட்களுக்குள்" mode={language} fontSize={6} />
                 <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[2].rebateAmount)}</Text>
               </View>
               <View style={compactStyles.earlyReleaseRow}>
-                <Text style={compactStyles.earlyReleaseDays}>Within 60-75 days / 60-75 நாட்களுக்குள்</Text>
+                <BilingualLabel english="Within 60-75 days" tamil="60-75 நாட்களுக்குள்" mode={language} fontSize={6} />
                 <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[3].rebateAmount)}</Text>
               </View>
               <View style={[compactStyles.earlyReleaseRow, { borderBottomWidth: 0 }]}>
-                <Text style={compactStyles.earlyReleaseDays}>After 75 days / 75 நாட்களுக்கு பிறகு</Text>
-                <Text style={compactStyles.noRebateText}>No rebate / தள்ளுபடி இல்லை</Text>
+                <BilingualLabel english="After 75 days" tamil="75 நாட்களுக்கு பிறகு" mode={language} fontSize={6} />
+                <BilingualLabel english="No rebate" tamil="தள்ளுபடி இல்லை" mode={language} fontSize={6} color="#888" />
               </View>
             </View>
           );
