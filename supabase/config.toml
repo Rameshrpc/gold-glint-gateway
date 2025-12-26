@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.reset-user-password]
 verify_jwt = false
+
+[functions.customer-request-otp]
+verify_jwt = false
+
+[functions.customer-verify-otp]
+verify_jwt = false
+
+[functions.customer-portal-data]
+verify_jwt = false
