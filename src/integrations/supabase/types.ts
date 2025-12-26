@@ -226,6 +226,13 @@ export type Database = {
             foreignKeyName: "agent_commissions_voucher_id_fkey"
             columns: ["voucher_id"]
             isOneToOne: false
+            referencedRelation: "v_unbalanced_vouchers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_commissions_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
             referencedRelation: "vouchers"
             referencedColumns: ["id"]
           },
@@ -3285,6 +3292,13 @@ export type Database = {
             foreignKeyName: "voucher_entries_voucher_id_fkey"
             columns: ["voucher_id"]
             isOneToOne: false
+            referencedRelation: "v_unbalanced_vouchers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_entries_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
             referencedRelation: "vouchers"
             referencedColumns: ["id"]
           },
@@ -3359,6 +3373,13 @@ export type Database = {
             foreignKeyName: "vouchers_reversed_voucher_id_fkey"
             columns: ["reversed_voucher_id"]
             isOneToOne: false
+            referencedRelation: "v_unbalanced_vouchers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vouchers_reversed_voucher_id_fkey"
+            columns: ["reversed_voucher_id"]
+            isOneToOne: false
             referencedRelation: "vouchers"
             referencedColumns: ["id"]
           },
@@ -3366,11 +3387,69 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_unbalanced_vouchers: {
+        Row: {
+          abs_imbalance: number | null
+          branch_id: string | null
+          client_id: string | null
+          created_at: string | null
+          id: string | null
+          imbalance: number | null
+          narration: string | null
+          reference_id: string | null
+          reference_type: string | null
+          total_credit: number | null
+          total_debit: number | null
+          voucher_date: string | null
+          voucher_number: string | null
+          voucher_type: string | null
+        }
+        Insert: {
+          abs_imbalance?: never
+          branch_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          imbalance?: never
+          narration?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
+          voucher_date?: string | null
+          voucher_number?: string | null
+          voucher_type?: string | null
+        }
+        Update: {
+          abs_imbalance?: never
+          branch_id?: string | null
+          client_id?: string | null
+          created_at?: string | null
+          id?: string | null
+          imbalance?: never
+          narration?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          total_credit?: number | null
+          total_debit?: number | null
+          voucher_date?: string | null
+          voucher_number?: string | null
+          voucher_type?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       calculate_dashboard_kpis: {
         Args: { p_branch_id?: string; p_client_id: string }
+        Returns: Json
+      }
+      fix_all_voucher_imbalances: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
+      fix_voucher_imbalance: {
+        Args: { p_user_id?: string; p_voucher_id: string }
         Returns: Json
       }
       generate_auction_lot_number: {
@@ -3399,6 +3478,7 @@ export type Database = {
         Args: { p_client_id: string; p_voucher_type: string }
         Returns: string
       }
+      get_accounting_health: { Args: { p_client_id: string }; Returns: Json }
       get_customer_from_session: {
         Args: { p_session_token: string }
         Returns: string
