@@ -959,11 +959,13 @@ export default function GoldVault() {
               )}
 
               {/* Gold Item Selection */}
-              <GoldItemSelector
-                clientId={client.id}
-                selectedItems={selectedGoldItems}
-                onSelectionChange={setSelectedGoldItems}
-              />
+              {client && (
+                <GoldItemSelector
+                  clientId={client.id}
+                  selectedItems={selectedGoldItems}
+                  onSelectionChange={setSelectedGoldItems}
+                />
+              )}
 
               {/* Bank Loan Details */}
               <div className="pt-4 border-t">
