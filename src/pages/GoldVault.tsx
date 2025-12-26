@@ -15,6 +15,8 @@ import { Separator } from '@/components/ui/separator';
 import { Plus, Package, Search, Eye, Loader2, Building2, Upload, FileImage, X, Vault, Unlock, AlertTriangle } from 'lucide-react';
 import MultiFileUpload from '@/components/uploads/MultiFileUpload';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
+import GoldItemSelector from '@/components/goldvault/GoldItemSelector';
+import PacketItemsView from '@/components/goldvault/PacketItemsView';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -70,12 +72,11 @@ interface RepledgeItem {
   };
 }
 
-interface Loan {
-  id: string;
-  loan_number: string;
-  principal_amount: number;
-  customer?: { full_name: string };
-  gold_items?: { net_weight_grams: number; appraised_value: number }[];
+interface SelectedGoldItem {
+  gold_item_id: string;
+  loan_id: string;
+  weight_grams: number;
+  appraised_value: number;
 }
 
 interface InVaultLoan {
@@ -122,7 +123,7 @@ export default function GoldVault() {
   // Create packet dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [availableLoans, setAvailableLoans] = useState<Loan[]>([]);
+  const [selectedGoldItems, setSelectedGoldItems] = useState<SelectedGoldItem[]>([]);
   const [selectedLoans, setSelectedLoans] = useState<string[]>([]);
   const [selectedBankId, setSelectedBankId] = useState('');
   const [selectedLoyaltyId, setSelectedLoyaltyId] = useState('');
@@ -276,34 +277,7 @@ export default function GoldVault() {
   };
 
   const fetchAvailableLoans = async () => {
-    if (!client) return;
-    
-    // Get loans that are active and not already in an active repledge packet
-    const { data: existingItems } = await supabase
-      .from('repledge_items')
-      .select('loan_id, packet:repledge_packets(status)')
-      .eq('client_id', client.id);
-
-    const activeLoanIds = existingItems
-      ?.filter(i => (i.packet as any)?.status === 'active')
-      .map(i => i.loan_id) || [];
-
-    let query = supabase
-      .from('loans')
-      .select('id, loan_number, principal_amount, customer:customers(full_name), gold_items(net_weight_grams, appraised_value)')
-      .eq('client_id', client.id)
-      .eq('status', 'active')
-      .order('loan_date', { ascending: false });
-
-    if (activeLoanIds.length > 0) {
-      query = query.not('id', 'in', `(${activeLoanIds.join(',')})`);
-    }
-
-    const { data, error } = await query;
-
-    if (!error && data) {
-      setAvailableLoans(data);
-    }
+    // No longer needed - using GoldItemSelector component instead
   };
 
   const fetchPacketItems = async (packetId: string) => {
@@ -375,8 +349,8 @@ export default function GoldVault() {
 
   const handleCreatePacket = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!client || !currentBranch || selectedLoans.length === 0) {
-      toast.error('Please select at least one loan');
+    if (!client || !currentBranch || selectedGoldItems.length === 0) {
+      toast.error('Please select at least one gold item');
       return;
     }
 
@@ -393,18 +367,29 @@ export default function GoldVault() {
       });
       if (numError) throw numError;
 
-      // Calculate totals from selected loans
-      const selectedLoanData = availableLoans.filter(l => selectedLoans.includes(l.id));
-      const totals = selectedLoanData.reduce((acc, loan) => {
-        const goldWeight = loan.gold_items?.reduce((sum, g) => sum + g.net_weight_grams, 0) || 0;
-        const appraisedValue = loan.gold_items?.reduce((sum, g) => sum + g.appraised_value, 0) || 0;
-        return {
-          loans: acc.loans + 1,
-          principal: acc.principal + loan.principal_amount,
-          weight: acc.weight + goldWeight,
-          value: acc.value + appraisedValue
-        };
-      }, { loans: 0, principal: 0, weight: 0, value: 0 });
+      // Calculate totals from selected gold items
+      const affectedLoanIds = [...new Set(selectedGoldItems.map(i => i.loan_id))];
+      const totals = {
+        loans: affectedLoanIds.length,
+        principal: 0, // Will be calculated based on proportional allocation
+        weight: selectedGoldItems.reduce((s, i) => s + i.weight_grams, 0),
+        value: selectedGoldItems.reduce((s, i) => s + i.appraised_value, 0),
+      };
+
+      // Fetch loan principal amounts for proportional allocation
+      const { data: loanData } = await supabase
+        .from('loans')
+        .select('id, principal_amount, gold_items(id, appraised_value)')
+        .in('id', affectedLoanIds);
+
+      // Calculate proportional principal for each selected item
+      const itemsWithPrincipal = selectedGoldItems.map(item => {
+        const loan = loanData?.find(l => l.id === item.loan_id);
+        const loanTotalValue = loan?.gold_items?.reduce((s: number, g: any) => s + g.appraised_value, 0) || 1;
+        const principalAllocated = loan ? (item.appraised_value / loanTotalValue) * loan.principal_amount : 0;
+        totals.principal += principalAllocated;
+        return { ...item, principal_allocated: principalAllocated };
+      });
 
       // Create packet
       const { data: packet, error: packetError } = await supabase

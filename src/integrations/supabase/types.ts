@@ -1415,6 +1415,7 @@ export type Database = {
           gross_weight_grams: number
           id: string
           image_url: string | null
+          is_repledged: boolean | null
           item_group_id: string | null
           item_id: string | null
           item_type: string
@@ -1425,6 +1426,7 @@ export type Database = {
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
+          repledge_packet_id: string | null
           stone_weight_grams: number | null
         }
         Insert: {
@@ -1434,6 +1436,7 @@ export type Database = {
           gross_weight_grams: number
           id?: string
           image_url?: string | null
+          is_repledged?: boolean | null
           item_group_id?: string | null
           item_id?: string | null
           item_type: string
@@ -1444,6 +1447,7 @@ export type Database = {
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
+          repledge_packet_id?: string | null
           stone_weight_grams?: number | null
         }
         Update: {
@@ -1453,6 +1457,7 @@ export type Database = {
           gross_weight_grams?: number
           id?: string
           image_url?: string | null
+          is_repledged?: boolean | null
           item_group_id?: string | null
           item_id?: string | null
           item_type?: string
@@ -1463,6 +1468,7 @@ export type Database = {
           net_weight_grams?: number
           purity?: Database["public"]["Enums"]["gold_purity"]
           purity_percentage?: number
+          repledge_packet_id?: string | null
           stone_weight_grams?: number | null
         }
         Relationships: [
@@ -1485,6 +1491,13 @@ export type Database = {
             columns: ["loan_id"]
             isOneToOne: false
             referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gold_items_repledge_packet_id_fkey"
+            columns: ["repledge_packet_id"]
+            isOneToOne: false
+            referencedRelation: "repledge_packets"
             referencedColumns: ["id"]
           },
         ]
@@ -2780,6 +2793,96 @@ export type Database = {
           },
         ]
       }
+      repledge_gold_items: {
+        Row: {
+          added_by: string | null
+          appraised_value: number
+          client_id: string
+          created_at: string | null
+          gold_item_id: string
+          id: string
+          loan_id: string
+          packet_id: string
+          principal_allocated: number
+          released_date: string | null
+          remarks: string | null
+          repledged_date: string | null
+          status: string | null
+          updated_at: string | null
+          weight_grams: number
+        }
+        Insert: {
+          added_by?: string | null
+          appraised_value: number
+          client_id: string
+          created_at?: string | null
+          gold_item_id: string
+          id?: string
+          loan_id: string
+          packet_id: string
+          principal_allocated?: number
+          released_date?: string | null
+          remarks?: string | null
+          repledged_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          weight_grams: number
+        }
+        Update: {
+          added_by?: string | null
+          appraised_value?: number
+          client_id?: string
+          created_at?: string | null
+          gold_item_id?: string
+          id?: string
+          loan_id?: string
+          packet_id?: string
+          principal_allocated?: number
+          released_date?: string | null
+          remarks?: string | null
+          repledged_date?: string | null
+          status?: string | null
+          updated_at?: string | null
+          weight_grams?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repledge_gold_items_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_gold_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_gold_items_gold_item_id_fkey"
+            columns: ["gold_item_id"]
+            isOneToOne: false
+            referencedRelation: "gold_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_gold_items_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repledge_gold_items_packet_id_fkey"
+            columns: ["packet_id"]
+            isOneToOne: false
+            referencedRelation: "repledge_packets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repledge_items: {
         Row: {
           added_by: string | null
@@ -3412,6 +3515,10 @@ export type Database = {
     Functions: {
       calculate_dashboard_kpis: {
         Args: { p_branch_id?: string; p_client_id: string }
+        Returns: Json
+      }
+      check_loan_items_repledge_status: {
+        Args: { p_loan_id: string }
         Returns: Json
       }
       fix_all_voucher_imbalances: {
