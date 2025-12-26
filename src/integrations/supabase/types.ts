@@ -3393,6 +3393,8 @@ export type Database = {
           branch_id: string | null
           client_id: string | null
           created_at: string | null
+          header_credit: number | null
+          header_debit: number | null
           id: string | null
           imbalance: number | null
           narration: string | null
@@ -3403,38 +3405,6 @@ export type Database = {
           voucher_date: string | null
           voucher_number: string | null
           voucher_type: string | null
-        }
-        Insert: {
-          abs_imbalance?: never
-          branch_id?: string | null
-          client_id?: string | null
-          created_at?: string | null
-          id?: string | null
-          imbalance?: never
-          narration?: string | null
-          reference_id?: string | null
-          reference_type?: string | null
-          total_credit?: number | null
-          total_debit?: number | null
-          voucher_date?: string | null
-          voucher_number?: string | null
-          voucher_type?: string | null
-        }
-        Update: {
-          abs_imbalance?: never
-          branch_id?: string | null
-          client_id?: string | null
-          created_at?: string | null
-          id?: string | null
-          imbalance?: never
-          narration?: string | null
-          reference_id?: string | null
-          reference_type?: string | null
-          total_credit?: number | null
-          total_debit?: number | null
-          voucher_date?: string | null
-          voucher_number?: string | null
-          voucher_type?: string | null
         }
         Relationships: []
       }
