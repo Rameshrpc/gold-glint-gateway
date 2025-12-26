@@ -11,7 +11,8 @@ import {
   LayoutTemplate,
   GitBranch,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  FileStack
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -19,6 +20,7 @@ import { useState } from 'react';
 export type SettingsSection = 
   | 'user-rights' 
   | 'client-rights' 
+  | 'print-loan-docs'
   | 'print-general' 
   | 'print-documents' 
   | 'print-terms' 
@@ -56,6 +58,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
   ];
 
   const printItems: MenuItem[] = [
+    { id: 'print-loan-docs', label: 'Loan Documents', icon: FileStack },
     { id: 'print-general', label: 'General', icon: Settings2 },
     { id: 'print-documents', label: 'Documents', icon: FileText },
     { id: 'print-terms', label: 'Terms & Conditions', icon: FileEdit },
