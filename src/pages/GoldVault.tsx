@@ -124,7 +124,6 @@ export default function GoldVault() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [selectedGoldItems, setSelectedGoldItems] = useState<SelectedGoldItem[]>([]);
-  const [selectedLoans, setSelectedLoans] = useState<string[]>([]);
   const [selectedBankId, setSelectedBankId] = useState('');
   const [selectedLoyaltyId, setSelectedLoyaltyId] = useState('');
   const [selectedCreditAccountId, setSelectedCreditAccountId] = useState('');
@@ -294,7 +293,7 @@ export default function GoldVault() {
   };
 
   const resetCreateForm = () => {
-    setSelectedLoans([]);
+    setSelectedGoldItems([]);
     setSelectedBankId('');
     setSelectedLoyaltyId('');
     setSelectedCreditAccountId('');
@@ -1048,7 +1047,7 @@ export default function GoldVault() {
                 <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting || selectedLoans.length === 0}>
+                <Button type="submit" disabled={submitting || selectedGoldItems.length === 0}>
                   {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Create Packet
                 </Button>
