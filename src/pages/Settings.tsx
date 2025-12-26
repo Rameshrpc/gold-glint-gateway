@@ -19,6 +19,7 @@ import { EditableContentSettings } from '@/components/print/EditableContentSetti
 import { HeaderFooterSettings } from '@/components/print/HeaderFooterSettings';
 import { TemplatesTab } from '@/components/print/TemplatesTab';
 import { BranchPrintSettingsTab } from '@/components/print/BranchPrintSettingsTab';
+import { LoanDocumentsOverview } from '@/components/print/LoanDocumentsOverview';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -368,6 +369,8 @@ export default function Settings() {
           </Card>
         );
 
+      case 'print-loan-docs':
+        return <LoanDocumentsOverview />;
       case 'print-general':
         return <GeneralPrintSettings />;
       case 'print-documents':
