@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -548,77 +549,79 @@ export default function Interest() {
               </div>
             ) : (
               <ScrollArea className="h-[500px]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Loan</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead className="text-right">Principal</TableHead>
-                      <TableHead className="text-right">Interest Due</TableHead>
-                      <TableHead className="text-right">Part Payment</TableHead>
-                      <TableHead>Due Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLoans.map((loan) => (
-                      <TableRow key={loan.id} className={loan.interestStatus === 'overdue' ? 'bg-red-50/50 dark:bg-red-950/20' : ''}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{loan.loan_number}</p>
-                            <p className="text-xs text-muted-foreground">{loan.scheme.scheme_name}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{loan.customer.full_name}</p>
-                            <p className="text-xs text-muted-foreground">{loan.customer.customer_code}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <p className="font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
-                          <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate}% p.a.</p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <p className="font-bold text-green-600">{formatIndianCurrency(loan.interestDue.shownInterest)}</p>
-                          <p className="text-xs text-muted-foreground">{loan.daysSincePayment} days</p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <p className="font-bold text-amber-600">{formatIndianCurrency(loan.interestDue.differential)}</p>
-                          <p className="text-xs text-muted-foreground">Principal reduction</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{loan.dueDate}</p>
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(loan.interestStatus)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openHistoryDialog(loan)}
-                            >
-                              <FileText className="h-4 w-4" />
-                            </Button>
-                            {canCollect && (
-                              <Button
-                                size="sm"
-                                className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                                onClick={() => openCollectionDialog(loan)}
-                              >
-                                <IndianRupee className="h-4 w-4 mr-1" />
-                                Collect
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                <ResponsiveTable minWidth="1000px">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Loan</TableHead>
+                        <TableHead>Customer</TableHead>
+                        <TableHead className="text-right">Principal</TableHead>
+                        <TableHead className="text-right">Interest Due</TableHead>
+                        <TableHead className="text-right">Part Payment</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredLoans.map((loan) => (
+                        <TableRow key={loan.id} className={loan.interestStatus === 'overdue' ? 'bg-red-50/50 dark:bg-red-950/20' : ''}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{loan.loan_number}</p>
+                              <p className="text-xs text-muted-foreground">{loan.scheme.scheme_name}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{loan.customer.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{loan.customer.customer_code}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <p className="font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
+                            <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate}% p.a.</p>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <p className="font-bold text-green-600">{formatIndianCurrency(loan.interestDue.shownInterest)}</p>
+                            <p className="text-xs text-muted-foreground">{loan.daysSincePayment} days</p>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <p className="font-bold text-amber-600">{formatIndianCurrency(loan.interestDue.differential)}</p>
+                            <p className="text-xs text-muted-foreground">Principal reduction</p>
+                          </TableCell>
+                          <TableCell>
+                            <p className="text-sm">{loan.dueDate}</p>
+                          </TableCell>
+                          <TableCell>
+                            {getStatusBadge(loan.interestStatus)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openHistoryDialog(loan)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              {canCollect && (
+                                <Button
+                                  size="sm"
+                                  className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
+                                  onClick={() => openCollectionDialog(loan)}
+                                >
+                                  <IndianRupee className="h-4 w-4 mr-1" />
+                                  Collect
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ResponsiveTable>
               </ScrollArea>
             )}
           </CardContent>
