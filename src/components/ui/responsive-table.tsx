@@ -4,12 +4,14 @@ import { cn } from "@/lib/utils";
 interface ResponsiveTableProps {
   children: React.ReactNode;
   minWidth?: string;
+  maxHeight?: string;
   className?: string;
 }
 
 export function ResponsiveTable({ 
   children, 
   minWidth = "800px",
+  maxHeight,
   className 
 }: ResponsiveTableProps) {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -48,16 +50,23 @@ export function ResponsiveTable({
       {/* Left fade indicator */}
       <div 
         className={cn(
-          "absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 transition-opacity duration-200",
+          "absolute left-0 top-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 transition-opacity duration-200",
+          maxHeight ? "bottom-4" : "bottom-0",
           canScrollLeft ? "opacity-100" : "opacity-0"
         )} 
       />
       
-      {/* Scrollable container */}
+      {/* Scrollable container - handles both horizontal and vertical scroll */}
       <div 
         ref={scrollContainerRef}
-        className="overflow-x-auto scrollbar-hide -webkit-overflow-scrolling-touch"
-        style={{ WebkitOverflowScrolling: 'touch' }}
+        className={cn(
+          "overflow-x-auto scrollbar-hide",
+          maxHeight && "overflow-y-auto"
+        )}
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          maxHeight: maxHeight || undefined
+        }}
       >
         <div style={{ minWidth }}>
           {children}
@@ -67,7 +76,8 @@ export function ResponsiveTable({
       {/* Right fade indicator */}
       <div 
         className={cn(
-          "absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 transition-opacity duration-200",
+          "absolute right-0 top-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 transition-opacity duration-200",
+          maxHeight ? "bottom-4" : "bottom-0",
           canScrollRight ? "opacity-100" : "opacity-0"
         )} 
       />
