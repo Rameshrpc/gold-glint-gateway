@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
@@ -604,64 +605,66 @@ export default function Vouchers() {
                 No vouchers found for the selected filters
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Voucher #</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="max-w-[300px]">Narration</TableHead>
-                    <TableHead className="text-right">Debit</TableHead>
-                    <TableHead className="text-right">Credit</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredVouchers.map(voucher => (
-                    <TableRow key={voucher.id}>
-                      <TableCell className="text-sm">
-                        {format(new Date(voucher.voucher_date), 'dd MMM yyyy')}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {voucher.voucher_number}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={cn('text-xs', voucherTypeColors[voucher.voucher_type])}>
-                          {voucherTypeLabels[voucher.voucher_type] || voucher.voucher_type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
-                        {voucher.narration}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-green-600">
-                        {formatCurrency(voucher.total_debit)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-red-600">
-                        {formatCurrency(voucher.total_credit)}
-                      </TableCell>
-                      <TableCell>
-                        {voucher.is_reversed ? (
-                          <Badge variant="destructive">Reversed</Badge>
-                        ) : voucher.is_posted ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700">Posted</Badge>
-                        ) : (
-                          <Badge variant="secondary">Draft</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleViewVoucher(voucher)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <ResponsiveTable minWidth="900px">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Voucher #</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="max-w-[300px]">Narration</TableHead>
+                      <TableHead className="text-right">Debit</TableHead>
+                      <TableHead className="text-right">Credit</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredVouchers.map(voucher => (
+                      <TableRow key={voucher.id}>
+                        <TableCell className="text-sm">
+                          {format(new Date(voucher.voucher_date), 'dd MMM yyyy')}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {voucher.voucher_number}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={cn('text-xs', voucherTypeColors[voucher.voucher_type])}>
+                            {voucherTypeLabels[voucher.voucher_type] || voucher.voucher_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
+                          {voucher.narration}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-green-600">
+                          {formatCurrency(voucher.total_debit)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-red-600">
+                          {formatCurrency(voucher.total_credit)}
+                        </TableCell>
+                        <TableCell>
+                          {voucher.is_reversed ? (
+                            <Badge variant="destructive">Reversed</Badge>
+                          ) : voucher.is_posted ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-700">Posted</Badge>
+                          ) : (
+                            <Badge variant="secondary">Draft</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleViewVoucher(voucher)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             )}
           </CardContent>
         </Card>

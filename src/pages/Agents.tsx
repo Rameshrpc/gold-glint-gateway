@@ -14,6 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   Dialog,
   DialogContent,
@@ -348,68 +349,70 @@ export default function Agents() {
             ) : filteredAgents.length === 0 ? (
               <p className="text-muted-foreground">No agents found. Add your first agent to get started.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Earned</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAgents.map((agent) => (
-                    <TableRow key={agent.id}>
-                      <TableCell className="font-mono">{agent.agent_code}</TableCell>
-                      <TableCell className="font-medium">{agent.full_name}</TableCell>
-                      <TableCell>
-                        <div className="space-y-1">
-                          {agent.phone && (
-                            <div className="flex items-center gap-1 text-sm">
-                              <Phone className="h-3 w-3" />
-                              {agent.phone}
-                            </div>
-                          )}
-                          {agent.email && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Mail className="h-3 w-3" />
-                              {agent.email}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {agent.branches ? (
-                          <Badge variant="outline">{agent.branches.branch_name}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{agent.commission_percentage}%</TableCell>
-                      <TableCell className="font-medium text-green-600">
-                        ₹{agent.total_commission_earned.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={agent.is_active ? "default" : "secondary"}>
-                          {agent.is_active ? "Active" : "Inactive"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
+              <ResponsiveTable minWidth="900px">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Commission</TableHead>
+                      <TableHead>Earned</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAgents.map((agent) => (
+                      <TableRow key={agent.id}>
+                        <TableCell className="font-mono">{agent.agent_code}</TableCell>
+                        <TableCell className="font-medium">{agent.full_name}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            {agent.phone && (
+                              <div className="flex items-center gap-1 text-sm">
+                                <Phone className="h-3 w-3" />
+                                {agent.phone}
+                              </div>
+                            )}
+                            {agent.email && (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Mail className="h-3 w-3" />
+                                {agent.email}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {agent.branches ? (
+                            <Badge variant="outline">{agent.branches.branch_name}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{agent.commission_percentage}%</TableCell>
+                        <TableCell className="font-medium text-green-600">
+                          ₹{agent.total_commission_earned.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={agent.is_active ? "default" : "secondary"}>
+                            {agent.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(agent)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(agent.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             )}
           </CardContent>
         </Card>

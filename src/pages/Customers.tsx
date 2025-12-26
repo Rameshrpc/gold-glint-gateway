@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -1184,121 +1185,123 @@ export default function Customers() {
               <CardTitle>Customer List ({filteredCustomers.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Photo</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Contact</TableHead>
-                    <TableHead>Branch</TableHead>
-                    <TableHead>Documents</TableHead>
-                    <TableHead>Nominee</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCustomers.map((customer) => (
-                    <TableRow key={customer.id}>
-                      <TableCell>
-                        {customer.photo_url ? (
-                          photoSignedUrls[customer.id] ? (
-                            <img
-                              src={photoSignedUrls[customer.id]}
-                              alt={customer.full_name}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
+              <ResponsiveTable minWidth="1100px">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Photo</TableHead>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Contact</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Documents</TableHead>
+                      <TableHead>Nominee</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCustomers.map((customer) => (
+                      <TableRow key={customer.id}>
+                        <TableCell>
+                          {customer.photo_url ? (
+                            photoSignedUrls[customer.id] ? (
+                              <img
+                                src={photoSignedUrls[customer.id]}
+                                alt={customer.full_name}
+                                className="h-10 w-10 rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                            )
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              <User className="h-5 w-5 text-muted-foreground" />
                             </div>
-                          )
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{customer.customer_code}</TableCell>
-                      <TableCell>{customer.full_name}</TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <span className="flex items-center gap-1 text-sm">
-                            <Phone className="h-3 w-3" /> {customer.phone}
-                          </span>
-                          {customer.email && (
-                            <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Mail className="h-3 w-3" /> {customer.email}
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{customer.customer_code}</TableCell>
+                        <TableCell>{customer.full_name}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            <span className="flex items-center gap-1 text-sm">
+                              <Phone className="h-3 w-3" /> {customer.phone}
                             </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getBranchName(customer.branch_id)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Badge variant={customer.aadhaar_front_url && customer.aadhaar_back_url ? 'default' : 'secondary'} className="text-xs">
-                            Aadhaar
-                          </Badge>
-                          <Badge variant={customer.pan_card_url ? 'default' : 'secondary'} className="text-xs">
-                            PAN
-                          </Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {customer.nominee_name ? (
-                          <span className="text-sm">
-                            {customer.nominee_relation && (
-                              <span className="capitalize">{customer.nominee_relation}: </span>
+                            {customer.email && (
+                              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Mail className="h-3 w-3" /> {customer.email}
+                              </span>
                             )}
-                            {customer.nominee_name}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={customer.is_active ? 'default' : 'secondary'}>
-                          {customer.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewCustomer(customer)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {canManageCustomers && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEditDialog(customer)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => {
-                                  setCustomerToDelete(customer);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
+                          </div>
+                        </TableCell>
+                        <TableCell>{getBranchName(customer.branch_id)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Badge variant={customer.aadhaar_front_url && customer.aadhaar_back_url ? 'default' : 'secondary'} className="text-xs">
+                              Aadhaar
+                            </Badge>
+                            <Badge variant={customer.pan_card_url ? 'default' : 'secondary'} className="text-xs">
+                              PAN
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {customer.nominee_name ? (
+                            <span className="text-sm">
+                              {customer.nominee_relation && (
+                                <span className="capitalize">{customer.nominee_relation}: </span>
+                              )}
+                              {customer.nominee_name}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
                           )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={customer.is_active ? 'default' : 'secondary'}>
+                            {customer.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewCustomer(customer)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {canManageCustomers && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openEditDialog(customer)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setCustomerToDelete(customer);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         )}

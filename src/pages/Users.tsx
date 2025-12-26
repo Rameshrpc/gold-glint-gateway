@@ -28,6 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -745,100 +746,102 @@ export default function Users() {
           </Card>
         ) : (
           <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  {isPlatformAdmin() && <TableHead className="hidden lg:table-cell">Client</TableHead>}
-                  <TableHead className="hidden sm:table-cell">Branch</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name}</TableCell>
-                    <TableCell className="hidden md:table-cell">{user.email || '-'}</TableCell>
-                    {isPlatformAdmin() && (
-                      <TableCell className="hidden lg:table-cell">
-                        {user.clients?.company_name || '-'}
-                      </TableCell>
-                    )}
-                    <TableCell className="hidden sm:table-cell">
-                      {user.branches?.branch_name || (
-                        user.roles.some(r => branchStaffRoles.includes(r)) 
-                          ? <span className="text-destructive text-xs">⚠️ Missing</span> 
-                          : '-'
+            <ResponsiveTable minWidth="900px">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    {isPlatformAdmin() && <TableHead>Client</TableHead>}
+                    <TableHead>Branch</TableHead>
+                    <TableHead>Roles</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.full_name}</TableCell>
+                      <TableCell>{user.email || '-'}</TableCell>
+                      {isPlatformAdmin() && (
+                        <TableCell>
+                          {user.clients?.company_name || '-'}
+                        </TableCell>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles.length === 0 ? (
-                          <Badge variant="outline" className="text-xs border-destructive text-destructive">
-                            ⚠️ No Role
-                          </Badge>
-                        ) : (
-                          <>
-                            {user.roles.slice(0, 2).map((role) => (
-                              <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
-                                {role.replace('_', ' ')}
-                              </Badge>
-                            ))}
-                            {user.roles.length > 2 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{user.roles.length - 2}
-                              </Badge>
-                            )}
-                          </>
+                      <TableCell>
+                        {user.branches?.branch_name || (
+                          user.roles.some(r => branchStaffRoles.includes(r)) 
+                            ? <span className="text-destructive text-xs">⚠️ Missing</span> 
+                            : '-'
                         )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={user.is_active ? 'default' : 'secondary'}>
-                        {user.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {isPlatformAdmin() && (
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles.length === 0 ? (
+                            <Badge variant="outline" className="text-xs border-destructive text-destructive">
+                              ⚠️ No Role
+                            </Badge>
+                          ) : (
+                            <>
+                              {user.roles.slice(0, 2).map((role) => (
+                                <Badge key={role} variant={getRoleBadgeVariant(role)} className="text-xs">
+                                  {role.replace('_', ' ')}
+                                </Badge>
+                              ))}
+                              {user.roles.length > 2 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{user.roles.length - 2}
+                                </Badge>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.is_active ? 'default' : 'secondary'}>
+                          {user.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {isPlatformAdmin() && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openPasswordResetDialog(user)}
+                              title="Reset password"
+                            >
+                              <KeyRound className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openPasswordResetDialog(user)}
-                            title="Reset password"
+                            onClick={() => openRolesDialog(user)}
+                            title="Manage roles"
                           >
-                            <KeyRound className="h-4 w-4" />
+                            <Shield className="h-4 w-4" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openRolesDialog(user)}
-                          title="Manage roles"
-                        >
-                          <Shield className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(user)}
-                          title="Edit user"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Switch
-                          checked={user.is_active}
-                          onCheckedChange={() => toggleUserStatus(user)}
-                        />
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditDialog(user)}
+                            title="Edit user"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Switch
+                            checked={user.is_active}
+                            onCheckedChange={() => toggleUserStatus(user)}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ResponsiveTable>
           </Card>
         )}
       </div>
