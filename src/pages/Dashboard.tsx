@@ -1,21 +1,20 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useBackfillVouchers } from '@/hooks/useBackfillVouchers';
-import { supabase } from '@/integrations/supabase/client';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AccountingHealthWidget } from '@/components/accounting/AccountingHealthWidget';
+import {
+  QuickStatsGrid,
+  PortfolioTrendChart,
+  OverdueAnalysisChart,
+  BranchPerformanceChart,
+  GoldCustodyWidget,
+} from '@/components/dashboard';
 import { 
-  Users, 
-  FileText, 
-  IndianRupee, 
-  TrendingUp,
-  Clock,
-  AlertTriangle,
-  Building,
-  MapPin,
   CreditCard,
   Wallet,
   RefreshCw,
@@ -23,34 +22,18 @@ import {
   CheckCircle2,
   Loader2,
   BookOpen,
+  AlertTriangle,
 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-
-interface DashboardStats {
-  totalCustomers: number;
-  activeLoans: number;
-  totalDisbursed: number;
-  interestCollected: number;
-  overdueLoans: number;
-}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { profile, client, currentBranch, branches, roles, hasRole } = useAuth();
+  const { profile, client, currentBranch, roles, hasRole } = useAuth();
   const { autoSync, syncStatus } = useBackfillVouchers();
   const hasAutoSynced = useRef(false);
-  const [showSyncCard, setShowSyncCard] = useState(true);
-  const [stats, setStats] = useState<DashboardStats>({
-    totalCustomers: 0,
-    activeLoans: 0,
-    totalDisbursed: 0,
-    interestCollected: 0,
-    overdueLoans: 0,
-  });
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const dashboardData = useDashboardData();
 
-  const hasMultipleBranches = branches && branches.length > 1;
+  const isTenantAdmin = hasRole('tenant_admin') || hasRole('super_admin');
 
   const quickActions = [
     { title: 'New Loan', icon: Plus, href: '/loans?action=new', color: 'bg-green-600 hover:bg-green-700' },
@@ -58,107 +41,6 @@ export default function Dashboard() {
     { title: 'Redemption', icon: Wallet, href: '/redemption', color: 'bg-purple-600 hover:bg-purple-700' },
     { title: 'Reloan', icon: RefreshCw, href: '/reloan', color: 'bg-amber-600 hover:bg-amber-700' },
   ];
-
-  // Fetch real stats
-  const fetchStats = useCallback(async () => {
-    if (!profile?.client_id) return;
-
-    try {
-      const branchFilter = currentBranch?.id;
-      
-      // Fetch stats in parallel
-      const [customersRes, loansRes, interestRes] = await Promise.all([
-        supabase
-          .from('customers')
-          .select('id', { count: 'exact' })
-          .eq('client_id', profile.client_id)
-          .eq('is_active', true),
-        supabase
-          .from('loans')
-          .select('id, principal_amount, status, maturity_date')
-          .eq('client_id', profile.client_id),
-        supabase
-          .from('interest_payments')
-          .select('amount_paid, payment_date')
-          .eq('client_id', profile.client_id),
-      ]);
-
-      const activeLoans = loansRes.data?.filter(l => l.status === 'active') || [];
-      const totalDisbursed = activeLoans.reduce((sum, l) => sum + (l.principal_amount || 0), 0);
-      
-      // Get this month's interest
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-      const monthlyInterest = interestRes.data
-        ?.filter(p => p.payment_date >= startOfMonth)
-        .reduce((sum, p) => sum + (p.amount_paid || 0), 0) || 0;
-
-      // Count overdue loans
-      const today = new Date().toISOString().split('T')[0];
-      const overdueLoans = activeLoans.filter(l => l.maturity_date < today).length;
-
-      setStats({
-        totalCustomers: customersRes.count || 0,
-        activeLoans: activeLoans.length,
-        totalDisbursed,
-        interestCollected: monthlyInterest,
-        overdueLoans,
-      });
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    } finally {
-      setIsLoadingStats(false);
-    }
-  }, [profile?.client_id, currentBranch?.id]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  const statItems = [
-    {
-      title: 'Total Customers',
-      value: isLoadingStats ? '...' : stats.totalCustomers.toLocaleString(),
-      icon: Users,
-      change: stats.totalCustomers > 0 ? 'Active customers' : 'Start adding customers',
-      color: 'text-blue-600',
-      bg: 'bg-blue-50',
-    },
-    {
-      title: 'Active Loans',
-      value: isLoadingStats ? '...' : stats.activeLoans.toLocaleString(),
-      icon: FileText,
-      change: stats.overdueLoans > 0 ? `${stats.overdueLoans} overdue` : 'All on track',
-      color: 'text-green-600',
-      bg: 'bg-green-50',
-    },
-    {
-      title: 'Total Disbursed',
-      value: isLoadingStats ? '...' : `₹${(stats.totalDisbursed / 100000).toFixed(1)}L`,
-      icon: IndianRupee,
-      change: 'Active portfolio',
-      color: 'text-amber-600',
-      bg: 'bg-amber-50',
-    },
-    {
-      title: 'Interest Collected',
-      value: isLoadingStats ? '...' : `₹${(stats.interestCollected / 1000).toFixed(0)}K`,
-      icon: TrendingUp,
-      change: 'This month',
-      color: 'text-purple-600',
-      bg: 'bg-purple-50',
-    },
-  ];
-
-  const getBranchTypeBadge = (type: string) => {
-    const colors: Record<string, string> = {
-      main_branch: 'bg-amber-100 text-amber-800',
-      company_owned: 'bg-blue-100 text-blue-800',
-      franchise: 'bg-green-100 text-green-800',
-      tenant: 'bg-purple-100 text-purple-800',
-    };
-    return colors[type] || 'bg-muted text-muted-foreground';
-  };
 
   // Auto-sync vouchers on dashboard load
   useEffect(() => {
@@ -195,7 +77,7 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {/* Welcome Header with Sync Status */}
         <div className="flex items-start justify-between">
           <div>
@@ -244,117 +126,44 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Multi-Branch Overview Card */}
-        {hasMultipleBranches && (
-          <Card className="border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Building className="h-5 w-5 text-amber-600" />
-                Branch Network Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {branches.map((branch) => (
-                  <div 
-                    key={branch.id} 
-                    className={`p-3 rounded-lg border ${
-                      currentBranch?.id === branch.id 
-                        ? 'border-amber-400 bg-amber-100/50' 
-                        : 'border-border bg-background'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="font-medium text-sm">{branch.branch_name}</p>
-                        <p className="text-xs text-muted-foreground font-mono">{branch.branch_code}</p>
-                      </div>
-                      <Badge 
-                        variant={branch.is_active ? 'default' : 'secondary'}
-                        className="text-xs"
-                      >
-                        {branch.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Badge className={`${getBranchTypeBadge(branch.branch_type)} text-xs`}>
-                        {branch.branch_type.replace('_', ' ')}
-                      </Badge>
-                      {currentBranch?.id === branch.id && (
-                        <span className="text-xs text-amber-600 font-medium flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          Current
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                You have access to {branches.length} branches. Use the branch selector in the sidebar to switch between them.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {statItems.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <div className={`p-2 rounded-lg ${stat.bg}`}>
-                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{stat.change}</p>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Quick Stats + Gold Custody Row */}
+        <div className="grid gap-4 lg:grid-cols-5">
+          <div className="lg:col-span-4">
+            <QuickStatsGrid stats={dashboardData.stats} isLoading={dashboardData.isLoading} />
+          </div>
+          <div className="lg:col-span-1">
+            <GoldCustodyWidget data={dashboardData.goldCustody} isLoading={dashboardData.isLoading} />
+          </div>
         </div>
 
-        {/* Quick Actions / Alerts */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Accounting Health Widget */}
+        {/* Charts Row 1: Portfolio Trend + Overdue Analysis */}
+        <div className="grid gap-4 lg:grid-cols-3">
+          <PortfolioTrendChart 
+            data={dashboardData.trendData} 
+            isLoading={dashboardData.isLoading} 
+          />
+          <OverdueAnalysisChart 
+            data={dashboardData.overdueBuckets}
+            totalOverdueLoans={dashboardData.stats.overdueLoans}
+            isLoading={dashboardData.isLoading}
+          />
+        </div>
+
+        {/* Charts Row 2: Branch Performance + Accounting Health */}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {isTenantAdmin && (
+            <BranchPerformanceChart 
+              data={dashboardData.branchPerformance} 
+              isLoading={dashboardData.isLoading} 
+            />
+          )}
           <AccountingHealthWidget />
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-amber-600" />
-                Pending Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                No pending actions. You're all caught up!
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
-                Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-sm">
-                No alerts at this time.
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Role Info Card */}
+        {/* Role Info Card - Compact */}
         <Card>
-          <CardHeader>
-            <CardTitle>Your Access</CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Your Access</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
