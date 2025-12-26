@@ -61,8 +61,11 @@ interface Loan {
   document_charges?: number | null;
   net_disbursed: number;
   shown_principal?: number | null;
+  actual_principal?: number | null;
   advance_interest_shown?: number | null;
   jewel_photo_url?: string | null;
+  rebate_days?: number | null;
+  rebate_amount?: number | null;
 }
 
 interface LoanPrintDialogProps {
