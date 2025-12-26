@@ -12,11 +12,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Package, Search, Eye, Loader2, Building2, Upload, FileImage, X, Vault, Unlock, AlertTriangle } from 'lucide-react';
+import { Plus, Package, Search, Eye, Loader2, Building2, Upload, FileImage, X, Vault, Unlock, AlertTriangle, MapPin } from 'lucide-react';
 import MultiFileUpload from '@/components/uploads/MultiFileUpload';
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import GoldItemSelector from '@/components/goldvault/GoldItemSelector';
 import PacketItemsView from '@/components/goldvault/PacketItemsView';
+import LoanTrackingView from '@/components/goldvault/LoanTrackingView';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -79,6 +80,14 @@ interface SelectedGoldItem {
   appraised_value: number;
 }
 
+interface GoldItemDetail {
+  id: string;
+  net_weight_grams: number;
+  appraised_value: number;
+  is_repledged: boolean;
+  repledge_packet_id: string | null;
+}
+
 interface InVaultLoan {
   id: string;
   loan_number: string;
@@ -86,7 +95,9 @@ interface InVaultLoan {
   principal_amount: number;
   status: string;
   customer?: { full_name: string };
-  gold_items?: { net_weight_grams: number; appraised_value: number }[];
+  gold_items?: GoldItemDetail[];
+  in_vault_items: number;
+  total_items: number;
 }
 
 interface BankNbfc {
@@ -214,35 +225,38 @@ export default function GoldVault() {
   const fetchInVaultLoans = async () => {
     if (!client) return;
     
-    // Get all loan IDs that are already in repledge_items with active packets
-    const { data: repledgedItems } = await supabase
-      .from('repledge_items')
-      .select('loan_id, packet:repledge_packets(status)')
-      .eq('client_id', client.id);
-
-    const activeLoanIds = repledgedItems
-      ?.filter(i => (i.packet as any)?.status === 'active')
-      .map(i => i.loan_id) || [];
-
-    // Fetch active loans NOT in active repledge packets
-    let query = supabase
+    // Fetch all active loans with gold item details (using item-level repledge tracking)
+    const { data, error } = await supabase
       .from('loans')
-      .select('id, loan_number, loan_date, principal_amount, status, customer:customers(full_name), gold_items(net_weight_grams, appraised_value)')
+      .select(`
+        id, loan_number, loan_date, principal_amount, status, 
+        customer:customers(full_name), 
+        gold_items(id, net_weight_grams, appraised_value, is_repledged, repledge_packet_id)
+      `)
       .eq('client_id', client.id)
       .eq('status', 'active')
       .order('loan_date', { ascending: false });
-
-    if (activeLoanIds.length > 0) {
-      query = query.not('id', 'in', `(${activeLoanIds.join(',')})`);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching in-vault loans:', error);
       return;
     }
-    setInVaultLoans(data || []);
+
+    // Filter to only loans that have at least one non-repledged item
+    const loansWithVaultItems = (data || [])
+      .map(loan => {
+        const items = loan.gold_items || [];
+        const inVaultItems = items.filter((item: any) => !item.is_repledged);
+        return {
+          ...loan,
+          gold_items: items as GoldItemDetail[],
+          in_vault_items: inVaultItems.length,
+          total_items: items.length
+        };
+      })
+      .filter(loan => loan.in_vault_items > 0);
+    
+    setInVaultLoans(loansWithVaultItems);
   };
 
   const fetchBanks = async () => {
@@ -654,11 +668,23 @@ export default function GoldVault() {
     l.customer?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  // Calculate stats from item-level data
+  const inVaultItemsWeight = inVaultLoans.reduce((sum, l) => {
+    const vaultItems = l.gold_items?.filter(g => !g.is_repledged) || [];
+    return sum + vaultItems.reduce((s, i) => s + i.net_weight_grams, 0);
+  }, 0);
+
+  const inVaultItemsValue = inVaultLoans.reduce((sum, l) => {
+    const vaultItems = l.gold_items?.filter(g => !g.is_repledged) || [];
+    return sum + vaultItems.reduce((s, i) => s + i.appraised_value, 0);
+  }, 0);
+
   const totalStats = {
     packetsActive: packets.filter(p => p.status === 'active').length,
     totalRepledged: packets.filter(p => p.status === 'active').reduce((sum, p) => sum + p.total_principal, 0),
     inVaultCount: inVaultLoans.length,
-    inVaultValue: inVaultLoans.reduce((sum, l) => sum + l.principal_amount, 0)
+    inVaultWeight: inVaultItemsWeight,
+    inVaultValue: inVaultItemsValue
   };
 
   const bankTotalSettlement = (parseFloat(bankPrincipalOutstanding) || 0) + 
@@ -720,8 +746,8 @@ export default function GoldVault() {
                   <Vault className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{totalStats.inVaultCount}</p>
-                  <p className="text-xs text-muted-foreground">In-Vault Loans</p>
+                  <p className="text-2xl font-bold">{totalStats.inVaultWeight.toFixed(2)}g</p>
+                  <p className="text-xs text-muted-foreground">In-Vault Gold</p>
                 </div>
               </div>
             </CardContent>
@@ -749,6 +775,10 @@ export default function GoldVault() {
                 <TabsList>
                   <TabsTrigger value="repledged">Repledged Packets</TabsTrigger>
                   <TabsTrigger value="in-vault">In-Vault</TabsTrigger>
+                  <TabsTrigger value="track">
+                    <MapPin className="h-4 w-4 mr-1" />
+                    Track
+                  </TabsTrigger>
                 </TabsList>
                 <div className="relative max-w-sm">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -842,9 +872,9 @@ export default function GoldVault() {
                         <TableHead>Loan #</TableHead>
                         <TableHead>Customer</TableHead>
                         <TableHead>Loan Date</TableHead>
-                        <TableHead>Principal</TableHead>
-                        <TableHead>Gold (g)</TableHead>
-                        <TableHead>Appraised Value</TableHead>
+                        <TableHead>Items in Vault</TableHead>
+                        <TableHead>Vault Gold (g)</TableHead>
+                        <TableHead>Vault Value</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
@@ -853,23 +883,38 @@ export default function GoldVault() {
                       {filteredInVault.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No untracked loans in vault
+                            No loans with items in vault
                           </TableCell>
                         </TableRow>
                       ) : (
                         filteredInVault.map((loan) => {
-                          const goldWeight = loan.gold_items?.reduce((sum, g) => sum + g.net_weight_grams, 0) || 0;
-                          const appraisedValue = loan.gold_items?.reduce((sum, g) => sum + g.appraised_value, 0) || 0;
+                          // Only count non-repledged items
+                          const vaultItems = loan.gold_items?.filter(g => !g.is_repledged) || [];
+                          const goldWeight = vaultItems.reduce((sum, g) => sum + g.net_weight_grams, 0);
+                          const appraisedValue = vaultItems.reduce((sum, g) => sum + g.appraised_value, 0);
+                          const isPartial = loan.total_items > loan.in_vault_items;
+                          
                           return (
                             <TableRow key={loan.id}>
                               <TableCell className="font-mono text-sm">{loan.loan_number}</TableCell>
                               <TableCell>{loan.customer?.full_name}</TableCell>
                               <TableCell>{new Date(loan.loan_date).toLocaleDateString('en-IN')}</TableCell>
-                              <TableCell>{formatCurrency(loan.principal_amount)}</TableCell>
+                              <TableCell>
+                                <span className="font-medium">{loan.in_vault_items}</span>
+                                <span className="text-muted-foreground"> / {loan.total_items}</span>
+                              </TableCell>
                               <TableCell>{goldWeight.toFixed(2)}g</TableCell>
                               <TableCell>{formatCurrency(appraisedValue)}</TableCell>
                               <TableCell>
-                                <Badge variant="secondary">In Vault</Badge>
+                                {isPartial ? (
+                                  <Badge variant="outline" className="border-amber-500 text-amber-600">
+                                    Partial in Vault
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                    Fully in Vault
+                                  </Badge>
+                                )}
                               </TableCell>
                               <TableCell className="text-right">
                                 <Button size="sm" variant="ghost">
@@ -882,6 +927,10 @@ export default function GoldVault() {
                       )}
                     </TableBody>
                   </Table>
+                </TabsContent>
+
+                <TabsContent value="track">
+                  <LoanTrackingView searchQuery={searchQuery} />
                 </TabsContent>
               </Tabs>
             )}
