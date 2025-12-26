@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -1756,94 +1756,92 @@ export default function Loans() {
               <CardTitle>Loan List ({filteredLoans.length})</CardTitle>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[500px]">
-                <ResponsiveTable minWidth="1000px">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Loan #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead className="text-right">Principal</TableHead>
-                        <TableHead className="text-right">Actual Principal</TableHead>
-                        <TableHead>Maturity</TableHead>
-                        <TableHead>Branch</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
+              <ResponsiveTable minWidth="1000px" maxHeight="500px">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Loan #</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead className="text-right">Principal</TableHead>
+                      <TableHead className="text-right">Actual Principal</TableHead>
+                      <TableHead>Maturity</TableHead>
+                      <TableHead>Branch</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredLoans.map((loan) => (
+                      <TableRow key={loan.id}>
+                        <TableCell className="font-medium">
+                          {loan.loan_number}
+                          {loan.is_reloan && (
+                            <Badge variant="secondary" className="ml-2 text-xs">Reloan</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p>{loan.customer.full_name}</p>
+                            <p className="text-sm text-muted-foreground">{loan.customer.customer_code}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p>{formatIndianCurrency(loan.principal_amount)}</p>
+                          <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate || loan.interest_rate}% p.a.</p>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <p className="text-amber-600 font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
+                        </TableCell>
+                        <TableCell>{format(new Date(loan.maturity_date), 'dd MMM yyyy')}</TableCell>
+                        <TableCell>{getBranchName(loan.branch_id)}</TableCell>
+                        <TableCell>
+                          <Badge className={`${getStatusColor(loan.status)} text-white`}>
+                            {loan.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)} title="View loan details">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handlePrintLoan(loan)}
+                              title="Print loan receipt"
+                            >
+                              <Printer className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleEditLoan(loan)}
+                              disabled={!canEdit}
+                              title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
+                              className={!canEdit ? "opacity-50 cursor-not-allowed" : ""}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => {
+                                if (!attemptDelete()) return;
+                                toast.info('Delete loan functionality coming soon');
+                              }}
+                              disabled={!canDelete}
+                              title={canDelete ? "Delete loan" : "Only tenant admin can delete"}
+                              className={`text-destructive hover:text-destructive ${!canDelete ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLoans.map((loan) => (
-                        <TableRow key={loan.id}>
-                          <TableCell className="font-medium">
-                            {loan.loan_number}
-                            {loan.is_reloan && (
-                              <Badge variant="secondary" className="ml-2 text-xs">Reloan</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <p>{loan.customer.full_name}</p>
-                              <p className="text-sm text-muted-foreground">{loan.customer.customer_code}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <p>{formatIndianCurrency(loan.principal_amount)}</p>
-                            <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate || loan.interest_rate}% p.a.</p>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <p className="text-amber-600 font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
-                          </TableCell>
-                          <TableCell>{format(new Date(loan.maturity_date), 'dd MMM yyyy')}</TableCell>
-                          <TableCell>{getBranchName(loan.branch_id)}</TableCell>
-                          <TableCell>
-                            <Badge className={`${getStatusColor(loan.status)} text-white`}>
-                              {loan.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)} title="View loan details">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handlePrintLoan(loan)}
-                                title="Print loan receipt"
-                              >
-                                <Printer className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => handleEditLoan(loan)}
-                                disabled={!canEdit}
-                                title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
-                                className={!canEdit ? "opacity-50 cursor-not-allowed" : ""}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                onClick={() => {
-                                  if (!attemptDelete()) return;
-                                  toast.info('Delete loan functionality coming soon');
-                                }}
-                                disabled={!canDelete}
-                                title={canDelete ? "Delete loan" : "Only tenant admin can delete"}
-                                className={`text-destructive hover:text-destructive ${!canDelete ? "opacity-50 cursor-not-allowed" : ""}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </ResponsiveTable>
-              </ScrollArea>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ResponsiveTable>
             </CardContent>
           </Card>
         )}
