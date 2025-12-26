@@ -1866,6 +1866,8 @@ export type Database = {
           previous_loan_id: string | null
           principal_amount: number
           processing_fee: number | null
+          rebate_amount: number | null
+          rebate_days: number | null
           remarks: string | null
           scheme_id: string
           shown_principal: number | null
@@ -1907,6 +1909,8 @@ export type Database = {
           previous_loan_id?: string | null
           principal_amount: number
           processing_fee?: number | null
+          rebate_amount?: number | null
+          rebate_days?: number | null
           remarks?: string | null
           scheme_id: string
           shown_principal?: number | null
@@ -1948,6 +1952,8 @@ export type Database = {
           previous_loan_id?: string | null
           principal_amount?: number
           processing_fee?: number | null
+          rebate_amount?: number | null
+          rebate_days?: number | null
           remarks?: string | null
           scheme_id?: string
           shown_principal?: number | null
