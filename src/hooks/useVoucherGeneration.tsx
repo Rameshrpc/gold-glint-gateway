@@ -237,7 +237,7 @@ export async function generateInterestVoucher(params: {
   });
 }
 
-// Helper function to generate redemption voucher
+// Helper function to generate redemption voucher with multiple payment entries
 export async function generateRedemptionVoucher(params: {
   clientId: string;
   branchId: string;
@@ -248,16 +248,72 @@ export async function generateRedemptionVoucher(params: {
   interestDue: number;
   penaltyAmount: number;
   rebateAmount: number;
+  paymentEntries?: Array<{
+    mode: string;
+    amount: number;
+    sourceBankId?: string;
+  }>;
 }): Promise<{ success: boolean; voucherNumber?: string; error?: string }> {
   const entries: VoucherEntry[] = [];
   
-  // Debit: Cash/Bank (amount received)
-  entries.push({
-    accountCode: 'CASH-001',
-    debitAmount: params.amountReceived,
-    creditAmount: 0,
-    narration: `Redemption payment for ${params.loanNumber}`,
-  });
+  // Debit entries for each payment mode
+  if (params.paymentEntries && params.paymentEntries.length > 0) {
+    for (const payment of params.paymentEntries) {
+      if (payment.amount <= 0) continue;
+      
+      if (payment.mode === 'cash') {
+        entries.push({
+          accountCode: 'CASH-001',
+          debitAmount: payment.amount,
+          creditAmount: 0,
+          narration: `Cash payment for ${params.loanNumber}`,
+        });
+      } else if (payment.sourceBankId) {
+        // Get bank info to create proper account code
+        const { data: bank } = await supabase
+          .from('banks_nbfc')
+          .select('bank_code, bank_name')
+          .eq('id', payment.sourceBankId)
+          .single();
+        
+        if (bank) {
+          const accountCode = `BANK-${bank.bank_code}`;
+          // Ensure the bank account exists
+          await getOrCreateBankAccount(params.clientId, payment.sourceBankId, bank.bank_name, bank.bank_code);
+          entries.push({
+            accountCode,
+            debitAmount: payment.amount,
+            creditAmount: 0,
+            narration: `${payment.mode.toUpperCase()} payment for ${params.loanNumber}`,
+          });
+        } else {
+          // Fallback to cash if bank not found
+          entries.push({
+            accountCode: 'CASH-001',
+            debitAmount: payment.amount,
+            creditAmount: 0,
+            narration: `${payment.mode.toUpperCase()} payment for ${params.loanNumber}`,
+          });
+        }
+      } else {
+        // Non-cash without specific bank - use cash account as fallback
+        entries.push({
+          accountCode: 'CASH-001',
+          debitAmount: payment.amount,
+          creditAmount: 0,
+          narration: `${payment.mode.toUpperCase()} payment for ${params.loanNumber}`,
+        });
+      }
+    }
+  } else {
+    // Fallback: single cash entry (backward compatibility)
+    entries.push({
+      accountCode: 'CASH-001',
+      debitAmount: params.amountReceived,
+      creditAmount: 0,
+      narration: `Redemption payment for ${params.loanNumber}`,
+    });
+  }
 
   // Debit: Rebate Expense (if any)
   if (params.rebateAmount > 0) {

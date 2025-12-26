@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, Wallet, Calculator, IndianRupee, 
   Package, CheckCircle, AlertTriangle, FileText,
-  Coins, Printer, Download
+  Coins, Printer, Download, Plus, Trash2
 } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { RedemptionReceiptPDF } from '@/components/print/documents';
@@ -30,7 +30,6 @@ import {
 } from '@/lib/interestCalculations';
 
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
-import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
 import { generateRedemptionVoucher } from '@/hooks/useVoucherGeneration';
 
@@ -106,6 +105,28 @@ const PAYMENT_MODES = [
   { value: 'cheque', label: 'Cheque' },
 ];
 
+interface PaymentEntry {
+  id: string;
+  mode: string;
+  amount: string;
+  reference: string;
+  sourceType: 'cash' | 'company' | 'employee';
+  sourceBankId: string;
+  sourceAccountId: string;
+  selectedLoyaltyId: string;
+}
+
+const createEmptyPaymentEntry = (initialAmount: string = ''): PaymentEntry => ({
+  id: crypto.randomUUID(),
+  mode: 'cash',
+  amount: initialAmount,
+  reference: '',
+  sourceType: 'cash',
+  sourceBankId: '',
+  sourceAccountId: '',
+  selectedLoyaltyId: '',
+});
+
 export default function Redemption() {
   const { client, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
   const { settings: printSettings } = useEffectivePrintSettings(currentBranch?.id);
@@ -117,13 +138,9 @@ export default function Redemption() {
   const [selectedLoan, setSelectedLoan] = useState<LoanWithDetails | null>(null);
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   
-  // Payment form
-  const [paymentMode, setPaymentMode] = useState('cash');
-  const [paymentReference, setPaymentReference] = useState('');
+  // Payment entries (multiple payment modes)
+  const [paymentEntries, setPaymentEntries] = useState<PaymentEntry[]>([createEmptyPaymentEntry()]);
   const [remarks, setRemarks] = useState('');
-  
-  // Source account tracking
-  const sourceAccount = useSourceAccount();
   
   // Verification
   const [identityVerified, setIdentityVerified] = useState(false);
@@ -236,7 +253,6 @@ export default function Redemption() {
     setSearchResults([]);
     setSearchQuery('');
     setReleasedTo(loan.customer.full_name);
-    sourceAccount.resetSourceAccount();
     
     // Fetch gold items
     const { data } = await supabase
@@ -263,7 +279,6 @@ export default function Redemption() {
 
     const lastPaidDate = selectedLoan.last_interest_paid_date || selectedLoan.loan_date;
     const daysSincePayment = differenceInDays(new Date(), parseISO(lastPaidDate));
-    const daysSinceLoan = differenceInDays(new Date(), parseISO(selectedLoan.loan_date));
     
     // Use new slab-based rebate calculation with differential_capitalized
     const differentialCapitalized = selectedLoan.differential_capitalized || 0;
@@ -276,6 +291,37 @@ export default function Redemption() {
       differentialCapitalized
     );
   }, [selectedLoan]);
+
+  // Calculate total collected from payment entries
+  const totalCollected = useMemo(() => {
+    return paymentEntries.reduce((sum, entry) => sum + (parseFloat(entry.amount) || 0), 0);
+  }, [paymentEntries]);
+
+  // Check if payment is matched to settlement
+  const isPaymentMatched = useMemo(() => {
+    if (!redemptionCalc) return false;
+    return Math.abs(totalCollected - redemptionCalc.breakdown.total) < 0.01;
+  }, [totalCollected, redemptionCalc]);
+
+  const paymentDifference = useMemo(() => {
+    if (!redemptionCalc) return 0;
+    return totalCollected - redemptionCalc.breakdown.total;
+  }, [totalCollected, redemptionCalc]);
+
+  // Payment entry handlers
+  const updatePaymentEntry = useCallback((id: string, field: keyof PaymentEntry, value: string) => {
+    setPaymentEntries(prev => prev.map(entry => 
+      entry.id === id ? { ...entry, [field]: value } : entry
+    ));
+  }, []);
+
+  const addPaymentEntry = useCallback(() => {
+    setPaymentEntries(prev => [...prev, createEmptyPaymentEntry()]);
+  }, []);
+
+  const removePaymentEntry = useCallback((id: string) => {
+    setPaymentEntries(prev => prev.length > 1 ? prev.filter(entry => entry.id !== id) : prev);
+  }, []);
 
   const handleProcessRedemption = async () => {
     if (!selectedLoan || !redemptionCalc || !client || !profile) return;
@@ -290,6 +336,21 @@ export default function Redemption() {
       return;
     }
 
+    // Validate payment amounts
+    if (!isPaymentMatched) {
+      if (paymentDifference < 0) {
+        toast.error(`Payment short by ${formatIndianCurrency(Math.abs(paymentDifference))}. Full settlement required.`);
+        return;
+      }
+    }
+
+    // Validate each payment entry has amount
+    const invalidEntries = paymentEntries.filter(e => parseFloat(e.amount) <= 0);
+    if (invalidEntries.length > 0) {
+      toast.error('Each payment entry must have a valid amount');
+      return;
+    }
+
     setSubmitting(true);
     try {
       // Generate redemption number
@@ -301,8 +362,13 @@ export default function Redemption() {
       const redemptionNumber = `RED${format(new Date(), 'yyMMdd')}${String((redemptionCount.count || 0) + 1).padStart(5, '0')}`;
       const today = format(new Date(), 'yyyy-MM-dd');
 
-      // Get source account data
-      const sourceData = sourceAccount.getSourceAccountData(paymentMode);
+      // Get primary payment info (first entry)
+      const primaryPayment = paymentEntries[0];
+
+      // Build payment breakdown for remarks
+      const paymentBreakdown = paymentEntries.length > 1 
+        ? `\nPayment Breakdown:\n${paymentEntries.map(p => `${p.mode.toUpperCase()}: ${formatIndianCurrency(parseFloat(p.amount) || 0)}${p.reference ? ` (Ref: ${p.reference})` : ''}`).join('\n')}`
+        : '';
 
       // Create redemption record
       const redemptionData = {
@@ -316,19 +382,19 @@ export default function Redemption() {
         penalty_amount: redemptionCalc.breakdown.penalty,
         rebate_amount: redemptionCalc.breakdown.rebate,
         total_settlement: redemptionCalc.breakdown.total,
-        amount_received: redemptionCalc.breakdown.total,
-        payment_mode: paymentMode,
-        payment_reference: paymentReference || null,
+        amount_received: totalCollected,
+        payment_mode: primaryPayment.mode,
+        payment_reference: primaryPayment.reference || null,
         gold_released: goldReleased,
         gold_released_date: today,
         released_to: releasedTo,
         released_by: profile.id,
         identity_verified: identityVerified,
         processed_by: profile.id,
-        remarks: remarks || null,
-        source_type: sourceData.source_type,
-        source_bank_id: sourceData.source_bank_id,
-        source_account_id: sourceData.source_account_id,
+        remarks: (remarks || '') + paymentBreakdown,
+        source_type: primaryPayment.sourceType !== 'cash' ? primaryPayment.sourceType : null,
+        source_bank_id: primaryPayment.sourceBankId || null,
+        source_account_id: primaryPayment.sourceAccountId || null,
       };
 
       const { data: redemptionResult, error: redemptionError } = await supabase
@@ -351,17 +417,22 @@ export default function Redemption() {
 
       if (loanError) throw loanError;
 
-      // Generate accounting voucher
+      // Generate accounting voucher with payment entries
       await generateRedemptionVoucher({
         clientId: client.id,
         branchId: selectedLoan.branch_id,
         redemptionId: redemptionResult.id,
         loanNumber: selectedLoan.loan_number,
-        amountReceived: redemptionCalc.breakdown.total,
+        amountReceived: totalCollected,
         principalAmount: redemptionCalc.breakdown.principal,
         interestDue: redemptionCalc.breakdown.interest,
         penaltyAmount: redemptionCalc.breakdown.penalty,
         rebateAmount: redemptionCalc.breakdown.rebate,
+        paymentEntries: paymentEntries.map(e => ({
+          mode: e.mode,
+          amount: parseFloat(e.amount) || 0,
+          sourceBankId: e.sourceBankId || undefined,
+        })),
       });
 
       toast.success(`Loan ${selectedLoan.loan_number} redeemed successfully`);
@@ -369,13 +440,11 @@ export default function Redemption() {
       // Reset form
       setSelectedLoan(null);
       setGoldItems([]);
-      setPaymentMode('cash');
-      setPaymentReference('');
+      setPaymentEntries([createEmptyPaymentEntry()]);
       setRemarks('');
       setIdentityVerified(false);
       setGoldReleased(false);
       setReleasedTo('');
-      sourceAccount.resetSourceAccount();
       
       fetchRecentRedemptions();
     } catch (error: any) {
@@ -601,31 +670,131 @@ export default function Redemption() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Payment Mode</Label>
-                      <Select value={paymentMode} onValueChange={setPaymentMode}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PAYMENT_MODES.map((mode) => (
-                            <SelectItem key={mode.value} value={mode.value}>
-                              {mode.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Reference (Optional)</Label>
-                      <Input
-                        placeholder="Transaction ID"
-                        value={paymentReference}
-                        onChange={(e) => setPaymentReference(e.target.value)}
-                      />
+                  {/* Payment Entries */}
+                  <div className="space-y-3">
+                    {paymentEntries.map((entry, index) => (
+                      <div key={entry.id} className="p-3 border rounded-lg bg-muted/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Payment {index + 1}</span>
+                          {paymentEntries.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removePaymentEntry(entry.id)}
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <Label className="text-xs">Mode</Label>
+                            <Select 
+                              value={entry.mode} 
+                              onValueChange={(v) => updatePaymentEntry(entry.id, 'mode', v)}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {PAYMENT_MODES.map((mode) => (
+                                  <SelectItem key={mode.value} value={mode.value}>
+                                    {mode.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Amount (₹)</Label>
+                            <Input
+                              type="number"
+                              value={entry.amount}
+                              onChange={(e) => updatePaymentEntry(entry.id, 'amount', e.target.value)}
+                              placeholder="0"
+                              className="h-9"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Reference</Label>
+                            <Input
+                              value={entry.reference}
+                              onChange={(e) => updatePaymentEntry(entry.id, 'reference', e.target.value)}
+                              placeholder={entry.mode === 'cash' ? 'N/A' : 'Txn ID'}
+                              className="h-9"
+                              disabled={entry.mode === 'cash'}
+                            />
+                          </div>
+                        </div>
+                        {entry.mode !== 'cash' && client && (
+                          <SourceAccountSelector
+                            clientId={client.id}
+                            paymentMode={entry.mode}
+                            sourceType={entry.sourceType}
+                            setSourceType={(v) => updatePaymentEntry(entry.id, 'sourceType', v)}
+                            sourceBankId={entry.sourceBankId}
+                            setSourceBankId={(v) => updatePaymentEntry(entry.id, 'sourceBankId', v)}
+                            sourceAccountId={entry.sourceAccountId}
+                            setSourceAccountId={(v) => updatePaymentEntry(entry.id, 'sourceAccountId', v)}
+                            selectedLoyaltyId={entry.selectedLoyaltyId}
+                            setSelectedLoyaltyId={(v) => updatePaymentEntry(entry.id, 'selectedLoyaltyId', v)}
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Payment Button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPaymentEntry}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Payment Mode
+                  </Button>
+
+                  {/* Payment Tally */}
+                  <div className={`p-3 rounded-lg border-2 ${
+                    isPaymentMatched 
+                      ? 'border-green-500/50 bg-green-50 dark:bg-green-950/20' 
+                      : paymentDifference < 0 
+                        ? 'border-red-500/50 bg-red-50 dark:bg-red-950/20'
+                        : 'border-amber-500/50 bg-amber-50 dark:bg-amber-950/20'
+                  }`}>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Settlement</p>
+                        <p className="font-semibold">{formatIndianCurrency(redemptionCalc.breakdown.total)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground">Collected</p>
+                        <p className="font-semibold">{formatIndianCurrency(totalCollected)}</p>
+                      </div>
+                      <div className="text-right">
+                        {isPaymentMatched ? (
+                          <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Matched
+                          </Badge>
+                        ) : paymentDifference < 0 ? (
+                          <Badge variant="destructive">
+                            Short: {formatIndianCurrency(Math.abs(paymentDifference))}
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                            Excess: {formatIndianCurrency(paymentDifference)}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Remarks */}
                   <div className="space-y-2">
                     <Label>Remarks (Optional)</Label>
                     <Textarea
@@ -635,22 +804,6 @@ export default function Redemption() {
                       rows={2}
                     />
                   </div>
-
-                  {/* Source Account Selector */}
-                  {client && (
-                    <SourceAccountSelector
-                      clientId={client.id}
-                      paymentMode={paymentMode}
-                      sourceType={sourceAccount.sourceType}
-                      setSourceType={sourceAccount.setSourceType}
-                      sourceBankId={sourceAccount.sourceBankId}
-                      setSourceBankId={sourceAccount.setSourceBankId}
-                      sourceAccountId={sourceAccount.sourceAccountId}
-                      setSourceAccountId={sourceAccount.setSourceAccountId}
-                      selectedLoyaltyId={sourceAccount.selectedLoyaltyId}
-                      setSelectedLoyaltyId={sourceAccount.setSelectedLoyaltyId}
-                    />
-                  )}
                 </CardContent>
               </Card>
 
@@ -697,7 +850,7 @@ export default function Redemption() {
               {/* Process Button */}
               <Button
                 onClick={handleProcessRedemption}
-                disabled={submitting || !identityVerified || !goldReleased || !canProcessRedemption}
+                disabled={submitting || !identityVerified || !goldReleased || !canProcessRedemption || !isPaymentMatched}
                 className="w-full h-12 text-lg bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
               >
                 {submitting ? (
@@ -705,10 +858,16 @@ export default function Redemption() {
                 ) : (
                   <>
                     <CheckCircle className="h-5 w-5 mr-2" />
-                    Process Redemption ({formatIndianCurrency(redemptionCalc.breakdown.total)})
+                    Process Redemption ({formatIndianCurrency(totalCollected)})
                   </>
                 )}
               </Button>
+              {!isPaymentMatched && paymentDifference < 0 && (
+                <p className="text-sm text-destructive text-center mt-2">
+                  <AlertTriangle className="h-4 w-4 inline mr-1" />
+                  Payment is short by {formatIndianCurrency(Math.abs(paymentDifference))}. Full settlement required.
+                </p>
+              )}
             </div>
           </div>
         )}
