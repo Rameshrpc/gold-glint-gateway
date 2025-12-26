@@ -14,10 +14,13 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Plus, Eye, RefreshCw, CalendarIcon, Trash2, FileText, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Eye, RefreshCw, CalendarIcon, Trash2, FileText, ArrowUpRight, ArrowDownLeft, AlertTriangle, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { SuspenseAccountReview } from '@/components/accounting/SuspenseAccountReview';
+import { useAccountingHealth } from '@/hooks/useAccountingHealth';
 
 interface Voucher {
   id: string;
@@ -101,6 +104,10 @@ export default function Vouchers() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
   const [voucherEntries, setVoucherEntries] = useState<VoucherEntry[]>([]);
+  const [activeTab, setActiveTab] = useState('vouchers');
+
+  // Accounting health for fix imbalances
+  const { health, fetchHealth, fixAllVouchers, isFixing } = useAccountingHealth();
 
   // Filters
   const [dateFrom, setDateFrom] = useState<Date>(startOfMonth(new Date()));
@@ -120,6 +127,7 @@ export default function Vouchers() {
   useEffect(() => {
     if (profile?.client_id) {
       fetchData();
+      fetchHealth(profile.client_id);
     }
   }, [profile?.client_id, dateFrom, dateTo, filterType]);
 
@@ -519,155 +527,214 @@ export default function Vouchers() {
           </div>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="space-y-2">
-                <Label>From Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(dateFrom, 'dd MMM yyyy')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateFrom}
-                      onSelect={(date) => date && setDateFrom(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
+        {/* Imbalance Alert Banner */}
+        {health && health.unbalanced_count > 0 && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  <div>
+                    <p className="font-medium text-amber-900">
+                      {health.unbalanced_count} unbalanced vouchers detected
+                    </p>
+                    <p className="text-sm text-amber-700">
+                      Total imbalance: {formatCurrency(health.total_imbalance)}
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  variant="outline" 
+                  className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                  onClick={async () => {
+                    if (profile?.client_id) {
+                      const result = await fixAllVouchers(profile.client_id);
+                      if (result?.success) {
+                        toast.success(`Fixed ${result.fixed_count} vouchers`);
+                        fetchData();
+                        fetchHealth(profile.client_id);
+                      }
+                    }
+                  }}
+                  disabled={isFixing}
+                >
+                  {isFixing ? (
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wrench className="h-4 w-4 mr-2" />
+                  )}
+                  Fix All via Suspense
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>To Date</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(dateTo, 'dd MMM yyyy')}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={dateTo}
-                      onSelect={(date) => date && setDateTo(date)}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {Object.entries(voucherTypeLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>{label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2 flex-1 min-w-[200px]">
-                <Label>Search</Label>
-                <Input
-                  placeholder="Search voucher number or narration..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Vouchers Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Voucher List</CardTitle>
-            <CardDescription>
-              {filteredVouchers.length} voucher(s) found for the selected period
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredVouchers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                No vouchers found for the selected filters
-              </div>
-            ) : (
-              <ResponsiveTable minWidth="900px">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Voucher #</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead className="max-w-[300px]">Narration</TableHead>
-                      <TableHead className="text-right">Debit</TableHead>
-                      <TableHead className="text-right">Credit</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredVouchers.map(voucher => (
-                      <TableRow key={voucher.id}>
-                        <TableCell className="text-sm">
-                          {format(new Date(voucher.voucher_date), 'dd MMM yyyy')}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {voucher.voucher_number}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={cn('text-xs', voucherTypeColors[voucher.voucher_type])}>
-                            {voucherTypeLabels[voucher.voucher_type] || voucher.voucher_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
-                          {voucher.narration}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          {formatCurrency(voucher.total_debit)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-red-600">
-                          {formatCurrency(voucher.total_credit)}
-                        </TableCell>
-                        <TableCell>
-                          {voucher.is_reversed ? (
-                            <Badge variant="destructive">Reversed</Badge>
-                          ) : voucher.is_posted ? (
-                            <Badge variant="outline" className="bg-green-50 text-green-700">Posted</Badge>
-                          ) : (
-                            <Badge variant="secondary">Draft</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleViewVoucher(voucher)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </ResponsiveTable>
-            )}
-          </CardContent>
-        </Card>
+        {/* Tabs for Vouchers and Suspense Review */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="vouchers">Vouchers</TabsTrigger>
+            <TabsTrigger value="suspense">
+              Suspense Review
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="vouchers" className="space-y-4 mt-4">
+            {/* Filters */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label>From Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(dateFrom, 'dd MMM yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={dateFrom}
+                          onSelect={(date) => date && setDateFrom(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>To Date</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-[140px] justify-start text-left font-normal">
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {format(dateTo, 'dd MMM yyyy')}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={dateTo}
+                          onSelect={(date) => date && setDateTo(date)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        {Object.entries(voucherTypeLabels).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 flex-1 min-w-[200px]">
+                    <Label>Search</Label>
+                    <Input
+                      placeholder="Search voucher number or narration..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Vouchers Table */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Voucher List</CardTitle>
+                <CardDescription>
+                  {filteredVouchers.length} voucher(s) found for the selected period
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredVouchers.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No vouchers found for the selected filters
+                  </div>
+                ) : (
+                  <ResponsiveTable minWidth="900px">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Voucher #</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead className="max-w-[300px]">Narration</TableHead>
+                          <TableHead className="text-right">Debit</TableHead>
+                          <TableHead className="text-right">Credit</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredVouchers.map(voucher => (
+                          <TableRow key={voucher.id}>
+                            <TableCell className="text-sm">
+                              {format(new Date(voucher.voucher_date), 'dd MMM yyyy')}
+                            </TableCell>
+                            <TableCell className="font-mono text-sm">
+                              {voucher.voucher_number}
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={cn('text-xs', voucherTypeColors[voucher.voucher_type])}>
+                                {voucherTypeLabels[voucher.voucher_type] || voucher.voucher_type}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">
+                              {voucher.narration}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-green-600">
+                              {formatCurrency(voucher.total_debit)}
+                            </TableCell>
+                            <TableCell className="text-right font-medium text-red-600">
+                              {formatCurrency(voucher.total_credit)}
+                            </TableCell>
+                            <TableCell>
+                              {voucher.is_reversed ? (
+                                <Badge variant="destructive">Reversed</Badge>
+                              ) : voucher.is_posted ? (
+                                <Badge variant="outline" className="bg-green-50 text-green-700">Posted</Badge>
+                              ) : (
+                                <Badge variant="secondary">Draft</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleViewVoucher(voucher)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </ResponsiveTable>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="suspense" className="mt-4">
+            <SuspenseAccountReview />
+          </TabsContent>
+        </Tabs>
 
         {/* View Voucher Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
