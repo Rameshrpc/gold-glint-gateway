@@ -69,7 +69,7 @@ const termStyles = StyleSheet.create({
     marginBottom: 2,
   },
   termText: {
-    fontFamily: 'NotoSansTamil',
+    fontFamily: 'Noto Sans Tamil',
     fontSize: 9,
     lineHeight: 1.5,
     textAlign: 'justify',
@@ -84,7 +84,7 @@ const termStyles = StyleSheet.create({
     marginBottom: 8,
   },
   fieldLabel: {
-    fontFamily: 'NotoSansTamil',
+    fontFamily: 'Noto Sans Tamil',
     fontSize: 9,
     width: 80,
   },
@@ -194,7 +194,7 @@ export function TermsConditionsPDF({
         
         {/* Document Title */}
         <View style={pdfStyles.documentTitle}>
-          <Text style={{ fontFamily: 'NotoSansTamil', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
+          <Text style={{ fontFamily: 'Noto Sans Tamil', fontSize: 14, fontWeight: 'bold', textAlign: 'center' }}>
             நிபந்தனைகளும், அறிவிப்புகளும்
           </Text>
           <Text style={{ fontFamily: 'Roboto', fontSize: 12, textAlign: 'center', marginTop: 2 }}>
