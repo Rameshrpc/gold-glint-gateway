@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { validateVoucherBalance, roundCurrency } from '@/lib/voucher-validation';
 
 interface VoucherEntry {
   accountCode: string;
@@ -23,6 +24,18 @@ interface AccountMap {
 
 export async function generateVoucher(params: VoucherParams): Promise<{ success: boolean; voucherNumber?: string; voucherId?: string; error?: string }> {
   try {
+    // PRE-INSERT VALIDATION: Ensure voucher is balanced before any DB operations
+    const validation = validateVoucherBalance(params.entries);
+    if (!validation.valid) {
+      console.error('ACCOUNTING INTEGRITY ERROR:', validation.error, {
+        entries: params.entries,
+        totalDebit: validation.totalDebit,
+        totalCredit: validation.totalCredit,
+        difference: validation.difference,
+      });
+      // Log but don't block - the DB trigger will also catch this
+      // This is a safeguard to catch issues early in development
+    }
     // Get account IDs for the entries
     const accountCodes = params.entries.map(e => e.accountCode);
     const { data: accounts, error: accountsError } = await supabase

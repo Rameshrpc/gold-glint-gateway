@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { AccountingHealthWidget } from '@/components/accounting/AccountingHealthWidget';
 import { 
   Users, 
   FileText, 
@@ -317,7 +318,10 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Actions / Alerts */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-3">
+          {/* Accounting Health Widget */}
+          <AccountingHealthWidget />
+
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
