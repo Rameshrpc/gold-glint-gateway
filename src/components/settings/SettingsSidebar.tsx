@@ -12,7 +12,8 @@ import {
   GitBranch,
   ChevronDown,
   ChevronRight,
-  FileStack
+  FileStack,
+  ShieldCheck
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -20,6 +21,7 @@ import { useState } from 'react';
 export type SettingsSection = 
   | 'user-rights' 
   | 'client-rights' 
+  | 'approval-workflows'
   | 'print-loan-docs'
   | 'print-general' 
   | 'print-documents' 
@@ -55,6 +57,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
   const configItems: MenuItem[] = [
     { id: 'user-rights', label: 'User Rights', icon: Users },
     ...(showClientRights ? [{ id: 'client-rights' as const, label: 'Client Rights', icon: Building2 }] : []),
+    { id: 'approval-workflows', label: 'Approval Workflows', icon: ShieldCheck },
   ];
 
   const printItems: MenuItem[] = [
@@ -69,7 +72,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
   ];
 
   const isConfigSection = (section: SettingsSection) => 
-    section === 'user-rights' || section === 'client-rights';
+    section === 'user-rights' || section === 'client-rights' || section === 'approval-workflows';
   
   const isPrintSection = (section: SettingsSection) => 
     section.startsWith('print-');

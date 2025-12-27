@@ -12,6 +12,7 @@ import { UserRightsSheet } from '@/components/settings/UserRightsSheet';
 import { ClientRightsSheet } from '@/components/settings/ClientRightsSheet';
 import { PermissionMatrix } from '@/components/settings/PermissionMatrix';
 import { SettingsSidebar, SettingsSection } from '@/components/settings/SettingsSidebar';
+import { ApprovalWorkflowSettings } from '@/components/settings/ApprovalWorkflowSettings';
 import { GeneralPrintSettings } from '@/components/print/GeneralPrintSettings';
 import { DocumentsSettings } from '@/components/print/DocumentsSettings';
 import { TermsConditionsSettings } from '@/components/print/TermsConditionsSettings';
@@ -368,6 +369,9 @@ export default function Settings() {
             </CardContent>
           </Card>
         );
+
+      case 'approval-workflows':
+        return <ApprovalWorkflowSettings />;
 
       case 'print-loan-docs':
         return <LoanDocumentsOverview />;
