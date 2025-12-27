@@ -79,18 +79,18 @@ const voucherTypeLabels: Record<string, string> = {
 };
 
 const voucherTypeColors: Record<string, string> = {
-  receipt: 'bg-green-100 text-green-800',
-  payment: 'bg-red-100 text-red-800',
-  contra: 'bg-purple-100 text-purple-800',
-  journal: 'bg-blue-100 text-blue-800',
-  loan_disbursement: 'bg-amber-100 text-amber-800',
-  interest_collection: 'bg-emerald-100 text-emerald-800',
-  redemption: 'bg-teal-100 text-teal-800',
-  reloan: 'bg-cyan-100 text-cyan-800',
-  auction: 'bg-orange-100 text-orange-800',
-  repledge_credit: 'bg-indigo-100 text-indigo-800',
-  repledge_redemption: 'bg-violet-100 text-violet-800',
-  agent_commission: 'bg-pink-100 text-pink-800',
+  receipt: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200',
+  payment: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-200',
+  contra: 'bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-200',
+  journal: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200',
+  loan_disbursement: 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200',
+  interest_collection: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200',
+  redemption: 'bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-200',
+  reloan: 'bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-200',
+  auction: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200',
+  repledge_credit: 'bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-200',
+  repledge_redemption: 'bg-violet-100 dark:bg-violet-900/50 text-violet-800 dark:text-violet-200',
+  agent_commission: 'bg-pink-100 dark:bg-pink-900/50 text-pink-800 dark:text-pink-200',
 };
 
 const manualVoucherTypes = ['receipt', 'payment', 'contra', 'journal'];

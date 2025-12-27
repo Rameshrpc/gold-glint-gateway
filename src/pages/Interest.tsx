@@ -420,13 +420,13 @@ export default function Interest() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge className="bg-green-500/10 text-green-600 border-green-500/20">Paid</Badge>;
+        return <Badge className="bg-green-500/10 dark:bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/20">Paid</Badge>;
       case 'due':
-        return <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">Due</Badge>;
+        return <Badge className="bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/20">Due</Badge>;
       case 'overdue':
-        return <Badge className="bg-red-500/10 text-red-600 border-red-500/20">Overdue</Badge>;
+        return <Badge className="bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/20">Overdue</Badge>;
       case 'upcoming':
-        return <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">Upcoming</Badge>;
+        return <Badge className="bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/20">Upcoming</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }

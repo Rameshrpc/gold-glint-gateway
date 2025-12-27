@@ -392,7 +392,7 @@ export default function Agents() {
                           )}
                         </TableCell>
                         <TableCell>{agent.commission_percentage}%</TableCell>
-                        <TableCell className="font-medium text-green-600">
+                        <TableCell className="font-medium text-green-600 dark:text-green-400">
                           ₹{agent.total_commission_earned.toLocaleString()}
                         </TableCell>
                         <TableCell>

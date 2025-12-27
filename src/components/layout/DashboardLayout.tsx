@@ -81,6 +81,7 @@ const menuGroups: MenuGroup[] = [
       { title: 'Reloan', icon: RefreshCw, href: '/reloan' },
       { title: 'Auction', icon: Gavel, href: '/auction' },
       { title: 'Gold Vault', icon: Vault, href: '/gold-vault' },
+      { title: 'Approvals', icon: Bell, href: '/approvals' },
     ]
   },
   {
@@ -102,7 +103,8 @@ const menuGroups: MenuGroup[] = [
     title: 'Reports & Comms',
     icon: BarChart3,
     items: [
-      { title: 'Reports', icon: BarChart3, href: '/reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
+      { title: 'MIS Reports', icon: BarChart3, href: '/mis-reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
+      { title: 'Audit Logs', icon: Database, href: '/audit-logs', roles: ['super_admin', 'moderator', 'tenant_admin', 'auditor'] },
       { title: 'Notifications', icon: Bell, href: '/notifications', moduleKey: 'notifications' },
       { title: 'WhatsApp', icon: MessageCircle, href: '/whatsapp' },
       { title: 'SMS', icon: Send, href: '/sms' },
