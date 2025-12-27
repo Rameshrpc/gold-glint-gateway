@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Phone, MapPin, CreditCard, IndianRupee } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
+import { getSignedUrl } from '@/lib/storage';
 
 interface CustomerSummaryProps {
   customerId: string;
@@ -32,7 +33,7 @@ export default function CustomerSummaryCard({ customerId }: CustomerSummaryProps
   const [customer, setCustomer] = useState<CustomerDetails | null>(null);
   const [loanStats, setLoanStats] = useState<LoanStats>({ liveLoans: 0, totalOutstanding: 0 });
   const [loading, setLoading] = useState(true);
-
+  const [photoSignedUrl, setPhotoSignedUrl] = useState<string | null>(null);
   useEffect(() => {
     const fetchCustomerDetails = async () => {
       setLoading(true);
@@ -46,6 +47,11 @@ export default function CustomerSummaryCard({ customerId }: CustomerSummaryProps
 
         if (customerData) {
           setCustomer(customerData);
+          // Fetch signed URL for photo
+          if (customerData.photo_url) {
+            const signedUrl = await getSignedUrl('customer-documents', customerData.photo_url);
+            setPhotoSignedUrl(signedUrl);
+          }
         }
 
         // Fetch loan statistics
@@ -83,10 +89,9 @@ export default function CustomerSummaryCard({ customerId }: CustomerSummaryProps
     );
   }
 
-  const getPhotoUrl = (path: string | null) => {
-    if (!path) return null;
-    const { data } = supabase.storage.from('customer-documents').getPublicUrl(path);
-    return data.publicUrl;
+  // Use the pre-fetched signed URL for the photo
+  const getPhotoUrl = () => {
+    return photoSignedUrl;
   };
 
   const getInitials = (name: string) => {
@@ -103,7 +108,7 @@ export default function CustomerSummaryCard({ customerId }: CustomerSummaryProps
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <Avatar className="h-16 w-16 border-2 border-blue-500/30">
-            <AvatarImage src={getPhotoUrl(customer.photo_url) || undefined} alt={customer.full_name} />
+            <AvatarImage src={getPhotoUrl() || undefined} alt={customer.full_name} />
             <AvatarFallback className="bg-blue-100 text-blue-700 text-lg">
               {getInitials(customer.full_name)}
             </AvatarFallback>
