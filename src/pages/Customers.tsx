@@ -891,7 +891,7 @@ export default function Customers() {
             {canManageCustomers && (
               <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700">
+                  <Button onClick={openAddDialog} className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 dark:from-amber-600 dark:to-orange-700 dark:hover:from-amber-700 dark:hover:to-orange-800">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Customer
                   </Button>
@@ -922,7 +922,7 @@ export default function Customers() {
                           </div>
                         )}
                         {!editingCustomer && (
-                          <div className="p-3 bg-muted rounded-lg">
+                          <div className="p-3 bg-muted dark:bg-muted/50 rounded-lg border border-border/50">
                             <p className="text-sm text-muted-foreground">
                               <FileCheck className="h-4 w-4 inline mr-1" />
                               Customer code will be auto-generated on save
@@ -1327,8 +1327,17 @@ export default function Customers() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleViewCustomer(customer)}
+                              title="View customer"
                             >
                               <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleGenerateCustomerStatement(customer)}
+                              title="Generate statement PDF"
+                            >
+                              <FileSpreadsheet className="h-4 w-4" />
                             </Button>
                             {canManageCustomers && (
                               <>
@@ -1336,6 +1345,7 @@ export default function Customers() {
                                   variant="ghost"
                                   size="sm"
                                   onClick={() => openEditDialog(customer)}
+                                  title="Edit customer"
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -1347,6 +1357,7 @@ export default function Customers() {
                                     setCustomerToDelete(customer);
                                     setDeleteDialogOpen(true);
                                   }}
+                                  title="Delete customer"
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
