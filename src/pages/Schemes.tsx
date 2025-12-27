@@ -312,8 +312,8 @@ export default function Schemes() {
                   </div>
 
                   {/* Dual Rate Configuration */}
-                  <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
-                    <h4 className="font-semibold text-amber-800 dark:text-amber-200 mb-3 flex items-center gap-2">
+                  <div className="p-4 border rounded-lg bg-amber-50/50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                    <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
                       <Percent className="h-4 w-4" />
                       Dual Rate Configuration (NBFC Logic)
                     </h4>
@@ -346,7 +346,7 @@ export default function Schemes() {
                       </div>
                       <div className="space-y-2">
                         <Label>Differential Rate</Label>
-                        <div className="h-10 flex items-center px-3 bg-muted rounded-md font-semibold text-amber-600">
+                        <div className="h-10 flex items-center px-3 bg-muted rounded-md font-semibold text-amber-600 dark:text-amber-400">
                           {((parseFloat(effectiveRate) || 0) - (parseFloat(shownRate) || 0)).toFixed(2)}% p.a.
                         </div>
                         <p className="text-xs text-muted-foreground">Capitalized silently</p>
@@ -378,7 +378,7 @@ export default function Schemes() {
                     </div>
                     <div className="grid grid-cols-2 gap-4 mt-4">
                       <div className="space-y-2">
-                        <Label htmlFor="rate22kt" className="text-amber-700 dark:text-amber-300 font-semibold">22KT Rate (₹/gram) *</Label>
+                        <Label htmlFor="rate22kt" className="text-amber-700 dark:text-amber-400 font-semibold">22KT Rate (₹/gram) *</Label>
                         <Input
                           id="rate22kt"
                           type="number"
@@ -391,7 +391,7 @@ export default function Schemes() {
                         <p className="text-xs text-muted-foreground">Most common jewelry purity</p>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="rate18kt" className="text-amber-700 dark:text-amber-300 font-semibold">18KT Rate (₹/gram) *</Label>
+                        <Label htmlFor="rate18kt" className="text-amber-700 dark:text-amber-400 font-semibold">18KT Rate (₹/gram) *</Label>
                         <Input
                           id="rate18kt"
                           type="number"
