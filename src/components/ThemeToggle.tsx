@@ -9,15 +9,28 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
+
+  const getThemeLabel = () => {
+    if (theme === "system") return "System";
+    if (theme === "dark") return "Dark";
+    return "Light";
+  };
+
+  const getCurrentIcon = () => {
+    if (theme === "system") return Monitor;
+    if (resolvedTheme === "dark") return Moon;
+    return Sun;
+  };
+
+  const CurrentIcon = getCurrentIcon();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
+        <Button variant="outline" size="sm" className="h-9 gap-2 px-3">
+          <CurrentIcon className="h-4 w-4" />
+          <span className="text-sm font-medium">{getThemeLabel()}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
