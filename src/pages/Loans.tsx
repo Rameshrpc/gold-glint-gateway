@@ -11,9 +11,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer, FileSpreadsheet, CheckSquare, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -26,7 +27,11 @@ import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
 import { LoanPrintDialog } from '@/components/print/LoanPrintDialog';
+import { BulkOperationsDialog } from '@/components/loans/BulkOperationsDialog';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
+import { LoanStatementPDF } from '@/components/print/documents';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
+import { pdf } from '@react-pdf/renderer';
 
 interface Customer {
   id: string;
@@ -243,6 +248,13 @@ export default function Loans() {
   const [printingLoan, setPrintingLoan] = useState<Loan | null>(null);
   const [printingCustomer, setPrintingCustomer] = useState<Customer | null>(null);
   const [printingGoldItems, setPrintingGoldItems] = useState<GoldItem[]>([]);
+  
+  // Bulk operations
+  const [selectedLoanIds, setSelectedLoanIds] = useState<Set<string>>(new Set());
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  
+  // Print settings for statement PDF
+  const { settings: printSettings } = useEffectivePrintSettings();
   
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
@@ -809,6 +821,121 @@ export default function Loans() {
     setPrintingGoldItems(goldItemsData || []);
     setPrintDialogOpen(true);
   };
+
+  const handleGenerateLoanStatement = async (loan: Loan) => {
+    try {
+      toast.info('Generating statement...');
+      
+      // Fetch gold items for the loan
+      const { data: goldItemsData } = await supabase
+        .from('gold_items')
+        .select('*')
+        .eq('loan_id', loan.id);
+      
+      // Fetch interest payments
+      const { data: paymentsData } = await supabase
+        .from('interest_payments')
+        .select('*')
+        .eq('loan_id', loan.id)
+        .order('payment_date', { ascending: false });
+      
+      const fullCustomer = customers.find(c => c.id === loan.customer.id);
+      
+      // Calculate outstanding interest
+      const totalInterestPaid = paymentsData?.reduce((sum, p) => sum + p.amount_paid, 0) || 0;
+      
+      const loanData = {
+        loan_number: loan.loan_number,
+        loan_date: loan.loan_date,
+        maturity_date: loan.maturity_date,
+        principal_amount: loan.actual_principal || loan.principal_amount,
+        interest_rate: loan.interest_rate,
+        tenure_days: loan.tenure_days,
+        status: loan.status,
+        net_disbursed: loan.net_disbursed,
+        advance_interest_shown: loan.advance_interest_shown || null,
+        processing_fee: null,
+        document_charges: null,
+        total_interest_paid: totalInterestPaid,
+        outstanding_principal: loan.actual_principal || loan.principal_amount,
+        outstanding_interest: 0, // Would need calculation based on dates
+        customer: {
+          full_name: fullCustomer?.full_name || loan.customer.full_name,
+          customer_code: fullCustomer?.customer_code || loan.customer.customer_code,
+          phone: fullCustomer?.phone || loan.customer.phone,
+          address: fullCustomer?.address || ''
+        },
+        scheme: {
+          scheme_name: loan.scheme.scheme_name,
+          interest_rate: loan.scheme.interest_rate
+        },
+        gold_items: (goldItemsData || []).map(item => ({
+          item_type: item.item_type,
+          gross_weight_grams: item.gross_weight_grams,
+          net_weight_grams: item.net_weight_grams,
+          purity: item.purity,
+          appraised_value: item.appraised_value
+        })),
+        interest_payments: (paymentsData || []).map(p => ({
+          id: p.id,
+          receipt_number: p.receipt_number,
+          payment_date: p.payment_date,
+          period_from: p.period_from,
+          period_to: p.period_to,
+          days_covered: p.days_covered,
+          amount_paid: p.amount_paid,
+          payment_mode: p.payment_mode
+        }))
+      };
+      
+      const branchName = getBranchName(loan.branch_id);
+      
+      const blob = await pdf(
+        <LoanStatementPDF 
+          loan={loanData}
+          companyName={client?.company_name || 'Gold Finance'}
+          branchName={branchName}
+          logoUrl={printSettings?.logo_url || ''}
+          asOfDate={new Date().toISOString().split('T')[0]}
+        />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      
+      toast.success('Statement generated');
+    } catch (error) {
+      console.error('Error generating statement:', error);
+      toast.error('Failed to generate statement');
+    }
+  };
+
+  // Bulk selection handlers
+  const toggleLoanSelection = (loanId: string) => {
+    setSelectedLoanIds(prev => {
+      const next = new Set(prev);
+      if (next.has(loanId)) {
+        next.delete(loanId);
+      } else {
+        next.add(loanId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedLoanIds.size === filteredLoans.length) {
+      setSelectedLoanIds(new Set());
+    } else {
+      setSelectedLoanIds(new Set(filteredLoans.map(l => l.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedLoanIds(new Set());
+  };
+
+  const selectedLoans = loans.filter(l => selectedLoanIds.has(l.id));
 
   const filteredLoans = loans.filter(loan => {
     const matchesSearch = 
@@ -1753,14 +1880,35 @@ export default function Loans() {
           </Card>
         ) : (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Loan List ({filteredLoans.length})</CardTitle>
+              {selectedLoanIds.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="px-3 py-1">
+                    <CheckSquare className="h-4 w-4 mr-1" />
+                    {selectedLoanIds.size} selected
+                  </Badge>
+                  <Button size="sm" variant="outline" onClick={() => setBulkDialogOpen(true)}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Bulk Actions
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={clearSelection}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
-              <ResponsiveTable minWidth="1000px" maxHeight="500px">
+              <ResponsiveTable minWidth="1100px" maxHeight="500px">
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox 
+                          checked={selectedLoanIds.size === filteredLoans.length && filteredLoans.length > 0}
+                          onCheckedChange={toggleSelectAll}
+                        />
+                      </TableHead>
                       <TableHead>Loan #</TableHead>
                       <TableHead>Customer</TableHead>
                       <TableHead className="text-right">Principal</TableHead>
@@ -1773,7 +1921,13 @@ export default function Loans() {
                   </TableHeader>
                   <TableBody>
                     {filteredLoans.map((loan) => (
-                      <TableRow key={loan.id}>
+                      <TableRow key={loan.id} className={selectedLoanIds.has(loan.id) ? 'bg-muted/50' : ''}>
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedLoanIds.has(loan.id)}
+                            onCheckedChange={() => toggleLoanSelection(loan.id)}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">
                           {loan.loan_number}
                           {loan.is_reloan && (
@@ -1791,7 +1945,7 @@ export default function Loans() {
                           <p className="text-xs text-muted-foreground">@{loan.scheme.shown_rate || loan.interest_rate}% p.a.</p>
                         </TableCell>
                         <TableCell className="text-right">
-                          <p className="text-amber-600 font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
+                          <p className="text-amber-600 dark:text-amber-400 font-medium">{formatIndianCurrency(loan.actual_principal || loan.principal_amount)}</p>
                         </TableCell>
                         <TableCell>{format(new Date(loan.maturity_date), 'dd MMM yyyy')}</TableCell>
                         <TableCell>{getBranchName(loan.branch_id)}</TableCell>
@@ -1804,6 +1958,14 @@ export default function Loans() {
                           <div className="flex items-center justify-end gap-1">
                             <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)} title="View loan details">
                               <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => handleGenerateLoanStatement(loan)}
+                              title="Generate statement PDF"
+                            >
+                              <FileSpreadsheet className="h-4 w-4" />
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -1846,6 +2008,14 @@ export default function Loans() {
             </CardContent>
           </Card>
         )}
+
+        {/* Bulk Operations Dialog */}
+        <BulkOperationsDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          selectedLoans={selectedLoans}
+          onClearSelection={clearSelection}
+        />
 
         {/* View Loan Dialog */}
         <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>

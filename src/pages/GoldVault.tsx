@@ -907,11 +907,11 @@ export default function GoldVault() {
                               <TableCell>{formatCurrency(appraisedValue)}</TableCell>
                               <TableCell>
                                 {isPartial ? (
-                                  <Badge variant="outline" className="border-amber-500 text-amber-600">
+                                  <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400">
                                     Partial in Vault
                                   </Badge>
                                 ) : (
-                                  <Badge variant="secondary" className="bg-green-100 text-green-700">
+                                  <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
                                     Fully in Vault
                                   </Badge>
                                 )}

@@ -12,12 +12,15 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, X, FileCheck, User, Trash2, Download, Database, Loader2 } from 'lucide-react';
+import { Plus, Users, Search, Edit, Eye, Phone, Mail, Camera, X, FileCheck, User, Trash2, Download, Database, Loader2, FileSpreadsheet } from 'lucide-react';
 import CameraCapture from '@/components/CameraCapture';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { getSignedUrl } from '@/lib/storage';
+import { CustomerStatementPDF } from '@/components/print/documents';
+import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
+import { pdf } from '@react-pdf/renderer';
 
 type NomineeRelation = 'father' | 'mother' | 'spouse' | 'son' | 'daughter' | 
                        'brother' | 'sister' | 'grandfather' | 'grandmother' | 
@@ -85,6 +88,7 @@ const MOCK_CUSTOMERS = [
 
 export default function Customers() {
   const { client, currentBranch, branches, isPlatformAdmin, hasRole } = useAuth();
+  const { settings: printSettings } = useEffectivePrintSettings();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -140,8 +144,66 @@ export default function Customers() {
   // Customer photo signed URLs cache for table display
   const [photoSignedUrls, setPhotoSignedUrls] = useState<Record<string, string>>({});
 
-
   const canManageCustomers = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer') || hasRole('appraiser');
+  
+  const getBranchName = (branchId: string) => {
+    const branch = branches.find(b => b.id === branchId);
+    return branch?.branch_name || 'Unknown';
+  };
+
+  const handleGenerateCustomerStatement = async (customer: Customer) => {
+    try {
+      toast.info('Generating statement...');
+      
+      // Fetch loans for customer
+      const { data: loansData } = await supabase
+        .from('loans')
+        .select('*, scheme:schemes(scheme_name), gold_items(net_weight_grams)')
+        .eq('customer_id', customer.id)
+        .order('loan_date', { ascending: false });
+      
+      const loans = (loansData || []).map(loan => ({
+        loan_number: loan.loan_number,
+        loan_date: loan.loan_date,
+        principal_amount: loan.principal_amount,
+        interest_rate: loan.interest_rate,
+        maturity_date: loan.maturity_date,
+        status: loan.status,
+        total_interest_paid: loan.total_interest_paid || 0,
+        outstanding_principal: loan.actual_principal || loan.principal_amount,
+        outstanding_interest: 0,
+        gold_weight_grams: loan.gold_items?.reduce((s: number, g: any) => s + g.net_weight_grams, 0) || 0,
+        scheme_name: loan.scheme?.scheme_name || ''
+      }));
+      
+      const blob = await pdf(
+        <CustomerStatementPDF 
+          customer={{
+            full_name: customer.full_name,
+            customer_code: customer.customer_code,
+            phone: customer.phone,
+            email: customer.email || undefined,
+            address: customer.address || undefined,
+            city: customer.city || undefined,
+            state: customer.state || undefined,
+            pincode: customer.pincode || undefined
+          }}
+          loans={loans}
+          companyName={client?.company_name || 'Gold Finance'}
+          branchName={getBranchName(customer.branch_id)}
+          logoUrl={printSettings?.logo_url || ''}
+          asOfDate={new Date().toISOString().split('T')[0]}
+        />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      toast.success('Statement generated');
+    } catch (error) {
+      console.error('Error generating statement:', error);
+      toast.error('Failed to generate statement');
+    }
+  };
 
   useEffect(() => {
     fetchCustomers();

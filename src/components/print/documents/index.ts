@@ -6,3 +6,5 @@ export * from './TermsConditionsPDF';
 export * from './InterestReceiptPDF';
 export * from './RedemptionReceiptPDF';
 export * from './AuctionNoticePDF';
+export { default as LoanStatementPDF } from './LoanStatementPDF';
+export { default as CustomerStatementPDF } from './CustomerStatementPDF';
