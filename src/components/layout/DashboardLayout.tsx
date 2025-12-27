@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { NavLink } from '@/components/NavLink';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { 
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
@@ -222,12 +223,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </Select>
         )}
         
-        {/* User Avatar */}
-        <Avatar className="h-9 w-9 cursor-pointer" onClick={() => navigate('/profile')}>
-          <AvatarFallback className="bg-primary text-primary-foreground text-sm">
-            {profile?.full_name ? getInitials(profile.full_name) : 'U'}
-          </AvatarFallback>
-        </Avatar>
+        <div className="flex items-center gap-2">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
+          {/* User Avatar */}
+          <Avatar className="h-9 w-9 cursor-pointer" onClick={() => navigate('/profile')}>
+            <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+              {profile?.full_name ? getInitials(profile.full_name) : 'U'}
+            </AvatarFallback>
+          </Avatar>
+        </div>
       </header>
 
       {/* Mobile Sidebar Overlay */}
@@ -240,21 +246,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed top-0 left-0 z-50 h-screen w-64 bg-gradient-to-b from-amber-900 via-amber-800 to-orange-900 text-white transition-transform lg:translate-x-0",
+        "fixed top-0 left-0 z-50 h-screen w-64 transition-transform lg:translate-x-0",
+        "bg-gradient-to-b from-amber-900 via-amber-800 to-orange-900 text-white",
+        "dark:from-[hsl(222,47%,8%)] dark:via-[hsl(222,40%,10%)] dark:to-[hsl(222,35%,12%)] dark:text-amber-50",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Sidebar Header */}
-        <div className="flex items-center justify-between h-14 px-4 border-b border-amber-700/50">
+        <div className="flex items-center justify-between h-14 px-4 border-b border-amber-700/50 dark:border-amber-900/50">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
-              <Building2 className="h-5 w-5" />
+            <div className="w-8 h-8 bg-white/20 dark:bg-amber-500/20 rounded-lg flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-white dark:text-amber-400" />
             </div>
-            <span className="font-bold text-lg">Zenith One</span>
+            <span className="font-bold text-lg text-white dark:text-amber-50">Zenith One</span>
           </div>
           <Button 
             variant="ghost" 
             size="icon" 
-            className="lg:hidden text-white hover:bg-white/10" 
+            className="lg:hidden text-white hover:bg-white/10 dark:hover:bg-amber-500/10" 
             onClick={() => setSidebarOpen(false)}
           >
             <X className="h-5 w-5" />
@@ -263,7 +271,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         {/* Branch Selector */}
         {branches.length > 0 && (
-          <div className="px-3 py-3 border-b border-amber-700/50">
+          <div className="px-3 py-3 border-b border-amber-700/50 dark:border-amber-900/50">
             <Select 
               value={currentBranch?.id || ''} 
               onValueChange={value => {
@@ -271,7 +279,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 setCurrentBranch(branch || null);
               }}
             >
-              <SelectTrigger className="bg-white/10 border-amber-700/50 text-white">
+              <SelectTrigger className="bg-white/10 dark:bg-amber-500/10 border-amber-700/50 dark:border-amber-800/50 text-white dark:text-amber-50">
                 <SelectValue placeholder="Select Branch" />
               </SelectTrigger>
               <SelectContent>
@@ -298,8 +306,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   <NavLink 
                     key={group.title}
                     to="/dashboard" 
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-100/80 hover:bg-white/10 hover:text-white transition-colors"
-                    activeClassName="bg-white/20 text-white font-medium"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-100/80 dark:text-amber-200/70 hover:bg-white/10 dark:hover:bg-amber-500/10 hover:text-white dark:hover:text-amber-50 transition-colors"
+                    activeClassName="bg-white/20 dark:bg-amber-500/20 text-white dark:text-amber-50 font-medium"
                     onClick={() => setSidebarOpen(false)}
                   >
                     <LayoutDashboard className="h-5 w-5" />
@@ -314,7 +322,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   open={isOpen}
                   onOpenChange={() => toggleGroup(group.title)}
                 >
-                  <CollapsibleTrigger className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-amber-100/80 hover:bg-white/10 hover:text-white transition-colors">
+                  <CollapsibleTrigger className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-amber-100/80 dark:text-amber-200/70 hover:bg-white/10 dark:hover:bg-amber-500/10 hover:text-white dark:hover:text-amber-50 transition-colors">
                     <group.icon className="h-5 w-5" />
                     <span className="flex-1 text-left">{group.title}</span>
                     <ChevronRight className={cn(
@@ -327,8 +335,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                       <NavLink 
                         key={item.href}
                         to={item.href} 
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-100/70 hover:bg-white/10 hover:text-white transition-colors text-sm"
-                        activeClassName="bg-white/15 text-white font-medium"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-amber-100/70 dark:text-amber-200/60 hover:bg-white/10 dark:hover:bg-amber-500/10 hover:text-white dark:hover:text-amber-50 transition-colors text-sm"
+                        activeClassName="bg-white/15 dark:bg-amber-500/15 text-white dark:text-amber-50 font-medium"
                         onClick={() => setSidebarOpen(false)}
                       >
                         <item.icon className="h-4 w-4" />
@@ -343,23 +351,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </ScrollArea>
 
         {/* User Section */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-amber-700/50 bg-amber-900/50">
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-amber-700/50 dark:border-amber-900/50 bg-amber-900/50 dark:bg-black/20">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="ghost" 
-                className="w-full justify-start gap-3 text-white hover:bg-white/10 h-auto py-2"
+                className="w-full justify-start gap-3 text-white dark:text-amber-50 hover:bg-white/10 dark:hover:bg-amber-500/10 h-auto py-2"
               >
-                <Avatar className="h-9 w-9 bg-white/20">
-                  <AvatarFallback className="bg-amber-600 text-white text-sm">
+                <Avatar className="h-9 w-9 bg-white/20 dark:bg-amber-500/20">
+                  <AvatarFallback className="bg-amber-600 dark:bg-amber-700 text-white text-sm">
                     {profile?.full_name ? getInitials(profile.full_name) : 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 text-left">
-                  <p className="text-sm font-medium truncate">{profile?.full_name || 'User'}</p>
+                  <p className="text-sm font-medium truncate text-white dark:text-amber-50">{profile?.full_name || 'User'}</p>
                   <p className={`text-xs ${roleBadge.color}`}>{roleBadge.label}</p>
                 </div>
-                <ChevronDown className="h-4 w-4 text-amber-200/70" />
+                <ChevronDown className="h-4 w-4 text-amber-200/70 dark:text-amber-400/70" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">

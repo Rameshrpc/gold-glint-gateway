@@ -81,45 +81,62 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    /* Dark background with subtle warmth */
+    --background: 222 47% 8%;
+    --foreground: 45 10% 92%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 222 47% 11%;
+    --card-foreground: 45 10% 92%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 45 10% 92%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Keep gold primary for brand identity */
+    --primary: 38 92% 50%;
+    --primary-foreground: 222 47% 8%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 222 30% 18%;
+    --secondary-foreground: 45 10% 90%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 222 30% 15%;
+    --muted-foreground: 215 20% 60%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    /* Gold accent */
+    --accent: 45 80% 45%;
+    --accent-foreground: 222 47% 8%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 222 30% 20%;
+    --input: 222 30% 18%;
+    --ring: 38 92% 50%;
 
-    /* Mobile dark mode tokens */
-    --glass-background: 222 84% 5% / 0.7;
-    --glass-border: 0 0% 100% / 0.1;
+    /* Dark mode sidebar - keep gold gradient feel */
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 45 20% 90%;
+    --sidebar-primary: 38 92% 50%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 222 30% 15%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 38 92% 50%;
+
+    /* Dark gradients - gold to amber */
+    --gradient-primary-start: 32 80% 40%;
+    --gradient-primary-end: 45 80% 42%;
+    --gradient-secondary-start: 222 47% 8%;
+    --gradient-secondary-end: 222 40% 12%;
+
+    /* Glassmorphism for dark mode */
+    --glass-background: 222 47% 8% / 0.8;
+    --glass-border: 45 20% 30% / 0.2;
+
+    /* Shadows for dark mode */
+    --shadow-mobile-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
+    --shadow-mobile-md: 0 4px 16px -4px hsl(0 0% 0% / 0.4);
+    --shadow-mobile-lg: 0 8px 32px -8px hsl(0 0% 0% / 0.5);
+    --shadow-mobile-glow: 0 0 20px hsl(38 92% 50% / 0.2);
   }
 }
 
