@@ -49,11 +49,11 @@ export function AccountingHealthWidget() {
     
     switch (health.status) {
       case 'healthy':
-        return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+        return <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />;
       case 'warning':
-        return <AlertTriangle className="h-5 w-5 text-amber-600" />;
+        return <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400" />;
       case 'critical':
-        return <XCircle className="h-5 w-5 text-red-600" />;
+        return <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />;
       default:
         return <Activity className="h-5 w-5 text-muted-foreground" />;
     }
@@ -64,20 +64,20 @@ export function AccountingHealthWidget() {
     
     switch (health.status) {
       case 'healthy':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-50 dark:bg-green-950/50 border-green-200 dark:border-green-800';
       case 'warning':
-        return 'bg-amber-50 border-amber-200';
+        return 'bg-amber-50 dark:bg-amber-950/50 border-amber-200 dark:border-amber-800';
       case 'critical':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 dark:bg-red-950/50 border-red-200 dark:border-red-800';
       default:
         return 'bg-muted';
     }
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-amber-600';
-    return 'text-red-600';
+    if (score >= 90) return 'text-green-600 dark:text-green-400';
+    if (score >= 70) return 'text-amber-600 dark:text-amber-400';
+    return 'text-red-600 dark:text-red-400';
   };
 
   const handleRefresh = () => {
@@ -191,7 +191,7 @@ export function AccountingHealthWidget() {
               </div>
               <div className="p-3 rounded-lg bg-background border">
                 <div className="text-xs text-muted-foreground">Today Balanced</div>
-                <div className="text-lg font-semibold text-green-600">
+              <div className="text-lg font-semibold text-green-600 dark:text-green-400">
                   {health.today_balanced}
                 </div>
               </div>
@@ -241,7 +241,7 @@ export function AccountingHealthWidget() {
             )}
 
             {health.status === 'healthy' && (
-              <div className="flex items-center justify-center gap-2 py-2 text-green-600">
+              <div className="flex items-center justify-center gap-2 py-2 text-green-600 dark:text-green-400">
                 <CheckCircle2 className="h-4 w-4" />
                 <span className="text-sm font-medium">All vouchers balanced</span>
               </div>
