@@ -31,6 +31,8 @@ import { BulkOperationsDialog } from '@/components/loans/BulkOperationsDialog';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 import { LoanStatementPDF } from '@/components/print/documents';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
+import { useApprovalWorkflow, WorkflowType } from '@/hooks/useApprovalWorkflow';
+import { ApprovalBadge } from '@/components/approvals/ApprovalBadge';
 import { pdf } from '@react-pdf/renderer';
 
 interface Customer {
@@ -123,6 +125,7 @@ interface Loan {
   maturity_date: string;
   net_disbursed: number;
   status: 'active' | 'closed' | 'overdue' | 'auctioned';
+  approval_status: 'pending' | 'approved' | 'rejected' | null;
   is_reloan: boolean | null;
   customer: Customer;
   scheme: {
@@ -256,6 +259,8 @@ export default function Loans() {
   // Print settings for statement PDF
   const { settings: printSettings } = useEffectivePrintSettings();
   
+  // Approval workflow
+  const { checkApprovalRequired, canAutoApprove, submitForApproval } = useApprovalWorkflow();
 
   const canManageLoans = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
 
@@ -300,7 +305,7 @@ export default function Loans() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setLoans(data || []);
+      setLoans((data || []) as Loan[]);
     } catch (error: any) {
       toast.error('Failed to fetch loans');
     } finally {
@@ -633,6 +638,16 @@ export default function Loans() {
 
     setSubmitting(true);
     try {
+      // Check if approval is required for this loan amount
+      const loanAmount = loanCalculation.finalApprovedAmount;
+      const { required: approvalRequired } = await checkApprovalRequired('loan', loanAmount);
+      const userCanAutoApprove = await canAutoApprove('loan');
+      
+      // Determine approval status
+      // If approval not required OR user can auto-approve: status = 'approved'
+      // Otherwise: status = 'pending'
+      const approvalStatus = (!approvalRequired || userCanAutoApprove) ? 'approved' : 'pending';
+      
       const loanDate = new Date();
       const maturityDate = addDays(loanDate, parseInt(tenureDays));
       const nextInterestDueDate = addMonths(loanDate, loanCalculation.scheme.advance_interest_months || 3);
@@ -665,6 +680,7 @@ export default function Loans() {
         disbursement_mode: paymentEntries[0]?.mode || 'cash',
         document_charges: loanCalculation.documentCharges,
         payment_reference: paymentEntries[0]?.reference || null,
+        approval_status: approvalStatus,
       };
 
       const { data: loanResult, error: loanError } = await supabase
@@ -769,6 +785,20 @@ export default function Loans() {
       }
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);
+      
+      // If approval is required, submit for approval
+      if (approvalStatus === 'pending') {
+        await submitForApproval({
+          workflowType: 'loan',
+          entityType: 'loan',
+          entityId: loanResult.id,
+          entityNumber: loanResult.loan_number,
+          branchId: selectedBranchId,
+          amount: loanAmount,
+          description: `Loan ${loanResult.loan_number} for ${customers.find(c => c.id === selectedCustomerId)?.full_name}`,
+        });
+        toast.info('Loan submitted for approval');
+      }
       
       // Prepare print data and auto-trigger print dialog
       const selectedCustomerData = customers.find(c => c.id === selectedCustomerId);
