@@ -166,6 +166,7 @@ export default function Loans() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [approvalFilter, setApprovalFilter] = useState<string>('all');
   const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   
   // New loan form state
@@ -973,7 +974,11 @@ export default function Loans() {
       loan.customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       loan.customer.customer_code.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || loan.status === statusFilter;
-    return matchesSearch && matchesStatus;
+    const matchesApproval = approvalFilter === 'all' || 
+      (approvalFilter === 'pending' && loan.approval_status === 'pending') ||
+      (approvalFilter === 'approved' && (loan.approval_status === 'approved' || loan.approval_status === null)) ||
+      (approvalFilter === 'rejected' && loan.approval_status === 'rejected');
+    return matchesSearch && matchesStatus && matchesApproval;
   });
 
   const getStatusColor = (status: string) => {
@@ -1875,6 +1880,17 @@ export default function Loans() {
                   <SelectItem value="auctioned">Auctioned</SelectItem>
                 </SelectContent>
               </Select>
+              <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Approval Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Approvals</SelectItem>
+                  <SelectItem value="pending">Pending Approval</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -1951,7 +1967,10 @@ export default function Loans() {
                   </TableHeader>
                   <TableBody>
                     {filteredLoans.map((loan) => (
-                      <TableRow key={loan.id} className={selectedLoanIds.has(loan.id) ? 'bg-muted/50' : ''}>
+                      <TableRow 
+                        key={loan.id} 
+                        className={`${selectedLoanIds.has(loan.id) ? 'bg-muted/50' : ''} ${loan.approval_status === 'pending' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''} ${loan.approval_status === 'rejected' ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}
+                      >
                         <TableCell>
                           <Checkbox 
                             checked={selectedLoanIds.has(loan.id)}
@@ -1959,10 +1978,18 @@ export default function Loans() {
                           />
                         </TableCell>
                         <TableCell className="font-medium">
-                          {loan.loan_number}
-                          {loan.is_reloan && (
-                            <Badge variant="secondary" className="ml-2 text-xs">Reloan</Badge>
-                          )}
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span>{loan.loan_number}</span>
+                            {loan.is_reloan && (
+                              <Badge variant="secondary" className="text-xs">Reloan</Badge>
+                            )}
+                            {loan.approval_status && loan.approval_status !== 'approved' && (
+                              <ApprovalBadge 
+                                status={loan.approval_status} 
+                                size="sm"
+                              />
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div>
