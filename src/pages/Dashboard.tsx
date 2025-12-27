@@ -13,6 +13,7 @@ import {
   OverdueAnalysisChart,
   BranchPerformanceChart,
   GoldCustodyWidget,
+  OverdueAlertsWidget,
 } from '@/components/dashboard';
 import { 
   CreditCard,
@@ -149,14 +150,18 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Charts Row 2: Branch Performance + Accounting Health */}
-        <div className="grid gap-4 lg:grid-cols-2">
+        {/* Charts Row 2: Branch Performance + Overdue Alerts + Accounting Health */}
+        <div className="grid gap-4 lg:grid-cols-3">
           {isTenantAdmin && (
             <BranchPerformanceChart 
               data={dashboardData.branchPerformance} 
               isLoading={dashboardData.isLoading} 
             />
           )}
+          <OverdueAlertsWidget 
+            data={dashboardData.overdueBuckets} 
+            isLoading={dashboardData.isLoading} 
+          />
           <AccountingHealthWidget />
         </div>
 

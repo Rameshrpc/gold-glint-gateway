@@ -897,13 +897,13 @@ export default function Reloan() {
                       <span className="font-medium">{formatIndianCurrency(oldLoanCalc.breakdown.interest)}</span>
                     </div>
                     {oldLoanCalc.breakdown.penalty > 0 && (
-                      <div className="flex justify-between text-red-600">
+                      <div className="flex justify-between text-red-600 dark:text-red-400">
                         <span>Penalty</span>
                         <span className="font-medium">+ {formatIndianCurrency(oldLoanCalc.breakdown.penalty)}</span>
                       </div>
                     )}
                     {oldLoanCalc.breakdown.rebate > 0 && (
-                      <div className="flex justify-between text-green-600">
+                      <div className="flex justify-between text-green-600 dark:text-green-400">
                         <span>Rebate</span>
                         <span className="font-medium">- {formatIndianCurrency(oldLoanCalc.breakdown.rebate)}</span>
                       </div>
