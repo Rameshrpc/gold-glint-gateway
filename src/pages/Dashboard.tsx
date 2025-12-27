@@ -93,9 +93,9 @@ export default function Dashboard() {
           <div 
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${
               syncStatus.status === 'synced' 
-                ? 'bg-green-50 border border-green-200' 
+                ? 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800' 
                 : syncStatus.status === 'syncing' || syncStatus.status === 'checking'
-                ? 'bg-amber-50 border border-amber-200'
+                ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800'
                 : 'bg-muted border border-border'
             }`}
             title="Accounting sync status"
@@ -170,7 +170,7 @@ export default function Dashboard() {
               {roles.map((role) => (
                 <span
                   key={role}
-                  className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium"
+                  className="px-3 py-1 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 rounded-full text-sm font-medium"
                 >
                   {role.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                 </span>
