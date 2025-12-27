@@ -22,18 +22,20 @@ export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
       value: stats.totalCustomers.toLocaleString(),
       icon: Users,
       subtitle: 'Active accounts',
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-50',
-      borderColor: 'border-blue-200',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-50 dark:bg-blue-950/50',
+      borderColor: 'border-blue-200 dark:border-blue-800',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/50',
     },
     {
       title: 'Active Loans',
       value: stats.activeLoans.toLocaleString(),
       icon: FileText,
       subtitle: stats.overdueLoans > 0 ? `${stats.overdueLoans} overdue` : 'All on track',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      borderColor: 'border-green-200',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-50 dark:bg-green-950/50',
+      borderColor: 'border-green-200 dark:border-green-800',
+      iconBg: 'bg-green-100 dark:bg-green-900/50',
       badge: stats.overdueLoans > 0 ? { text: `${stats.overdueLoans}`, variant: 'destructive' as const } : null,
     },
     {
@@ -41,18 +43,20 @@ export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
       value: formatCurrency(stats.totalAUM),
       icon: IndianRupee,
       subtitle: 'Active portfolio',
-      color: 'text-amber-600',
-      bgColor: 'bg-amber-50',
-      borderColor: 'border-amber-200',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-50 dark:bg-amber-950/50',
+      borderColor: 'border-amber-200 dark:border-amber-800',
+      iconBg: 'bg-amber-100 dark:bg-amber-900/50',
     },
     {
       title: 'Monthly Collection',
       value: formatCurrency(stats.monthlyCollection),
       icon: TrendingUp,
       subtitle: 'Interest this month',
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-200',
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-50 dark:bg-purple-950/50',
+      borderColor: 'border-purple-200 dark:border-purple-800',
+      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
     },
   ];
 
@@ -96,7 +100,7 @@ export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">{stat.subtitle}</p>
               </div>
-              <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+              <div className={`p-2 rounded-lg ${stat.iconBg}`}>
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
               </div>
             </div>
