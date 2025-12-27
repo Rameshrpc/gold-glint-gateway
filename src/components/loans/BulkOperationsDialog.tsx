@@ -4,19 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Download, 
   FileText, 
   Bell, 
   X,
-  CheckCircle,
   Loader2,
+  MessageSquare,
+  Phone,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
 import { exportToCSV, exportToExcel } from '@/lib/export-utils';
+import { BulkSendDialog } from '@/components/notifications/BulkSendDialog';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Loan {
   id: string;
@@ -48,8 +50,10 @@ export function BulkOperationsDialog({
   selectedLoans,
   onClearSelection,
 }: BulkOperationsDialogProps) {
+  const { client } = useAuth();
   const [processing, setProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState('export');
+  const [bulkSendOpen, setBulkSendOpen] = useState(false);
 
   const exportColumns = [
     { key: 'loan_number', header: 'Loan Number' },
@@ -73,22 +77,19 @@ export function BulkOperationsDialog({
     toast.success(`Exported ${selectedLoans.length} loans to Excel`);
   };
 
-  const handleGenerateReminders = async () => {
-    setProcessing(true);
-    try {
-      // Simulate reminder generation
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const phoneNumbers = selectedLoans.map(l => l.customer.phone).filter(Boolean);
-      toast.success(`Generated ${phoneNumbers.length} interest reminder messages`, {
-        description: 'Ready to send via SMS/WhatsApp',
-      });
-    } catch (error) {
-      toast.error('Failed to generate reminders');
-    } finally {
-      setProcessing(false);
-    }
+  const handleOpenBulkSend = () => {
+    setBulkSendOpen(true);
   };
+
+  // Prepare recipients for bulk send
+  const bulkRecipients = selectedLoans.map(loan => ({
+    id: loan.id,
+    name: loan.customer.full_name,
+    phone: loan.customer.phone,
+    loanNumber: loan.loan_number,
+    amount: loan.principal_amount,
+    status: loan.status,
+  }));
 
   const totalPrincipal = selectedLoans.reduce((sum, l) => sum + l.principal_amount, 0);
   const activeCount = selectedLoans.filter(l => l.status === 'active').length;
@@ -150,7 +151,7 @@ export function BulkOperationsDialog({
 
           <TabsContent value="reminders" className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Generate interest payment reminder messages for selected customers
+              Send interest payment reminders via SMS or WhatsApp
             </p>
             
             <ScrollArea className="h-48 border rounded-lg p-3">
@@ -176,18 +177,23 @@ export function BulkOperationsDialog({
               ))}
             </ScrollArea>
 
-            <Button 
-              onClick={handleGenerateReminders} 
-              className="w-full"
-              disabled={processing}
-            >
-              {processing ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Bell className="h-4 w-4 mr-2" />
-              )}
-              Generate Reminders
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="outline"
+                onClick={handleOpenBulkSend}
+                className="flex items-center gap-2"
+              >
+                <Phone className="h-4 w-4" />
+                Send via SMS
+              </Button>
+              <Button 
+                onClick={handleOpenBulkSend}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Send via WhatsApp
+              </Button>
+            </div>
           </TabsContent>
         </Tabs>
 
@@ -201,6 +207,13 @@ export function BulkOperationsDialog({
           </Button>
         </div>
       </DialogContent>
+
+      <BulkSendDialog
+        open={bulkSendOpen}
+        onOpenChange={setBulkSendOpen}
+        recipients={bulkRecipients}
+        companyName={client?.company_name || 'Our Company'}
+      />
     </Dialog>
   );
 }
