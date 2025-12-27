@@ -23,6 +23,7 @@ import Redemption from "./pages/Redemption";
 import Settings from "./pages/Settings";
 import Agents from "./pages/Agents";
 import Items from "./pages/Items";
+import Approvals from "./pages/Approvals";
 import ItemGroups from "./pages/ItemGroups";
 import Reloan from "./pages/Reloan";
 import Auction from "./pages/Auction";
@@ -104,6 +105,7 @@ const App = () => (
             <Route path="/notifications" element={<ProtectedRoute><PlaceholderPage title="Notifications" description="Manage alerts and reminders" /></ProtectedRoute>} />
             <Route path="/whatsapp" element={<ProtectedRoute><PlaceholderPage title="WhatsApp" description="Send WhatsApp messages to customers" /></ProtectedRoute>} />
             <Route path="/sms" element={<ProtectedRoute><PlaceholderPage title="SMS" description="Send SMS notifications to customers" /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
