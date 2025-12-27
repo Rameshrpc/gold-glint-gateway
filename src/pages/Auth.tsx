@@ -132,7 +132,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-4">
+    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 p-4">
       <div className="w-full max-w-md">
         {/* Logo/Branding */}
         <div className="text-center mb-8">
@@ -270,6 +270,6 @@ export default function Auth() {
           © 2025 Zenith One. All rights reserved.
         </p>
       </div>
-    </div>
+    </main>
   );
 }
