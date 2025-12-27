@@ -44,6 +44,7 @@ import DayBook from "./pages/DayBook";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
+import NotificationLogs from "./pages/NotificationLogs";
 import NotFound from "./pages/NotFound";
 
 // Customer Portal
@@ -106,9 +107,10 @@ const App = () => (
             <Route path="/commission-reports" element={<ProtectedRoute><CommissionReports /></ProtectedRoute>} />
             <Route path="/vouchers" element={<ProtectedRoute><Vouchers /></ProtectedRoute>} />
             <Route path="/backfill-vouchers" element={<ProtectedRoute><BackfillVouchers /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><PlaceholderPage title="Notifications" description="Manage alerts and reminders" /></ProtectedRoute>} />
-            <Route path="/whatsapp" element={<ProtectedRoute><PlaceholderPage title="WhatsApp" description="Send WhatsApp messages to customers" /></ProtectedRoute>} />
-            <Route path="/sms" element={<ProtectedRoute><PlaceholderPage title="SMS" description="Send SMS notifications to customers" /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/notification-logs" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/sms" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
