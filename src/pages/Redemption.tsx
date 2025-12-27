@@ -15,13 +15,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Search, Wallet, Calculator, IndianRupee, 
   Package, CheckCircle, AlertTriangle, FileText,
-  Coins, Printer, Download, Plus, Trash2
+  Coins, Printer, Download, Plus, Trash2, Clock
 } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { RedemptionReceiptPDF } from '@/components/print/documents';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
+import { useApprovalWorkflow } from '@/hooks/useApprovalWorkflow';
+import { ApprovalBadge } from '@/components/approvals';
 import { toast } from 'sonner';
 import { format, differenceInDays, parseISO } from 'date-fns';
 import {
@@ -89,6 +91,7 @@ interface Redemption {
   amount_received: number;
   payment_mode: string;
   gold_released: boolean;
+  approval_status: string | null;
   loan: {
     loan_number: string;
     customer: {
@@ -131,6 +134,7 @@ const createEmptyPaymentEntry = (initialAmount: string = ''): PaymentEntry => ({
 export default function Redemption() {
   const { client, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
   const { settings: printSettings } = useEffectivePrintSettings(currentBranch?.id);
+  const { checkApprovalRequired, canAutoApprove, submitForApproval } = useApprovalWorkflow();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LoanWithDetails[]>([]);
   const [searching, setSearching] = useState(false);
@@ -354,6 +358,11 @@ export default function Redemption() {
 
     setSubmitting(true);
     try {
+      // Check if approval is required
+      const { required: approvalRequired, workflow } = await checkApprovalRequired('redemption', redemptionCalc.breakdown.total);
+      const userCanAutoApprove = await canAutoApprove('redemption');
+      const needsApproval = approvalRequired && !userCanAutoApprove;
+
       // Generate redemption number
       const redemptionCount = await supabase
         .from('redemptions')
@@ -371,7 +380,7 @@ export default function Redemption() {
         ? `\nPayment Breakdown:\n${paymentEntries.map(p => `${p.mode.toUpperCase()}: ${formatIndianCurrency(parseFloat(p.amount) || 0)}${p.reference ? ` (Ref: ${p.reference})` : ''}`).join('\n')}`
         : '';
 
-      // Create redemption record
+      // Create redemption record - if approval needed, don't release gold yet
       const redemptionData = {
         loan_id: selectedLoan.id,
         client_id: client.id,
@@ -386,16 +395,17 @@ export default function Redemption() {
         amount_received: totalCollected,
         payment_mode: primaryPayment.mode,
         payment_reference: primaryPayment.reference || null,
-        gold_released: goldReleased,
-        gold_released_date: today,
+        gold_released: needsApproval ? false : goldReleased,
+        gold_released_date: needsApproval ? null : today,
         released_to: releasedTo,
-        released_by: profile.id,
+        released_by: needsApproval ? null : profile.id,
         identity_verified: identityVerified,
         processed_by: profile.id,
         remarks: (remarks || '') + paymentBreakdown,
         source_type: primaryPayment.sourceType !== 'cash' ? primaryPayment.sourceType : null,
         source_bank_id: primaryPayment.sourceBankId || null,
         source_account_id: primaryPayment.sourceAccountId || null,
+        approval_status: needsApproval ? 'pending' : 'approved',
       };
 
       const { data: redemptionResult, error: redemptionError } = await supabase
@@ -406,37 +416,58 @@ export default function Redemption() {
 
       if (redemptionError) throw redemptionError;
 
-      // Update loan status to closed
-      const { error: loanError } = await supabase
-        .from('loans')
-        .update({
-          status: 'closed',
-          closed_date: today,
-          closure_type: 'redeemed',
-        })
-        .eq('id', selectedLoan.id);
+      // If approval is needed, submit for approval and don't close loan yet
+      if (needsApproval) {
+        await submitForApproval({
+          workflowType: 'redemption',
+          entityType: 'redemption',
+          entityId: redemptionResult.id,
+          entityNumber: redemptionNumber,
+          branchId: selectedLoan.branch_id,
+          amount: redemptionCalc.breakdown.total,
+          description: `Redemption for loan ${selectedLoan.loan_number} - Customer: ${selectedLoan.customer.full_name}`,
+          metadata: {
+            loan_number: selectedLoan.loan_number,
+            customer_name: selectedLoan.customer.full_name,
+            principal: redemptionCalc.breakdown.principal,
+            interest: redemptionCalc.breakdown.interest,
+          },
+        });
 
-      if (loanError) throw loanError;
+        toast.success(`Redemption ${redemptionNumber} submitted for approval. Gold will be released after approval.`);
+      } else {
+        // Update loan status to closed
+        const { error: loanError } = await supabase
+          .from('loans')
+          .update({
+            status: 'closed',
+            closed_date: today,
+            closure_type: 'redeemed',
+          })
+          .eq('id', selectedLoan.id);
 
-      // Generate accounting voucher with payment entries
-      await generateRedemptionVoucher({
-        clientId: client.id,
-        branchId: selectedLoan.branch_id,
-        redemptionId: redemptionResult.id,
-        loanNumber: selectedLoan.loan_number,
-        amountReceived: totalCollected,
-        principalAmount: redemptionCalc.breakdown.principal,
-        interestDue: redemptionCalc.breakdown.interest,
-        penaltyAmount: redemptionCalc.breakdown.penalty,
-        rebateAmount: redemptionCalc.breakdown.rebate,
-        paymentEntries: paymentEntries.map(e => ({
-          mode: e.mode,
-          amount: parseFloat(e.amount) || 0,
-          sourceBankId: e.sourceBankId || undefined,
-        })),
-      });
+        if (loanError) throw loanError;
 
-      toast.success(`Loan ${selectedLoan.loan_number} redeemed successfully`);
+        // Generate accounting voucher with payment entries
+        await generateRedemptionVoucher({
+          clientId: client.id,
+          branchId: selectedLoan.branch_id,
+          redemptionId: redemptionResult.id,
+          loanNumber: selectedLoan.loan_number,
+          amountReceived: totalCollected,
+          principalAmount: redemptionCalc.breakdown.principal,
+          interestDue: redemptionCalc.breakdown.interest,
+          penaltyAmount: redemptionCalc.breakdown.penalty,
+          rebateAmount: redemptionCalc.breakdown.rebate,
+          paymentEntries: paymentEntries.map(e => ({
+            mode: e.mode,
+            amount: parseFloat(e.amount) || 0,
+            sourceBankId: e.sourceBankId || undefined,
+          })),
+        });
+
+        toast.success(`Loan ${selectedLoan.loan_number} redeemed successfully`);
+      }
 
       // Reset form
       setSelectedLoan(null);
@@ -893,20 +924,35 @@ export default function Redemption() {
                     <TableHead>Loan #</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead className="text-right">Settlement</TableHead>
-                    <TableHead>Gold</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {recentRedemptions.map((redemption) => (
-                    <TableRow key={redemption.id}>
-                      <TableCell className="font-medium">{redemption.redemption_number}</TableCell>
+                    <TableRow 
+                      key={redemption.id}
+                      className={`${redemption.approval_status === 'pending' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''} ${redemption.approval_status === 'rejected' ? 'bg-red-50/50 dark:bg-red-950/20' : ''}`}
+                    >
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{redemption.redemption_number}</span>
+                          {redemption.approval_status && redemption.approval_status !== 'approved' && (
+                            <ApprovalBadge status={redemption.approval_status} size="sm" />
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{format(parseISO(redemption.redemption_date), 'dd MMM yyyy')}</TableCell>
                       <TableCell>{redemption.loan?.loan_number || '-'}</TableCell>
                       <TableCell>{redemption.loan?.customer?.full_name || '-'}</TableCell>
                       <TableCell className="text-right font-medium">{formatIndianCurrency(redemption.total_settlement)}</TableCell>
                       <TableCell>
-                        {redemption.gold_released ? (
+                        {redemption.approval_status === 'pending' ? (
+                          <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Awaiting Approval
+                          </Badge>
+                        ) : redemption.gold_released ? (
                           <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
                             <CheckCircle className="h-3 w-3 mr-1" />
                             Released
@@ -914,7 +960,7 @@ export default function Redemption() {
                         ) : (
                           <Badge variant="secondary">
                             <AlertTriangle className="h-3 w-3 mr-1" />
-                            Pending
+                            Pending Release
                           </Badge>
                         )}
                       </TableCell>

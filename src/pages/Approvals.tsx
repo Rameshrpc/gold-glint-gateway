@@ -15,9 +15,10 @@ import {
   Clock, 
   Search, 
   Eye,
-  Filter,
   RefreshCw,
-  AlertCircle
+  AlertCircle,
+  Send,
+  Inbox
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApprovalWorkflow, ApprovalRequest } from '@/hooks/useApprovalWorkflow';
@@ -42,6 +43,7 @@ export default function Approvals() {
   const [statusFilter, setStatusFilter] = useState<string>('pending');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [profiles, setProfiles] = useState<Record<string, Profile>>({});
+  const [activeTab, setActiveTab] = useState<string>('pending-review');
 
   const canApprove = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager');
 
@@ -149,7 +151,8 @@ export default function Approvals() {
     );
   };
 
-  const filteredRequests = requests.filter(req => {
+  // Filter requests based on search
+  const searchFilteredRequests = requests.filter(req => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -159,9 +162,21 @@ export default function Approvals() {
     );
   });
 
+  // Split requests into "Pending Review" (user can approve) and "My Requests" (user submitted)
+  const pendingReviewRequests = searchFilteredRequests.filter(
+    req => req.status === 'pending' && req.requested_by !== profile?.id
+  );
+  const myRequests = searchFilteredRequests.filter(
+    req => req.requested_by === profile?.id
+  );
+  
+  // Get current display list based on active tab
+  const filteredRequests = activeTab === 'pending-review' ? pendingReviewRequests : myRequests;
+
   const pendingCount = requests.filter(r => r.status === 'pending').length;
   const approvedCount = requests.filter(r => r.status === 'approved').length;
   const rejectedCount = requests.filter(r => r.status === 'rejected').length;
+  const myPendingCount = myRequests.filter(r => r.status === 'pending').length;
 
   return (
     <DashboardLayout>
@@ -215,52 +230,73 @@ export default function Approvals() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by entity number, type, or description..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="w-full sm:w-40">
-                  <SelectValue placeholder="Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="loan">Loan</SelectItem>
-                  <SelectItem value="redemption">Redemption</SelectItem>
-                  <SelectItem value="voucher">Voucher</SelectItem>
-                  <SelectItem value="auction">Auction</SelectItem>
-                  <SelectItem value="commission">Commission</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Tabs and Filters */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="pending-review" className="flex items-center gap-2">
+              <Inbox className="h-4 w-4" />
+              Pending Review
+              {pendingReviewRequests.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{pendingReviewRequests.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="my-requests" className="flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              My Requests
+              {myPendingCount > 0 && (
+                <Badge variant="outline" className="ml-1 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">{myPendingCount}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Requests Table */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Approval Requests</CardTitle>
-          </CardHeader>
+          {/* Filters */}
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by entity number, type, or description..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-40">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="loan">Loan</SelectItem>
+                    <SelectItem value="redemption">Redemption</SelectItem>
+                    <SelectItem value="voucher">Voucher</SelectItem>
+                    <SelectItem value="auction">Auction</SelectItem>
+                    <SelectItem value="commission">Commission</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Requests Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {activeTab === 'pending-review' ? 'Requests Awaiting Your Review' : 'Your Submitted Requests'}
+              </CardTitle>
+            </CardHeader>
           <CardContent>
             {loading ? (
               <div className="space-y-4">
@@ -336,6 +372,7 @@ export default function Approvals() {
             )}
           </CardContent>
         </Card>
+        </Tabs>
       </div>
 
       <ApprovalDialog
