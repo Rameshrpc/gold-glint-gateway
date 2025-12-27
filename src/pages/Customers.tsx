@@ -704,11 +704,6 @@ export default function Customers() {
     c.phone.includes(searchQuery)
   );
 
-  const getBranchName = (branchId: string) => {
-    const branch = branches.find(b => b.id === branchId);
-    return branch?.branch_name || 'Unknown';
-  };
-
   // Load signed URLs for a customer when viewing
   const loadCustomerSignedUrls = useCallback(async (customer: Customer) => {
     setLoadingSignedUrls(true);
