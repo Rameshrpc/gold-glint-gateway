@@ -739,7 +739,7 @@ const Auction = () => {
                           </div>
                           <div className="border-t pt-2 mt-2">
                             {surplusAmount > 0 ? (
-                              <div className="flex justify-between text-green-600 font-bold">
+                              <div className="flex justify-between text-green-600 dark:text-green-400 font-bold">
                                 <span className="flex items-center gap-1">
                                   <TrendingUp className="h-4 w-4" />
                                   Surplus (Return to Customer)
@@ -747,7 +747,7 @@ const Auction = () => {
                                 <span>{formatIndianCurrency(surplusAmount)}</span>
                               </div>
                             ) : shortfallAmount > 0 ? (
-                              <div className="flex justify-between text-destructive font-bold">
+                              <div className="flex justify-between text-red-600 dark:text-red-400 font-bold">
                                 <span className="flex items-center gap-1">
                                   <TrendingDown className="h-4 w-4" />
                                   Shortfall (Loss)

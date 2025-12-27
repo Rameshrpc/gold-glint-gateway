@@ -2,6 +2,7 @@ import { CustomerPortalLayout } from '@/components/customer-portal/CustomerPorta
 import { useCustomerPortalData } from '@/hooks/useCustomerPortalData';
 import { CustomerLoanCard } from '@/components/customer-portal/CustomerLoanCard';
 import { CustomerPaymentHistory } from '@/components/customer-portal/CustomerPaymentHistory';
+import { InterestCalculator } from '@/components/customer-portal/InterestCalculator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
@@ -66,7 +67,7 @@ export default function CustomerDashboard() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Interest Due</p>
-                  <p className="text-lg font-bold text-amber-600">
+                  <p className="text-lg font-bold text-amber-600 dark:text-amber-400">
                     {formatIndianCurrency(summary?.totalInterestDue || 0)}
                   </p>
                 </div>
@@ -76,15 +77,18 @@ export default function CustomerDashboard() {
         </div>
 
         {summary?.overdueLoansCount ? (
-          <Card className="border-red-200 bg-red-50/50 dark:bg-red-950/10">
+          <Card className="border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/20">
             <CardContent className="p-4 flex items-center gap-3">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-              <p className="text-sm text-red-600">
+              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <p className="text-sm text-red-600 dark:text-red-400">
                 You have {summary.overdueLoansCount} overdue loan(s). Please make payment soon.
               </p>
             </CardContent>
           </Card>
         ) : null}
+
+        {/* Interest Calculator */}
+        <InterestCalculator defaultInterestRate={1.5} />
 
         {/* Active Loans */}
         <div>
