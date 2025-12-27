@@ -164,22 +164,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string, clientCode: string) => {
     try {
-      // First verify client code exists
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('id, client_code')
-        .eq('client_code', clientCode.toUpperCase())
-        .eq('is_active', true)
-        .maybeSingle();
+      // First verify client code exists using secure RPC function
+      const { data: validationResult, error: clientError } = await supabase
+        .rpc('validate_client_code', { p_client_code: clientCode }) as { 
+          data: { valid: boolean; client_id: string | null } | null; 
+          error: Error | null 
+        };
 
       if (clientError) {
         console.error('Client lookup error:', clientError);
         return { error: new Error('Unable to verify client code. Please try again.') };
       }
 
-      if (!clientData) {
+      if (!validationResult?.valid || !validationResult?.client_id) {
         return { error: new Error('Invalid client code. Please check and try again.') };
       }
+
+      const clientData = { id: validationResult.client_id };
 
       // Attempt sign in
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -235,22 +236,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, clientCode: string) => {
     try {
-      // First verify client code exists
-      const { data: clientData, error: clientError } = await supabase
-        .from('clients')
-        .select('id')
-        .eq('client_code', clientCode.toUpperCase())
-        .eq('is_active', true)
-        .maybeSingle();
+      // First verify client code exists using secure RPC function
+      const { data: validationResult, error: clientError } = await supabase
+        .rpc('validate_client_code', { p_client_code: clientCode }) as { 
+          data: { valid: boolean; client_id: string | null } | null; 
+          error: Error | null 
+        };
 
       if (clientError) {
         console.error('Client lookup error:', clientError);
         return { error: new Error('Unable to verify client code. Please try again.') };
       }
 
-      if (!clientData) {
+      if (!validationResult?.valid || !validationResult?.client_id) {
         return { error: new Error('Invalid client code. Please contact your administrator.') };
       }
+
+      const clientData = { id: validationResult.client_id };
 
       const redirectUrl = `${window.location.origin}/`;
 
