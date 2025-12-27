@@ -42,7 +42,18 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Inline loading indicator for faster FCP -->
+      <div id="initial-loader" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#fffbeb,#fff7ed,#fefce8);font-family:system-ui,sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:48px;height:48px;margin:0 auto 16px;background:linear-gradient(135deg,#f59e0b,#ea580c);border-radius:12px;display:flex;align-items:center;justify-content:center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 21h18M3 7v1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7m0 1a3 3 0 0 0 6 0V7H3l2-4h14l2 4M5 21V10.85M19 21V10.85"/></svg>
+          </div>
+          <div style="color:#78350f;font-weight:600;font-size:18px;">Zenith One</div>
+          <div style="color:#92400e;font-size:14px;margin-top:4px;">Loading...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
