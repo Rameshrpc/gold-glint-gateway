@@ -3614,6 +3614,7 @@ export type Database = {
         Args: { _branch_id: string; _user_id: string }
         Returns: boolean
       }
+      validate_client_code: { Args: { p_client_code: string }; Returns: Json }
       validate_customer_session: {
         Args: { p_session_token: string }
         Returns: {
