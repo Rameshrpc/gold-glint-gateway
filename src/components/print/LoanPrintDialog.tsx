@@ -20,6 +20,7 @@ import { KYCDocumentsPDF } from './documents/KYCDocumentsPDF';
 import { JewelImagePDF } from './documents/JewelImagePDF';
 import { GoldDeclarationPDF } from './documents/GoldDeclarationPDF';
 import { TermsConditionsPDF } from './documents/TermsConditionsPDF';
+import { BillOfSalePDF } from './documents/BillOfSalePDF';
 
 interface GoldItem {
   id?: string;
@@ -79,6 +80,7 @@ interface LoanPrintDialogProps {
 
 interface DocumentSelection {
   loanReceipt: boolean;
+  billOfSale: boolean;
   kycDocuments: boolean;
   jewelImage: boolean;
   goldDeclaration: boolean;
@@ -87,6 +89,7 @@ interface DocumentSelection {
 
 interface CopyCounts {
   loanReceipt: number;
+  billOfSale: number;
   kycDocuments: number;
   jewelImage: number;
   goldDeclaration: number;
@@ -109,6 +112,7 @@ export function LoanPrintDialog({
   const [generating, setGenerating] = useState(false);
   const [selection, setSelection] = useState<DocumentSelection>({
     loanReceipt: true,
+    billOfSale: false,
     kycDocuments: false,
     jewelImage: false,
     goldDeclaration: true,
@@ -117,6 +121,7 @@ export function LoanPrintDialog({
   
   const [copies, setCopies] = useState<CopyCounts>({
     loanReceipt: 2,
+    billOfSale: 2,
     kycDocuments: 1,
     jewelImage: 1,
     goldDeclaration: 1,
@@ -126,8 +131,10 @@ export function LoanPrintDialog({
   // Update defaults from effective settings
   useEffect(() => {
     if (effectiveSettings) {
+      const useTradingFormat = (effectiveSettings as any).use_trading_format ?? false;
       setSelection({
-        loanReceipt: effectiveSettings.include_loan_receipt ?? true,
+        loanReceipt: useTradingFormat ? false : (effectiveSettings.include_loan_receipt ?? true),
+        billOfSale: useTradingFormat ? true : ((effectiveSettings as any).include_bill_of_sale ?? false),
         kycDocuments: effectiveSettings.include_kyc_documents ?? false,
         jewelImage: effectiveSettings.include_jewel_image ?? false,
         goldDeclaration: effectiveSettings.include_gold_declaration ?? true,
@@ -135,6 +142,7 @@ export function LoanPrintDialog({
       });
       setCopies({
         loanReceipt: effectiveSettings.loan_receipt_copies ?? 2,
+        billOfSale: (effectiveSettings as any).bill_of_sale_copies ?? 2,
         kycDocuments: effectiveSettings.kyc_documents_copies ?? 1,
         jewelImage: effectiveSettings.jewel_image_copies ?? 1,
         goldDeclaration: effectiveSettings.gold_declaration_copies ?? 1,
@@ -155,6 +163,7 @@ export function LoanPrintDialog({
   const selectAll = () => {
     setSelection({
       loanReceipt: true,
+      billOfSale: true,
       kycDocuments: true,
       jewelImage: true,
       goldDeclaration: true,
@@ -165,6 +174,7 @@ export function LoanPrintDialog({
   const deselectAll = () => {
     setSelection({
       loanReceipt: false,
+      billOfSale: false,
       kycDocuments: false,
       jewelImage: false,
       goldDeclaration: false,
@@ -233,6 +243,55 @@ export function LoanPrintDialog({
               paperSize={paperSize}
               footerEnglish={effectiveSettings.footer_english}
               footerTamil={effectiveSettings.footer_tamil}
+              sloganEnglish={effectiveSettings.company_slogan_english}
+              sloganTamil={effectiveSettings.company_slogan_tamil}
+              logoUrl={effectiveSettings.logo_url}
+              copyType="office"
+            />
+          );
+          const officeBlob = await pdf(officeDoc).toBlob();
+          blobs.push(officeBlob);
+        }
+      }
+
+      // Generate Bill of Sale Agreement
+      if (selection.billOfSale) {
+        // Customer copy
+        const customerDoc = (
+          <BillOfSalePDF
+            loan={loan}
+            customer={customer}
+            goldItems={goldItems}
+            companyName={companyName}
+            companyAddress={client?.address || ''}
+            gstin={(client as any)?.gstin}
+            stateCode={(client as any)?.state_code || '33'}
+            branchName={branchName}
+            language={language}
+            paperSize={paperSize}
+            sloganEnglish={effectiveSettings.company_slogan_english}
+            sloganTamil={effectiveSettings.company_slogan_tamil}
+            logoUrl={effectiveSettings.logo_url}
+            copyType="customer"
+          />
+        );
+        const customerBlob = await pdf(customerDoc).toBlob();
+        blobs.push(customerBlob);
+        
+        // Office copy if copies > 1
+        if (copies.billOfSale > 1) {
+          const officeDoc = (
+            <BillOfSalePDF
+              loan={loan}
+              customer={customer}
+              goldItems={goldItems}
+              companyName={companyName}
+              companyAddress={client?.address || ''}
+              gstin={(client as any)?.gstin}
+              stateCode={(client as any)?.state_code || '33'}
+              branchName={branchName}
+              language={language}
+              paperSize={paperSize}
               sloganEnglish={effectiveSettings.company_slogan_english}
               sloganTamil={effectiveSettings.company_slogan_tamil}
               logoUrl={effectiveSettings.logo_url}
@@ -412,6 +471,7 @@ export function LoanPrintDialog({
 
   const documents = [
     { key: 'loanReceipt' as const, label: 'Loan Receipt', icon: FileText },
+    { key: 'billOfSale' as const, label: 'Bill of Sale Agreement', icon: FileText },
     { key: 'goldDeclaration' as const, label: 'Gold Declaration', icon: FileText },
     { key: 'termsConditions' as const, label: 'Terms & Conditions', icon: FileText, disabled: terms.length === 0 },
     { key: 'kycDocuments' as const, label: 'KYC Documents', icon: FileText },
