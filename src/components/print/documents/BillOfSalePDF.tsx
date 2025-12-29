@@ -4,7 +4,7 @@ import { pdfStyles, PAPER_SIZES, formatCurrencyPrint, formatDatePrint, formatWei
 import { PDFHeader } from '../shared/PDFHeader';
 import { BilingualLabel, BilingualValueRow, BilingualText, LanguageMode } from '@/lib/bilingual-utils';
 import { fontsRegistered } from '@/lib/pdf-fonts';
-import { calculateStrikePrices, generateAgreementRef, formatCurrencyForSale } from '@/lib/strike-price-utils';
+import { calculateStrikePrices, generateAgreementRef, formatCurrencyForSale, parseStrikePeriod, StrikePeriodConfig } from '@/lib/strike-price-utils';
 import { amountToWordsOnly } from '@/lib/amount-to-words';
 
 // Ensure fonts are loaded
@@ -42,6 +42,36 @@ interface Loan {
   net_disbursed: number;
 }
 
+interface ContentBlock {
+  content_english: string | null;
+  content_tamil: string | null;
+}
+
+interface BillOfSaleContent {
+  title?: ContentBlock;
+  legalRef?: ContentBlock;
+  sellerTitle?: ContentBlock;
+  buyerTitle?: ContentBlock;
+  goodsTitle?: ContentBlock;
+  goodsIntro?: ContentBlock;
+  considerationTitle?: ContentBlock;
+  considerationIntro?: ContentBlock;
+  spotPriceLabel?: ContentBlock;
+  repurchaseTitle?: ContentBlock;
+  repurchaseIntro?: ContentBlock;
+  expiryNote?: ContentBlock;
+  declarationsTitle?: ContentBlock;
+  declarations?: ContentBlock[];
+  sellerSignature?: ContentBlock;
+  sellerSignatureNote?: ContentBlock;
+  buyerSignature?: ContentBlock;
+  buyerSignatureNote?: ContentBlock;
+  strikePeriodHeader?: ContentBlock;
+  strikePriceHeader?: ContentBlock;
+  strikeStatusHeader?: ContentBlock;
+  strikePeriods?: ContentBlock[];
+}
+
 interface BillOfSalePDFProps {
   loan: Loan;
   customer: Customer;
@@ -57,6 +87,7 @@ interface BillOfSalePDFProps {
   sloganTamil?: string | null;
   logoUrl?: string | null;
   copyType?: 'customer' | 'office';
+  content?: BillOfSaleContent;
 }
 
 const styles = StyleSheet.create({
@@ -282,6 +313,36 @@ const styles = StyleSheet.create({
   },
 });
 
+// Helper to get text with fallback
+const getText = (block: ContentBlock | undefined, defaultEnglish: string, defaultTamil: string) => ({
+  english: block?.content_english || defaultEnglish,
+  tamil: block?.content_tamil || defaultTamil,
+});
+
+// Helper to replace placeholders
+const replacePlaceholders = (text: string, companyName: string, expiryDate: string) => {
+  return text
+    .replace(/\{\{company_name\}\}/g, companyName)
+    .replace(/\{\{expiry_date\}\}/g, expiryDate);
+};
+
+// Parse declaration from content format: "Title|English Content|Tamil Content"
+const parseDeclaration = (block: ContentBlock) => {
+  const parts = (block.content_english || '').split('|');
+  if (parts.length >= 2) {
+    return {
+      title: parts[0],
+      english: parts[1],
+      tamil: block.content_tamil || parts[2] || parts[1],
+    };
+  }
+  return {
+    title: '',
+    english: block.content_english || '',
+    tamil: block.content_tamil || block.content_english || '',
+  };
+};
+
 export function BillOfSalePDF({
   loan,
   customer,
@@ -297,11 +358,23 @@ export function BillOfSalePDF({
   sloganTamil,
   logoUrl,
   copyType,
+  content,
 }: BillOfSalePDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
   
   const totalGrossWeight = goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0);
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
+  
+  // Parse custom strike periods from content
+  const customPeriods: StrikePeriodConfig[] = [];
+  if (content?.strikePeriods && content.strikePeriods.length > 0) {
+    content.strikePeriods.forEach((block) => {
+      const parsed = parseStrikePeriod(block.content_english, block.content_tamil);
+      if (parsed) {
+        customPeriods.push(parsed);
+      }
+    });
+  }
   
   // Calculate strike prices
   const processingFeePercent = loan.processing_fee 
@@ -313,11 +386,70 @@ export function BillOfSalePDF({
     loan.interest_rate,
     processingFeePercent,
     loan.loan_date,
-    loan.tenure_days
+    loan.tenure_days,
+    customPeriods.length > 0 ? customPeriods : undefined
   );
   
   const agreementRef = generateAgreementRef(loan.loan_number);
   const copyLabel = copyType === 'customer' ? 'Customer Copy' : copyType === 'office' ? 'Office Copy' : null;
+  
+  // Get content with fallbacks
+  const title = getText(content?.title, 'BILL OF SALE & REPURCHASE OPTION AGREEMENT', 'விற்பனை மற்றும் மறுகொள்முதல் விருப்ப ஒப்பந்தம்');
+  const legalRef = getText(content?.legalRef, '(Under Sale of Goods Act, 1930 & Contract Act, 1872)', '(விற்பனை பொருட்கள் சட்டம், 1930 & ஒப்பந்த சட்டம், 1872 கீழ்)');
+  const sellerTitle = getText(content?.sellerTitle, 'THE SELLER (Customer)', 'விற்பவர் (வாடிக்கையாளர்)');
+  const buyerTitle = getText(content?.buyerTitle, 'THE BUYER (Trading Entity)', 'வாங்குபவர் (வர்த்தக நிறுவனம்)');
+  const goodsTitle = getText(content?.goodsTitle, 'DESCRIPTION OF GOODS SOLD', 'விற்கப்பட்ட பொருட்களின் விவரம்');
+  const goodsIntro = getText(content?.goodsIntro, 'The Seller hereby sells and transfers absolute title and ownership of the following pre-owned jewellery to the Buyer:', 'விற்பவர் பின்வரும் பழைய நகைகளின் முழு உரிமையையும் உடைமையையும் வாங்குபவருக்கு விற்பனை செய்து மாற்றுகிறார்:');
+  const considerationTitle = getText(content?.considerationTitle, 'CONSIDERATION (PAYMENT DETAILS)', 'பரிசீலனை (கட்டண விவரங்கள்)');
+  const considerationIntro = getText(content?.considerationIntro, 'The Buyer has paid the following amount to the Seller as full and final consideration for the purchase of the above goods:', 'மேற்கண்ட பொருட்களை வாங்குவதற்கான முழு மற்றும் இறுதித் தொகையாக வாங்குபவர் விற்பவருக்கு பின்வரும் தொகையை செலுத்தியுள்ளார்:');
+  const spotPriceLabel = getText(content?.spotPriceLabel, 'SPOT PURCHASE PRICE (CASH HANDED OVER)', 'உடனடி கொள்முதல் விலை (ரொக்கமாக வழங்கப்பட்டது)');
+  const repurchaseTitle = getText(content?.repurchaseTitle, 'REPURCHASE OPTION (BUYBACK TERMS)', 'மறுகொள்முதல் விருப்பம் (திருப்பி வாங்கும் விதிமுறைகள்)');
+  const repurchaseIntro = getText(content?.repurchaseIntro, "As part of this trading transaction, the Buyer grants the Seller an exclusive option to buy back the exact same goods within the specified period at the following fixed Strike Prices. This price includes the original purchase cost plus the Buyer's trade margin and administrative fees.", 'இந்த வர்த்தக பரிவர்த்தனையின் ஒரு பகுதியாக, குறிப்பிட்ட காலத்திற்குள் கீழ்க்கண்ட நிலையான ஸ்ட்ரைக் விலையில் அதே பொருட்களை திருப்பி வாங்குவதற்கான பிரத்யேக விருப்பத்தை வாங்குபவர் விற்பவருக்கு வழங்குகிறார்.');
+  const expiryNoteContent = getText(content?.expiryNote, `Note: If the option is not exercised by {{expiry_date}}, this agreement expires. The Buyer ({{company_name}}) retains full ownership and is free to liquidate/melt/sell the asset without further notice.`, `குறிப்பு: {{expiry_date}} க்குள் விருப்பம் பயன்படுத்தப்படாவிட்டால், இந்த ஒப்பந்தம் காலாவதியாகும். வாங்குபவர் ({{company_name}}) முழு உரிமையைத் தக்க வைத்துக் கொள்கிறார்.`);
+  const declarationsTitle = getText(content?.declarationsTitle, 'DECLARATIONS & TAX COMPLIANCE', 'அறிவிப்புகள் & வரி இணக்கம்');
+  const sellerSignature = getText(content?.sellerSignature, 'Signature of SELLER (Customer)', 'விற்பவர் கையொப்பம் (வாடிக்கையாளர்)');
+  const sellerSignatureNote = getText(content?.sellerSignatureNote, '(I have received the cash and sold my gold)', '(நான் ரொக்கத்தைப் பெற்று என் தங்கத்தை விற்றேன்)');
+  const buyerSignature = getText(content?.buyerSignature, `For {{company_name}}`, `{{company_name}} சார்பாக`);
+  const buyerSignatureNote = getText(content?.buyerSignatureNote, '(Authorized Signatory)', '(அங்கீகரிக்கப்பட்ட கையொப்பமிடுபவர்)');
+  const strikePeriodHeader = getText(content?.strikePeriodHeader, 'If Exercised Between...', 'இடையில் பயன்படுத்தினால்...');
+  const strikePriceHeader = getText(content?.strikePriceHeader, 'You Pay (Strike Price)', 'நீங்கள் செலுத்த வேண்டிய தொகை (ஸ்ட்ரைக் விலை)');
+  const strikeStatusHeader = getText(content?.strikeStatusHeader, 'Status', 'நிலை');
+  
+  // Default declarations
+  const defaultDeclarations = [
+    {
+      title: 'Transfer of Title:',
+      english: `I (The Seller) declare that I am the legal owner of these goods. I have sold them to ${companyName} voluntarily.`,
+      tamil: `நான் (விற்பவர்) இந்த பொருட்களின் சட்டப்பூர்வ உரிமையாளர் என்று அறிவிக்கிறேன். நான் அவற்றை ${companyName} க்கு தானாகவே விற்றேன்.`,
+    },
+    {
+      title: 'No Financial Transaction:',
+      english: 'I understand this is a Buy-Sell transaction and not a financial transaction. There is no rate applicable; there is only a repurchase price difference.',
+      tamil: 'இது கடன் பரிவர்த்தனை அல்ல, வாங்கல்-விற்றல் பரிவர்த்தனை என்பதை புரிந்துகொள்கிறேன். வட்டி விகிதம் இல்லை; மறுகொள்முதல் விலை வேறுபாடு மட்டுமே உள்ளது.',
+    },
+    {
+      title: 'GST Rule 32(5):',
+      english: `The Buyer (${companyName}) declares that this is a purchase of second-hand goods. GST will be paid on the margin earned upon resale/repurchase as per Rule 32(5) of CGST Rules, 2017.`,
+      tamil: `வாங்குபவர் (${companyName}) இது பழைய பொருட்களின் கொள்முதல் என்று அறிவிக்கிறார். CGST விதிகள், 2017 இன் விதி 32(5) படி மறுவிற்பனை/மறுகொள்முதலில் ஈட்டிய மார்ஜினில் GST செலுத்தப்படும்.`,
+    },
+    {
+      title: 'Custody Authorization:',
+      english: `I authorize ${companyName} to store these goods in their safe deposit vaults or with their financial partners/bankers for logistics and safety purposes during the option period.`,
+      tamil: `விருப்ப காலத்தில் பாதுகாப்பு மற்றும் தளவாட நோக்கங்களுக்காக இந்த பொருட்களை ${companyName} அவர்களின் பாதுகாப்பு பெட்டகங்களில் அல்லது நிதி பங்காளிகள்/வங்கிகளிடம் சேமிக்க அனுமதிக்கிறேன்.`,
+    },
+  ];
+  
+  // Parse declarations from content or use defaults
+  const declarations = content?.declarations && content.declarations.length > 0
+    ? content.declarations.map((block) => {
+        const parsed = parseDeclaration(block);
+        return {
+          title: parsed.title,
+          english: replacePlaceholders(parsed.english, companyName, strikePriceData.expiryDate),
+          tamil: replacePlaceholders(parsed.tamil, companyName, strikePriceData.expiryDate),
+        };
+      })
+    : defaultDeclarations;
   
   return (
     <Document>
@@ -345,8 +477,8 @@ export function BillOfSalePDF({
         {/* Document Title */}
         <View style={styles.title}>
           <BilingualLabel
-            english="BILL OF SALE & REPURCHASE OPTION AGREEMENT"
-            tamil="விற்பனை மற்றும் மறுகொள்முதல் விருப்ப ஒப்பந்தம்"
+            english={title.english}
+            tamil={title.tamil}
             mode={language}
             fontSize={11}
             fontWeight="bold"
@@ -354,7 +486,7 @@ export function BillOfSalePDF({
         </View>
         
         <Text style={styles.subtitle}>
-          (Under Sale of Goods Act, 1930 & Contract Act, 1872)
+          {language === 'tamil' ? legalRef.tamil : legalRef.english}
         </Text>
         
         {/* Reference and Date */}
@@ -369,8 +501,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>1</Text>
             <BilingualLabel
-              english="THE SELLER (Customer)"
-              tamil="விற்பவர் (வாடிக்கையாளர்)"
+              english={sellerTitle.english}
+              tamil={sellerTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -418,8 +550,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>2</Text>
             <BilingualLabel
-              english="THE BUYER (Trading Entity)"
-              tamil="வாங்குபவர் (வர்த்தக நிறுவனம்)"
+              english={buyerTitle.english}
+              tamil={buyerTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -436,8 +568,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>A</Text>
             <BilingualLabel
-              english="DESCRIPTION OF GOODS SOLD"
-              tamil="விற்கப்பட்ட பொருட்களின் விவரம்"
+              english={goodsTitle.english}
+              tamil={goodsTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -445,8 +577,8 @@ export function BillOfSalePDF({
           </View>
           
           <BilingualText
-            english="The Seller hereby sells and transfers absolute title and ownership of the following pre-owned jewellery to the Buyer:"
-            tamil="விற்பவர் பின்வரும் பழைய நகைகளின் முழு உரிமையையும் உடைமையையும் வாங்குபவருக்கு விற்பனை செய்து மாற்றுகிறார்:"
+            english={goodsIntro.english}
+            tamil={goodsIntro.tamil}
             mode={language}
             fontSize={7}
           />
@@ -484,8 +616,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>B</Text>
             <BilingualLabel
-              english="CONSIDERATION (PAYMENT DETAILS)"
-              tamil="பரிசீலனை (கட்டண விவரங்கள்)"
+              english={considerationTitle.english}
+              tamil={considerationTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -493,16 +625,16 @@ export function BillOfSalePDF({
           </View>
           
           <BilingualText
-            english="The Buyer has paid the following amount to the Seller as full and final consideration for the purchase of the above goods:"
-            tamil="மேற்கண்ட பொருட்களை வாங்குவதற்கான முழு மற்றும் இறுதித் தொகையாக வாங்குபவர் விற்பவருக்கு பின்வரும் தொகையை செலுத்தியுள்ளார்:"
+            english={considerationIntro.english}
+            tamil={considerationIntro.tamil}
             mode={language}
             fontSize={7}
           />
           
           <View style={styles.amountBox}>
             <BilingualLabel
-              english="SPOT PURCHASE PRICE (CASH HANDED OVER)"
-              tamil="உடனடி கொள்முதல் விலை (ரொக்கமாக வழங்கப்பட்டது)"
+              english={spotPriceLabel.english}
+              tamil={spotPriceLabel.tamil}
               mode={language}
               fontSize={8}
               fontWeight="bold"
@@ -517,8 +649,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>C</Text>
             <BilingualLabel
-              english="REPURCHASE OPTION (BUYBACK TERMS)"
-              tamil="மறுகொள்முதல் விருப்பம் (திருப்பி வாங்கும் விதிமுறைகள்)"
+              english={repurchaseTitle.english}
+              tamil={repurchaseTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -526,17 +658,23 @@ export function BillOfSalePDF({
           </View>
           
           <BilingualText
-            english="As part of this trading transaction, the Buyer grants the Seller an exclusive option to buy back the exact same goods within the specified period at the following fixed Strike Prices. This price includes the original purchase cost plus the Buyer's trade margin and administrative fees."
-            tamil="இந்த வர்த்தக பரிவர்த்தனையின் ஒரு பகுதியாக, குறிப்பிட்ட காலத்திற்குள் கீழ்க்கண்ட நிலையான ஸ்ட்ரைக் விலையில் அதே பொருட்களை திருப்பி வாங்குவதற்கான பிரத்யேக விருப்பத்தை வாங்குபவர் விற்பவருக்கு வழங்குகிறார்."
+            english={repurchaseIntro.english}
+            tamil={repurchaseIntro.tamil}
             mode={language}
             fontSize={7}
           />
           
           <View style={styles.strikePriceTable}>
             <View style={styles.strikePriceHeader}>
-              <Text style={[styles.tableHeaderCell, { width: '40%', textAlign: 'left' }]}>If Exercised Between...</Text>
-              <Text style={[styles.tableHeaderCell, { width: '35%' }]}>You Pay (Strike Price)</Text>
-              <Text style={[styles.tableHeaderCell, { width: '25%' }]}>Status</Text>
+              <Text style={[styles.tableHeaderCell, { width: '40%', textAlign: 'left' }]}>
+                {language === 'tamil' ? strikePeriodHeader.tamil : strikePeriodHeader.english}
+              </Text>
+              <Text style={[styles.tableHeaderCell, { width: '35%' }]}>
+                {language === 'tamil' ? strikePriceHeader.tamil : strikePriceHeader.english}
+              </Text>
+              <Text style={[styles.tableHeaderCell, { width: '25%' }]}>
+                {language === 'tamil' ? strikeStatusHeader.tamil : strikeStatusHeader.english}
+              </Text>
             </View>
             
             {strikePriceData.strikePrices.map((row, index) => (
@@ -559,8 +697,11 @@ export function BillOfSalePDF({
           
           <View style={styles.noteBox}>
             <Text style={styles.noteText}>
-              Note: If the option is not exercised by {strikePriceData.expiryDate}, this agreement expires. 
-              The Buyer ({companyName}) retains full ownership and is free to liquidate/melt/sell the asset without further notice.
+              {replacePlaceholders(
+                language === 'tamil' ? expiryNoteContent.tamil : expiryNoteContent.english,
+                companyName,
+                strikePriceData.expiryDate
+              )}
             </Text>
           </View>
         </View>
@@ -570,8 +711,8 @@ export function BillOfSalePDF({
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
             <Text style={styles.sectionTitleNumber}>D</Text>
             <BilingualLabel
-              english="DECLARATIONS & TAX COMPLIANCE"
-              tamil="அறிவிப்புகள் & வரி இணக்கம்"
+              english={declarationsTitle.english}
+              tamil={declarationsTitle.tamil}
               mode={language}
               fontSize={10}
               fontWeight="bold"
@@ -579,33 +720,16 @@ export function BillOfSalePDF({
           </View>
           
           <View style={styles.declarationBox}>
-            <View style={styles.declarationItem}>
-              <Text style={styles.declarationTitle}>Transfer of Title:</Text>
-              <Text style={styles.declarationText}>
-                I (The Seller) declare that I am the legal owner of these goods. I have sold them to {companyName} voluntarily.
-              </Text>
-            </View>
-            
-            <View style={styles.declarationItem}>
-              <Text style={styles.declarationTitle}>No Financial Transaction:</Text>
-              <Text style={styles.declarationText}>
-                I understand this is a Buy-Sell transaction and not a financial transaction. There is no rate applicable; there is only a repurchase price difference.
-              </Text>
-            </View>
-            
-            <View style={styles.declarationItem}>
-              <Text style={styles.declarationTitle}>GST Rule 32(5):</Text>
-              <Text style={styles.declarationText}>
-                The Buyer ({companyName}) declares that this is a purchase of second-hand goods. GST will be paid on the margin earned upon resale/repurchase as per Rule 32(5) of CGST Rules, 2017.
-              </Text>
-            </View>
-            
-            <View style={styles.declarationItem}>
-              <Text style={styles.declarationTitle}>Custody Authorization:</Text>
-              <Text style={styles.declarationText}>
-                I authorize {companyName} to store these goods in their safe deposit vaults or with their financial partners/bankers for logistics and safety purposes during the option period.
-              </Text>
-            </View>
+            {declarations.map((declaration, index) => (
+              <View key={index} style={styles.declarationItem}>
+                {declaration.title && (
+                  <Text style={styles.declarationTitle}>{declaration.title}</Text>
+                )}
+                <Text style={styles.declarationText}>
+                  {language === 'tamil' ? declaration.tamil : declaration.english}
+                </Text>
+              </View>
+            ))}
           </View>
         </View>
         
@@ -614,25 +738,29 @@ export function BillOfSalePDF({
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
             <BilingualLabel
-              english="Signature of SELLER (Customer)"
-              tamil="விற்பவர் கையொப்பம் (வாடிக்கையாளர்)"
+              english={sellerSignature.english}
+              tamil={sellerSignature.tamil}
               mode={language}
               fontSize={8}
               fontWeight="bold"
             />
-            <Text style={styles.signatureNote}>(I have received the cash and sold my gold)</Text>
+            <Text style={styles.signatureNote}>
+              {language === 'tamil' ? sellerSignatureNote.tamil : sellerSignatureNote.english}
+            </Text>
           </View>
           
           <View style={styles.signatureBox}>
             <View style={styles.signatureLine} />
             <BilingualLabel
-              english={`For ${companyName}`}
-              tamil={`${companyName} சார்பாக`}
+              english={replacePlaceholders(buyerSignature.english, companyName, '')}
+              tamil={replacePlaceholders(buyerSignature.tamil, companyName, '')}
               mode={language}
               fontSize={8}
               fontWeight="bold"
             />
-            <Text style={styles.signatureNote}>(Authorized Signatory)</Text>
+            <Text style={styles.signatureNote}>
+              {language === 'tamil' ? buyerSignatureNote.tamil : buyerSignatureNote.english}
+            </Text>
           </View>
         </View>
       </Page>
