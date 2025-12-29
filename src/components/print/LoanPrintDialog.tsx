@@ -13,6 +13,7 @@ import { usePrintSettings } from '@/hooks/usePrintSettings';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
+import { useBillOfSaleContentForPDF } from '@/hooks/useBillOfSaleContent';
 import { getSignedCustomerDocumentUrl, getSignedLoanDocumentUrl } from '@/lib/storage-utils';
 
 import { LoanReceiptPDF } from './documents/LoanReceiptPDF';
@@ -108,6 +109,7 @@ export function LoanPrintDialog({
   // Use effective settings based on current branch
   const { settings: effectiveSettings } = useEffectivePrintSettings(currentBranch?.id);
   const { data: terms = [] } = useClientTerms('loan');
+  const billOfSaleContent = useBillOfSaleContentForPDF();
   
   const [generating, setGenerating] = useState(false);
   const [selection, setSelection] = useState<DocumentSelection>({
@@ -256,6 +258,32 @@ export function LoanPrintDialog({
 
       // Generate Bill of Sale Agreement
       if (selection.billOfSale) {
+        // Transform content from hook to PDF format
+        const billOfSaleContentForPDF = billOfSaleContent.hasContent ? {
+          title: billOfSaleContent.title,
+          legalRef: billOfSaleContent.legalRef,
+          sellerTitle: billOfSaleContent.sellerTitle,
+          buyerTitle: billOfSaleContent.buyerTitle,
+          goodsTitle: billOfSaleContent.goodsTitle,
+          goodsIntro: billOfSaleContent.goodsIntro,
+          considerationTitle: billOfSaleContent.considerationTitle,
+          considerationIntro: billOfSaleContent.considerationIntro,
+          spotPriceLabel: billOfSaleContent.spotPriceLabel,
+          repurchaseTitle: billOfSaleContent.repurchaseTitle,
+          repurchaseIntro: billOfSaleContent.repurchaseIntro,
+          expiryNote: billOfSaleContent.expiryNote,
+          declarationsTitle: billOfSaleContent.declarationsTitle,
+          declarations: billOfSaleContent.declarations,
+          sellerSignature: billOfSaleContent.sellerSignature,
+          sellerSignatureNote: billOfSaleContent.sellerSignatureNote,
+          buyerSignature: billOfSaleContent.buyerSignature,
+          buyerSignatureNote: billOfSaleContent.buyerSignatureNote,
+          strikePeriodHeader: billOfSaleContent.strikePeriodHeader,
+          strikePriceHeader: billOfSaleContent.strikePriceHeader,
+          strikeStatusHeader: billOfSaleContent.strikeStatusHeader,
+          strikePeriods: billOfSaleContent.strikePeriods,
+        } : undefined;
+
         // Customer copy
         const customerDoc = (
           <BillOfSalePDF
@@ -273,6 +301,7 @@ export function LoanPrintDialog({
             sloganTamil={effectiveSettings.company_slogan_tamil}
             logoUrl={effectiveSettings.logo_url}
             copyType="customer"
+            content={billOfSaleContentForPDF}
           />
         );
         const customerBlob = await pdf(customerDoc).toBlob();
@@ -296,6 +325,7 @@ export function LoanPrintDialog({
               sloganTamil={effectiveSettings.company_slogan_tamil}
               logoUrl={effectiveSettings.logo_url}
               copyType="office"
+              content={billOfSaleContentForPDF}
             />
           );
           const officeBlob = await pdf(officeDoc).toBlob();
