@@ -1072,6 +1072,7 @@ export type Database = {
           company_name: string
           created_at: string | null
           email: string | null
+          gstin: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
@@ -1079,6 +1080,7 @@ export type Database = {
           max_users: number | null
           phone: string | null
           plan_name: string | null
+          state_code: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1087,6 +1089,7 @@ export type Database = {
           company_name: string
           created_at?: string | null
           email?: string | null
+          gstin?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
@@ -1094,6 +1097,7 @@ export type Database = {
           max_users?: number | null
           phone?: string | null
           plan_name?: string | null
+          state_code?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1102,6 +1106,7 @@ export type Database = {
           company_name?: string
           created_at?: string | null
           email?: string | null
+          gstin?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
@@ -1109,6 +1114,7 @@ export type Database = {
           max_users?: number | null
           phone?: string | null
           plan_name?: string | null
+          state_code?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -2427,6 +2433,7 @@ export type Database = {
       }
       print_settings: {
         Row: {
+          bill_of_sale_copies: number | null
           client_id: string
           company_slogan_english: string | null
           company_slogan_tamil: string | null
@@ -2438,6 +2445,7 @@ export type Database = {
           header_english: string | null
           header_tamil: string | null
           id: string
+          include_bill_of_sale: boolean | null
           include_gold_declaration: boolean
           include_jewel_image: boolean
           include_kyc_documents: boolean
@@ -2451,8 +2459,10 @@ export type Database = {
           paper_size: string
           terms_conditions_copies: number
           updated_at: string | null
+          use_trading_format: boolean | null
         }
         Insert: {
+          bill_of_sale_copies?: number | null
           client_id: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2464,6 +2474,7 @@ export type Database = {
           header_english?: string | null
           header_tamil?: string | null
           id?: string
+          include_bill_of_sale?: boolean | null
           include_gold_declaration?: boolean
           include_jewel_image?: boolean
           include_kyc_documents?: boolean
@@ -2477,8 +2488,10 @@ export type Database = {
           paper_size?: string
           terms_conditions_copies?: number
           updated_at?: string | null
+          use_trading_format?: boolean | null
         }
         Update: {
+          bill_of_sale_copies?: number | null
           client_id?: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2490,6 +2503,7 @@ export type Database = {
           header_english?: string | null
           header_tamil?: string | null
           id?: string
+          include_bill_of_sale?: boolean | null
           include_gold_declaration?: boolean
           include_jewel_image?: boolean
           include_kyc_documents?: boolean
@@ -2503,6 +2517,7 @@ export type Database = {
           paper_size?: string
           terms_conditions_copies?: number
           updated_at?: string | null
+          use_trading_format?: boolean | null
         }
         Relationships: [
           {
@@ -2516,6 +2531,7 @@ export type Database = {
       }
       print_templates: {
         Row: {
+          bill_of_sale_copies: number | null
           client_id: string
           company_slogan_english: string | null
           company_slogan_tamil: string | null
@@ -2528,6 +2544,7 @@ export type Database = {
           header_english: string | null
           header_tamil: string | null
           id: string
+          include_bill_of_sale: boolean | null
           include_gold_declaration: boolean | null
           include_jewel_image: boolean | null
           include_kyc_documents: boolean | null
@@ -2547,6 +2564,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bill_of_sale_copies?: number | null
           client_id: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2559,6 +2577,7 @@ export type Database = {
           header_english?: string | null
           header_tamil?: string | null
           id?: string
+          include_bill_of_sale?: boolean | null
           include_gold_declaration?: boolean | null
           include_jewel_image?: boolean | null
           include_kyc_documents?: boolean | null
@@ -2578,6 +2597,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bill_of_sale_copies?: number | null
           client_id?: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2590,6 +2610,7 @@ export type Database = {
           header_english?: string | null
           header_tamil?: string | null
           id?: string
+          include_bill_of_sale?: boolean | null
           include_gold_declaration?: boolean | null
           include_jewel_image?: boolean | null
           include_kyc_documents?: boolean | null
