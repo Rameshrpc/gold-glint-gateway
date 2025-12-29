@@ -13,7 +13,8 @@ import {
   ChevronDown,
   ChevronRight,
   FileStack,
-  ShieldCheck
+  ShieldCheck,
+  Scale
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -29,7 +30,8 @@ export type SettingsSection =
   | 'print-content' 
   | 'print-header-footer' 
   | 'print-templates' 
-  | 'print-branches';
+  | 'print-branches'
+  | 'print-bill-of-sale';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSection;
@@ -64,6 +66,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
     { id: 'print-loan-docs', label: 'Loan Documents', icon: FileStack },
     { id: 'print-general', label: 'General', icon: Settings2 },
     { id: 'print-documents', label: 'Documents', icon: FileText },
+    { id: 'print-bill-of-sale', label: 'Bill of Sale', icon: Scale },
     { id: 'print-terms', label: 'Terms & Conditions', icon: FileEdit },
     { id: 'print-content', label: 'Editable Content', icon: Type },
     { id: 'print-header-footer', label: 'Header & Footer', icon: Image },

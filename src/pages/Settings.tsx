@@ -21,6 +21,7 @@ import { HeaderFooterSettings } from '@/components/print/HeaderFooterSettings';
 import { TemplatesTab } from '@/components/print/TemplatesTab';
 import { BranchPrintSettingsTab } from '@/components/print/BranchPrintSettingsTab';
 import { LoanDocumentsOverview } from '@/components/print/LoanDocumentsOverview';
+import { BillOfSaleSettings } from '@/components/print/BillOfSaleSettings';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -379,6 +380,8 @@ export default function Settings() {
         return <GeneralPrintSettings />;
       case 'print-documents':
         return <DocumentsSettings />;
+      case 'print-bill-of-sale':
+        return <BillOfSaleSettings />;
       case 'print-terms':
         return <TermsConditionsSettings />;
       case 'print-content':
