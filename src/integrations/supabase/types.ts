@@ -2434,6 +2434,8 @@ export type Database = {
       print_settings: {
         Row: {
           bill_of_sale_copies: number | null
+          bill_of_sale_place: string | null
+          bill_of_sale_ref_prefix: string | null
           client_id: string
           company_slogan_english: string | null
           company_slogan_tamil: string | null
@@ -2463,6 +2465,8 @@ export type Database = {
         }
         Insert: {
           bill_of_sale_copies?: number | null
+          bill_of_sale_place?: string | null
+          bill_of_sale_ref_prefix?: string | null
           client_id: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2492,6 +2496,8 @@ export type Database = {
         }
         Update: {
           bill_of_sale_copies?: number | null
+          bill_of_sale_place?: string | null
+          bill_of_sale_ref_prefix?: string | null
           client_id?: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2532,6 +2538,8 @@ export type Database = {
       print_templates: {
         Row: {
           bill_of_sale_copies: number | null
+          bill_of_sale_place: string | null
+          bill_of_sale_ref_prefix: string | null
           client_id: string
           company_slogan_english: string | null
           company_slogan_tamil: string | null
@@ -2565,6 +2573,8 @@ export type Database = {
         }
         Insert: {
           bill_of_sale_copies?: number | null
+          bill_of_sale_place?: string | null
+          bill_of_sale_ref_prefix?: string | null
           client_id: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -2598,6 +2608,8 @@ export type Database = {
         }
         Update: {
           bill_of_sale_copies?: number | null
+          bill_of_sale_place?: string | null
+          bill_of_sale_ref_prefix?: string | null
           client_id?: string
           company_slogan_english?: string | null
           company_slogan_tamil?: string | null
@@ -3601,6 +3613,10 @@ export type Database = {
         Returns: undefined
       }
       initialize_approval_workflows: {
+        Args: { p_client_id: string }
+        Returns: undefined
+      }
+      initialize_bill_of_sale_content: {
         Args: { p_client_id: string }
         Returns: undefined
       }
