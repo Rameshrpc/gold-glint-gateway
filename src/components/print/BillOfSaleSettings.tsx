@@ -1,117 +1,160 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { useBillOfSaleContent, Declaration, StrikePeriod } from '@/hooks/useBillOfSaleContent';
-import { usePrintSettings } from '@/hooks/usePrintSettings';
-import { Loader2, Plus, Trash2, GripVertical, Save, RefreshCw, AlertCircle, FileText } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { useBillOfSaleContent } from '@/hooks/useBillOfSaleContent';
+import { Loader2, Plus, Trash2, Edit2, Save, X, Scale, FileText } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface ContentItem {
+  id?: string;
+  label: string;
+  block_type: string;
+  content_english: string;
+  content_tamil: string;
+  display_order: number;
+  is_deletable: boolean;
+}
+
+const DEFAULT_CONTENT: ContentItem[] = [
+  { label: 'Document Title', block_type: 'bill_of_sale_title', content_english: 'BILL OF SALE & REPURCHASE OPTION AGREEMENT', content_tamil: 'விற்பனை மற்றும் மறுகொள்முதல் விருப்ப ஒப்பந்தம்', display_order: 1, is_deletable: false },
+  { label: 'Legal Reference', block_type: 'bill_of_sale_legal_ref', content_english: '(Under Sale of Goods Act, 1930 & Contract Act, 1872)', content_tamil: '(விற்பனை பொருட்கள் சட்டம், 1930 & ஒப்பந்த சட்டம், 1872 கீழ்)', display_order: 2, is_deletable: false },
+  { label: 'Seller Title', block_type: 'bill_of_sale_seller_title', content_english: 'THE SELLER (Customer)', content_tamil: 'விற்பவர் (வாடிக்கையாளர்)', display_order: 3, is_deletable: false },
+  { label: 'Buyer Title', block_type: 'bill_of_sale_buyer_title', content_english: 'THE BUYER (Trading Entity)', content_tamil: 'வாங்குபவர் (வர்த்தக நிறுவனம்)', display_order: 4, is_deletable: false },
+  { label: 'Goods Section Title', block_type: 'bill_of_sale_goods_title', content_english: 'DESCRIPTION OF GOODS SOLD', content_tamil: 'விற்கப்பட்ட பொருட்களின் விவரம்', display_order: 5, is_deletable: false },
+  { label: 'Goods Section Intro', block_type: 'bill_of_sale_goods_intro', content_english: 'The Seller hereby sells and transfers absolute title and ownership of the following pre-owned jewellery to the Buyer:', content_tamil: 'விற்பவர் பின்வரும் பழைய நகைகளின் முழு உரிமையையும் உடைமையையும் வாங்குபவருக்கு விற்பனை செய்து மாற்றுகிறார்:', display_order: 6, is_deletable: false },
+  { label: 'Consideration Title', block_type: 'bill_of_sale_consideration_title', content_english: 'CONSIDERATION (PAYMENT DETAILS)', content_tamil: 'பரிசீலனை (கட்டண விவரங்கள்)', display_order: 7, is_deletable: false },
+  { label: 'Consideration Intro', block_type: 'bill_of_sale_consideration_intro', content_english: 'The Buyer has paid the following amount to the Seller as full and final consideration for the purchase of the above goods:', content_tamil: 'மேற்கண்ட பொருட்களை வாங்குவதற்கான முழு மற்றும் இறுதித் தொகையாக வாங்குபவர் விற்பவருக்கு பின்வரும் தொகையை செலுத்தியுள்ளார்:', display_order: 8, is_deletable: false },
+  { label: 'Spot Price Label', block_type: 'bill_of_sale_spot_price_label', content_english: 'SPOT PURCHASE PRICE (CASH HANDED OVER)', content_tamil: 'உடனடி கொள்முதல் விலை (ரொக்கமாக வழங்கப்பட்டது)', display_order: 9, is_deletable: false },
+  { label: 'Repurchase Title', block_type: 'bill_of_sale_repurchase_title', content_english: 'REPURCHASE OPTION (BUYBACK TERMS)', content_tamil: 'மறுகொள்முதல் விருப்பம் (திருப்பி வாங்கும் விதிமுறைகள்)', display_order: 10, is_deletable: false },
+  { label: 'Repurchase Intro', block_type: 'bill_of_sale_repurchase_intro', content_english: "As part of this trading transaction, the Buyer grants the Seller an exclusive option to buy back the exact same goods within the specified period at the following fixed Strike Prices. This price includes the original purchase cost plus the Buyer's trade margin and administrative fees.", content_tamil: 'இந்த வர்த்தக பரிவர்த்தனையின் ஒரு பகுதியாக, குறிப்பிட்ட காலத்திற்குள் கீழ்க்கண்ட நிலையான ஸ்ட்ரைக் விலையில் அதே பொருட்களை திருப்பி வாங்குவதற்கான பிரத்யேக விருப்பத்தை வாங்குபவர் விற்பவருக்கு வழங்குகிறார்.', display_order: 11, is_deletable: false },
+  { label: 'Expiry Note', block_type: 'bill_of_sale_expiry_note', content_english: 'Note: If the option is not exercised by {{expiry_date}}, this agreement expires. The Buyer ({{company_name}}) retains full ownership and is free to liquidate/melt/sell the asset without further notice.', content_tamil: 'குறிப்பு: {{expiry_date}} க்குள் விருப்பம் பயன்படுத்தப்படாவிட்டால், இந்த ஒப்பந்தம் காலாவதியாகும். வாங்குபவர் ({{company_name}}) முழு உரிமையைத் தக்க வைத்துக் கொள்கிறார்.', display_order: 12, is_deletable: false },
+  { label: 'Declarations Title', block_type: 'bill_of_sale_declarations_title', content_english: 'DECLARATIONS & TAX COMPLIANCE', content_tamil: 'அறிவிப்புகள் & வரி இணக்கம்', display_order: 13, is_deletable: false },
+  { label: 'Declaration 1: Transfer of Title', block_type: 'bill_of_sale_declaration', content_english: 'I (The Seller) declare that I am the legal owner of these goods. I have sold them to {{company_name}} voluntarily.', content_tamil: 'நான் (விற்பவர்) இந்த பொருட்களின் சட்டப்பூர்வ உரிமையாளர் என்று அறிவிக்கிறேன். நான் அவற்றை {{company_name}} க்கு தானாகவே விற்றேன்.', display_order: 14, is_deletable: true },
+  { label: 'Declaration 2: No Financial Transaction', block_type: 'bill_of_sale_declaration', content_english: 'I understand this is a Buy-Sell transaction and not a financial transaction. There is no rate applicable; there is only a repurchase price difference.', content_tamil: 'இது கடன் பரிவர்த்தனை அல்ல, வாங்கல்-விற்றல் பரிவர்த்தனை என்பதை புரிந்துகொள்கிறேன். வட்டி விகிதம் இல்லை; மறுகொள்முதல் விலை வேறுபாடு மட்டுமே உள்ளது.', display_order: 15, is_deletable: true },
+  { label: 'Declaration 3: GST Rule 32(5)', block_type: 'bill_of_sale_declaration', content_english: 'The Buyer ({{company_name}}) declares that this is a purchase of second-hand goods. GST will be paid on the margin earned upon resale/repurchase as per Rule 32(5) of CGST Rules, 2017.', content_tamil: 'வாங்குபவர் ({{company_name}}) இது பழைய பொருட்களின் கொள்முதல் என்று அறிவிக்கிறார். CGST விதிகள், 2017 இன் விதி 32(5) படி மறுவிற்பனை/மறுகொள்முதலில் ஈட்டிய மார்ஜினில் GST செலுத்தப்படும்.', display_order: 16, is_deletable: true },
+  { label: 'Declaration 4: Custody Authorization', block_type: 'bill_of_sale_declaration', content_english: 'I authorize {{company_name}} to store these goods in their safe deposit vaults or with their financial partners/bankers for logistics and safety purposes during the option period.', content_tamil: 'விருப்ப காலத்தில் பாதுகாப்பு மற்றும் தளவாட நோக்கங்களுக்காக இந்த பொருட்களை {{company_name}} அவர்களின் பாதுகாப்பு பெட்டகங்களில் அல்லது நிதி பங்காளிகள்/வங்கிகளிடம் சேமிக்க அனுமதிக்கிறேன்.', display_order: 17, is_deletable: true },
+  { label: 'Seller Signature Label', block_type: 'bill_of_sale_signature_seller', content_english: 'Signature of SELLER (Customer)', content_tamil: 'விற்பவர் கையொப்பம் (வாடிக்கையாளர்)', display_order: 18, is_deletable: false },
+  { label: 'Seller Signature Note', block_type: 'bill_of_sale_signature_seller_note', content_english: '(I have received the cash and sold my gold)', content_tamil: '(நான் ரொக்கத்தைப் பெற்று என் தங்கத்தை விற்றேன்)', display_order: 19, is_deletable: false },
+  { label: 'Buyer Signature Label', block_type: 'bill_of_sale_signature_buyer', content_english: 'For {{company_name}}', content_tamil: '{{company_name}} சார்பாக', display_order: 20, is_deletable: false },
+  { label: 'Buyer Signature Note', block_type: 'bill_of_sale_signature_buyer_note', content_english: '(Authorized Signatory)', content_tamil: '(அங்கீகரிக்கப்பட்ட கையொப்பமிடுபவர்)', display_order: 21, is_deletable: false },
+  { label: 'Strike Price Table: Period Header', block_type: 'bill_of_sale_strike_period_header', content_english: 'If Exercised Between...', content_tamil: 'இடையில் பயன்படுத்தினால்...', display_order: 22, is_deletable: false },
+  { label: 'Strike Price Table: Price Header', block_type: 'bill_of_sale_strike_price_header', content_english: 'You Pay (Strike Price)', content_tamil: 'நீங்கள் செலுத்த வேண்டிய தொகை (ஸ்ட்ரைக் விலை)', display_order: 23, is_deletable: false },
+  { label: 'Strike Price Table: Status Header', block_type: 'bill_of_sale_strike_status_header', content_english: 'Status', content_tamil: 'நிலை', display_order: 24, is_deletable: false },
+  { label: 'Strike Period 1: 0-30 Days', block_type: 'bill_of_sale_strike_period', content_english: '0-30 Days', content_tamil: '0-30 நாட்கள்', display_order: 25, is_deletable: true },
+  { label: 'Strike Period 2: 31-60 Days', block_type: 'bill_of_sale_strike_period', content_english: '31-60 Days', content_tamil: '31-60 நாட்கள்', display_order: 26, is_deletable: true },
+  { label: 'Strike Period 3: 61-90 Days', block_type: 'bill_of_sale_strike_period', content_english: '61-90 Days', content_tamil: '61-90 நாட்கள்', display_order: 27, is_deletable: true },
+];
 
 export function BillOfSaleSettings() {
-  const { 
-    content, 
-    contentBlocks,
-    loading, 
-    saving, 
-    initializeContent,
-    updateContentBlock,
-    addContentBlock,
-    deleteContentBlock,
-    updateSettings,
-    hasContent
-  } = useBillOfSaleContent();
-  
-  const { settings, updateSettings: updatePrintSettings } = usePrintSettings();
-  
-  const [localSettings, setLocalSettings] = useState({
-    place: content.settings.place,
-    refPrefix: content.settings.refPrefix
-  });
-  
-  const [editingBlock, setEditingBlock] = useState<string | null>(null);
-  const [editedValues, setEditedValues] = useState<{ english: string; tamil: string }>({ english: '', tamil: '' });
+  const { contentBlocks, isLoading, saveAllContent, isSaving } = useBillOfSaleContent();
+  const [editingContent, setEditingContent] = useState<ContentItem[]>([]);
+  const [isEditMode, setIsEditMode] = useState(false);
 
-  useEffect(() => {
-    setLocalSettings({
-      place: content.settings.place,
-      refPrefix: content.settings.refPrefix
-    });
-  }, [content.settings]);
+  // Convert database content to ContentItem format
+  const currentContent: ContentItem[] = contentBlocks.length > 0 
+    ? contentBlocks.map((block, index) => ({
+        id: block.id,
+        label: getLabelForBlockType(block.block_type, block.display_order || index),
+        block_type: block.block_type,
+        content_english: block.content_english || '',
+        content_tamil: block.content_tamil || '',
+        display_order: block.display_order || index,
+        is_deletable: block.block_type === 'bill_of_sale_declaration' || block.block_type === 'bill_of_sale_strike_period',
+      }))
+    : [];
 
-  const handleSaveSettings = async () => {
-    await updateSettings(localSettings);
+  const loadDefaultContent = () => {
+    setEditingContent([...DEFAULT_CONTENT]);
+    setIsEditMode(true);
+    toast.info('Default content loaded. Review and save to apply.');
   };
 
-  const handleToggleTradingFormat = async (enabled: boolean) => {
-    await updatePrintSettings({ use_trading_format: enabled } as any);
+  const startEditing = () => {
+    if (currentContent.length > 0) {
+      setEditingContent([...currentContent]);
+    } else {
+      setEditingContent([...DEFAULT_CONTENT]);
+    }
+    setIsEditMode(true);
   };
 
-  const handleToggleIncludeBillOfSale = async (enabled: boolean) => {
-    await updatePrintSettings({ include_bill_of_sale: enabled } as any);
+  const updateItem = (index: number, field: 'content_english' | 'content_tamil', value: string) => {
+    const updated = [...editingContent];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditingContent(updated);
   };
 
-  const startEditing = (blockId: string, english: string, tamil: string) => {
-    setEditingBlock(blockId);
-    setEditedValues({ english, tamil });
+  const removeItem = (index: number) => {
+    if (!editingContent[index].is_deletable) {
+      toast.error('This item cannot be deleted');
+      return;
+    }
+    setEditingContent(editingContent.filter((_, i) => i !== index));
+  };
+
+  const addDeclaration = () => {
+    const declarationCount = editingContent.filter(c => c.block_type === 'bill_of_sale_declaration').length;
+    const maxOrder = Math.max(...editingContent.map(c => c.display_order), 0);
+    
+    // Find the index of the last declaration
+    const lastDeclarationIndex = editingContent.reduce((lastIdx, item, idx) => 
+      item.block_type === 'bill_of_sale_declaration' ? idx : lastIdx, -1);
+    
+    const newItem: ContentItem = {
+      label: `Declaration ${declarationCount + 1}`,
+      block_type: 'bill_of_sale_declaration',
+      content_english: '',
+      content_tamil: '',
+      display_order: maxOrder + 1,
+      is_deletable: true,
+    };
+
+    const updated = [...editingContent];
+    updated.splice(lastDeclarationIndex + 1, 0, newItem);
+    setEditingContent(updated);
+  };
+
+  const addStrikePeriod = () => {
+    const periodCount = editingContent.filter(c => c.block_type === 'bill_of_sale_strike_period').length;
+    const maxOrder = Math.max(...editingContent.map(c => c.display_order), 0);
+    
+    const newItem: ContentItem = {
+      label: `Strike Period ${periodCount + 1}`,
+      block_type: 'bill_of_sale_strike_period',
+      content_english: '',
+      content_tamil: '',
+      display_order: maxOrder + 1,
+      is_deletable: true,
+    };
+
+    setEditingContent([...editingContent, newItem]);
+  };
+
+  const handleSave = async () => {
+    const contentToSave = editingContent.map((item, idx) => ({
+      block_type: item.block_type,
+      content_english: item.content_english,
+      content_tamil: item.content_tamil,
+      display_order: idx + 1,
+    }));
+
+    await saveAllContent(contentToSave);
+    setIsEditMode(false);
+    setEditingContent([]);
   };
 
   const cancelEditing = () => {
-    setEditingBlock(null);
-    setEditedValues({ english: '', tamil: '' });
+    setEditingContent([]);
+    setIsEditMode(false);
   };
 
-  const saveEditing = async (blockId: string) => {
-    await updateContentBlock(blockId, {
-      content_english: editedValues.english,
-      content_tamil: editedValues.tamil
-    });
-    cancelEditing();
-  };
-
-  const getBlockByType = (type: string) => contentBlocks.find(b => b.block_type === type);
-  const getBlocksByType = (type: string) => contentBlocks.filter(b => b.block_type === type).sort((a, b) => a.display_order - b.display_order);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!hasContent) {
+  if (isLoading) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Bill of Sale Agreement Settings
-          </CardTitle>
-          <CardDescription>
-            Configure the content for Bill of Sale & Repurchase Option Agreement documents
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Bill of Sale content has not been initialized for your organization.
-            </AlertDescription>
-          </Alert>
-          <Button 
-            onClick={initializeContent} 
-            disabled={saving}
-            className="mt-4"
-          >
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-            Initialize Default Content
-          </Button>
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -119,679 +162,167 @@ export function BillOfSaleSettings() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <FileText className="h-5 w-5" />
-          Bill of Sale Agreement Settings
-        </CardTitle>
-        <CardDescription>
-          Configure all content for Bill of Sale & Repurchase Option Agreement documents
-        </CardDescription>
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="flex items-center gap-2">
+            <Scale className="h-5 w-5" />
+            Bill of Sale Agreement Settings
+          </CardTitle>
+          <CardDescription>
+            Configure all editable content for Bill of Sale & Repurchase Option Agreement documents.
+          </CardDescription>
+        </div>
+        <div className="flex gap-2">
+          {!isEditMode ? (
+            <>
+              <Button onClick={loadDefaultContent} variant="outline" size="sm">
+                <FileText className="h-4 w-4 mr-2" />
+                Load Default Content
+              </Button>
+              <Button onClick={startEditing} variant="outline">
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit Content
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button onClick={cancelEditing} variant="outline" size="sm">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={isSaving} size="sm">
+                {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+                Save Content
+              </Button>
+            </>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="general" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="sections">Sections</TabsTrigger>
-            <TabsTrigger value="declarations">Declarations</TabsTrigger>
-            <TabsTrigger value="signatures">Signatures</TabsTrigger>
-            <TabsTrigger value="strike-prices">Strike Prices</TabsTrigger>
-          </TabsList>
-
-          {/* General Tab */}
-          <TabsContent value="general" className="space-y-6">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Document Settings</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-base">Enable Trading Format</Label>
-                    <p className="text-sm text-muted-foreground">Use Bill of Sale instead of Loan Receipt by default</p>
-                  </div>
-                  <Switch
-                    checked={(settings as any)?.use_trading_format || false}
-                    onCheckedChange={handleToggleTradingFormat}
-                  />
-                </div>
-                
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <Label className="text-base">Include Bill of Sale</Label>
-                    <p className="text-sm text-muted-foreground">Include in loan document prints</p>
-                  </div>
-                  <Switch
-                    checked={(settings as any)?.include_bill_of_sale || false}
-                    onCheckedChange={handleToggleIncludeBillOfSale}
-                  />
-                </div>
+        {isEditMode ? (
+          <div className="space-y-4">
+            {/* Placeholder Documentation */}
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm">
+              <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">Available Placeholders (will be replaced at print time):</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-blue-800 dark:text-blue-200">
+                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs">{'{{company_name}}'}</code>
+                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs">{'{{customer_name}}'}</code>
+                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs">{'{{expiry_date}}'}</code>
+                <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded text-xs">{'{{loan_date}}'}</code>
               </div>
-
-              <Separator />
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Default Place</Label>
-                  <Input
-                    value={localSettings.place}
-                    onChange={(e) => setLocalSettings(prev => ({ ...prev, place: e.target.value }))}
-                    placeholder="e.g., Coimbatore"
-                  />
-                  <p className="text-xs text-muted-foreground">Place shown on the agreement</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Reference Prefix</Label>
-                  <Input
-                    value={localSettings.refPrefix}
-                    onChange={(e) => setLocalSettings(prev => ({ ...prev, refPrefix: e.target.value }))}
-                    placeholder="e.g., ZG"
-                  />
-                  <p className="text-xs text-muted-foreground">Prefix for agreement reference number</p>
-                </div>
-              </div>
-
-              <Button onClick={handleSaveSettings} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                Save Settings
-              </Button>
-
-              <Separator />
-
-              {/* Document Title */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Document Title</h4>
-                {(() => {
-                  const block = getBlockByType('bill_of_sale_title');
-                  if (!block) return null;
-                  const isEditing = editingBlock === block.id;
-                  return (
-                    <div className="p-4 border rounded-lg space-y-3">
-                      {isEditing ? (
-                        <>
-                          <div className="space-y-2">
-                            <Label>English</Label>
-                            <Input
-                              value={editedValues.english}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Tamil</Label>
-                            <Input
-                              value={editedValues.tamil}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <Badge variant="outline" className="mb-2">English</Badge>
-                            <p className="font-medium">{block.content_english}</p>
-                          </div>
-                          <div>
-                            <Badge variant="outline" className="mb-2">Tamil</Badge>
-                            <p>{block.content_tamil}</p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                          >
-                            Edit
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {/* Legal Reference */}
-              <div className="space-y-4">
-                <h4 className="font-medium">Legal Reference</h4>
-                {(() => {
-                  const block = getBlockByType('bill_of_sale_legal_ref');
-                  if (!block) return null;
-                  const isEditing = editingBlock === block.id;
-                  return (
-                    <div className="p-4 border rounded-lg space-y-3">
-                      {isEditing ? (
-                        <>
-                          <div className="space-y-2">
-                            <Label>English</Label>
-                            <Input
-                              value={editedValues.english}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Tamil</Label>
-                            <Input
-                              value={editedValues.tamil}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                            />
-                          </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <Badge variant="outline" className="mb-2">English</Badge>
-                            <p>{block.content_english}</p>
-                          </div>
-                          <div>
-                            <Badge variant="outline" className="mb-2">Tamil</Badge>
-                            <p>{block.content_tamil}</p>
-                          </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                          >
-                            Edit
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Sections Tab */}
-          <TabsContent value="sections" className="space-y-6">
-            {[
-              { type: 'bill_of_sale_seller_title', title: 'Section 1: Seller Title' },
-              { type: 'bill_of_sale_buyer_title', title: 'Section 2: Buyer Title' },
-              { type: 'bill_of_sale_goods_title', title: 'Section A: Goods Title' },
-              { type: 'bill_of_sale_goods_intro', title: 'Section A: Goods Introduction' },
-              { type: 'bill_of_sale_consideration_title', title: 'Section B: Consideration Title' },
-              { type: 'bill_of_sale_consideration_intro', title: 'Section B: Consideration Introduction' },
-              { type: 'bill_of_sale_spot_price_label', title: 'Spot Price Label' },
-              { type: 'bill_of_sale_repurchase_title', title: 'Section C: Repurchase Title' },
-              { type: 'bill_of_sale_repurchase_intro', title: 'Section C: Repurchase Introduction' },
-              { type: 'bill_of_sale_expiry_note', title: 'Option Expiry Note' },
-              { type: 'bill_of_sale_declarations_title', title: 'Section D: Declarations Title' },
-            ].map(({ type, title }) => {
-              const block = getBlockByType(type);
-              if (!block) return null;
-              const isEditing = editingBlock === block.id;
-              const isLongText = type.includes('intro') || type.includes('note');
-              
-              return (
-                <div key={type} className="space-y-2">
-                  <h4 className="font-medium">{title}</h4>
-                  <div className="p-4 border rounded-lg space-y-3">
-                    {isEditing ? (
-                      <>
-                        <div className="space-y-2">
-                          <Label>English</Label>
-                          {isLongText ? (
-                            <Textarea
-                              value={editedValues.english}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                              rows={3}
-                            />
-                          ) : (
-                            <Input
-                              value={editedValues.english}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                            />
-                          )}
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Tamil</Label>
-                          {isLongText ? (
-                            <Textarea
-                              value={editedValues.tamil}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                              rows={3}
-                            />
-                          ) : (
-                            <Input
-                              value={editedValues.tamil}
-                              onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                            />
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <Badge variant="outline" className="mb-2">English</Badge>
-                          <p className={isLongText ? 'text-sm' : ''}>{block.content_english}</p>
-                        </div>
-                        <div>
-                          <Badge variant="outline" className="mb-2">Tamil</Badge>
-                          <p className={isLongText ? 'text-sm' : ''}>{block.content_tamil}</p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                        >
-                          Edit
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </TabsContent>
-
-          {/* Declarations Tab */}
-          <TabsContent value="declarations" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Declarations</h3>
-                <p className="text-sm text-muted-foreground">Manage declaration statements that appear on the document</p>
-              </div>
-              <Button 
-                onClick={() => addContentBlock({
-                  block_type: 'bill_of_sale_declaration',
-                  content_english: 'New Declaration|Enter declaration text here',
-                  content_tamil: 'புதிய அறிவிப்பு|அறிவிப்பு உரையை இங்கே உள்ளிடவும்',
-                  display_order: (getBlocksByType('bill_of_sale_declaration').length || 0) + 1
-                })}
-                disabled={saving}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Declaration
-              </Button>
             </div>
             
-            <div className="space-y-4">
-              {getBlocksByType('bill_of_sale_declaration').map((block, index) => {
-                const parts = block.content_english.split('|');
-                const title = parts[0] || `Declaration ${index + 1}`;
-                const contentEn = parts[1] || block.content_english;
-                const tamilParts = block.content_tamil.split('|');
-                const contentTa = tamilParts.length > 1 ? tamilParts[1] : block.content_tamil;
-                const isEditing = editingBlock === block.id;
-
-                return (
-                  <div key={block.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Badge>{index + 1}</Badge>
-                        <span className="font-medium">{title}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteContentBlock(block.id)}
-                        disabled={saving}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+            {editingContent.map((item, index) => (
+              <div key={index} className="flex gap-3 items-start border rounded-lg p-4">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary text-sm font-medium shrink-0">
+                  {index + 1}
+                </div>
+                <div className="flex-1 space-y-3">
+                  <Label className="text-sm font-medium text-muted-foreground">{item.label}</Label>
+                  <div className="grid gap-3">
+                    <div>
+                      <Label className="text-xs text-muted-foreground">English</Label>
+                      <Textarea
+                        value={item.content_english}
+                        onChange={(e) => updateItem(index, 'content_english', e.target.value)}
+                        placeholder="Enter English content"
+                        className="min-h-[60px] font-mono text-sm mt-1"
+                      />
                     </div>
-                    
-                    {isEditing ? (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Title</Label>
-                          <Input
-                            value={editedValues.english.split('|')[0] || ''}
-                            onChange={(e) => {
-                              const parts = editedValues.english.split('|');
-                              parts[0] = e.target.value;
-                              setEditedValues(prev => ({ ...prev, english: parts.join('|') }));
-                            }}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Content (English)</Label>
-                          <Textarea
-                            value={editedValues.english.split('|')[1] || ''}
-                            onChange={(e) => {
-                              const parts = editedValues.english.split('|');
-                              parts[1] = e.target.value;
-                              setEditedValues(prev => ({ ...prev, english: parts.join('|') }));
-                            }}
-                            rows={2}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Content (Tamil)</Label>
-                          <Textarea
-                            value={editedValues.tamil.split('|')[1] || editedValues.tamil}
-                            onChange={(e) => {
-                              const parts = editedValues.tamil.split('|');
-                              if (parts.length > 1) {
-                                parts[1] = e.target.value;
-                                setEditedValues(prev => ({ ...prev, tamil: parts.join('|') }));
-                              } else {
-                                setEditedValues(prev => ({ ...prev, tamil: `${parts[0]}|${e.target.value}` }));
-                              }
-                            }}
-                            rows={2}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <Badge variant="outline" className="mb-2">English</Badge>
-                          <p className="text-sm">{contentEn}</p>
-                        </div>
-                        <div>
-                          <Badge variant="outline" className="mb-2">Tamil</Badge>
-                          <p className="text-sm">{contentTa}</p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                        >
-                          Edit
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{'{{company_name}}'}</code> as a placeholder for the company name in declaration text.
-              </AlertDescription>
-            </Alert>
-          </TabsContent>
-
-          {/* Signatures Tab */}
-          <TabsContent value="signatures" className="space-y-6">
-            <h3 className="text-lg font-semibold">Signature Labels</h3>
-            
-            {[
-              { type: 'bill_of_sale_signature_seller', title: 'Seller Signature Label' },
-              { type: 'bill_of_sale_signature_seller_note', title: 'Seller Signature Note' },
-              { type: 'bill_of_sale_signature_buyer', title: 'Buyer Signature Label' },
-              { type: 'bill_of_sale_signature_buyer_note', title: 'Buyer Signature Note' },
-            ].map(({ type, title }) => {
-              const block = getBlockByType(type);
-              if (!block) return null;
-              const isEditing = editingBlock === block.id;
-              
-              return (
-                <div key={type} className="space-y-2">
-                  <h4 className="font-medium">{title}</h4>
-                  <div className="p-4 border rounded-lg space-y-3">
-                    {isEditing ? (
-                      <>
-                        <div className="space-y-2">
-                          <Label>English</Label>
-                          <Input
-                            value={editedValues.english}
-                            onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Tamil</Label>
-                          <Input
-                            value={editedValues.tamil}
-                            onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <Badge variant="outline" className="mb-2">English</Badge>
-                          <p>{block.content_english}</p>
-                        </div>
-                        <div>
-                          <Badge variant="outline" className="mb-2">Tamil</Badge>
-                          <p>{block.content_tamil}</p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                        >
-                          Edit
-                        </Button>
-                      </>
-                    )}
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Tamil / தமிழ்</Label>
+                      <Textarea
+                        value={item.content_tamil}
+                        onChange={(e) => updateItem(index, 'content_tamil', e.target.value)}
+                        placeholder="தமிழ் உள்ளடக்கத்தை உள்ளிடவும்"
+                        className="min-h-[60px] font-mono text-sm mt-1"
+                      />
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Use <code className="text-xs bg-muted px-1 py-0.5 rounded">{'{{company_name}}'}</code> as a placeholder for the company name.
-              </AlertDescription>
-            </Alert>
-          </TabsContent>
-
-          {/* Strike Prices Tab */}
-          <TabsContent value="strike-prices" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">Strike Price Periods</h3>
-                <p className="text-sm text-muted-foreground">Configure the repurchase option periods and labels</p>
+                {item.is_deletable && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeItem(index)}
+                    className="shrink-0"
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
               </div>
-              <Button 
-                onClick={() => {
-                  const periods = getBlocksByType('bill_of_sale_strike_period');
-                  const nextOrder = periods.length + 1;
-                  const prevDays = periods.length > 0 
-                    ? parseInt(periods[periods.length - 1].content_english.split('|')[2] || '90', 10)
-                    : 0;
-                  addContentBlock({
-                    block_type: 'bill_of_sale_strike_period',
-                    content_english: `${prevDays + 1}-${prevDays + 30} Days|${prevDays + 1}-${prevDays + 30} நாட்கள்|${prevDays + 30}`,
-                    content_tamil: '',
-                    display_order: nextOrder
-                  });
-                }}
-                disabled={saving}
-              >
+            ))}
+            
+            <div className="flex gap-2 pt-4">
+              <Button variant="outline" onClick={addDeclaration} className="flex-1">
                 <Plus className="h-4 w-4 mr-2" />
-                Add Period
+                Add New Declaration
+              </Button>
+              <Button variant="outline" onClick={addStrikePeriod} className="flex-1">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Strike Period
               </Button>
             </div>
-
-            {/* Table Headers */}
-            <div className="space-y-4">
-              <h4 className="font-medium">Table Headers</h4>
-              {[
-                { type: 'bill_of_sale_strike_period_header', title: 'Period Column' },
-                { type: 'bill_of_sale_strike_price_header', title: 'Price Column' },
-                { type: 'bill_of_sale_strike_status_header', title: 'Status Column' },
-              ].map(({ type, title }) => {
-                const block = getBlockByType(type);
-                if (!block) return null;
-                const isEditing = editingBlock === block.id;
-                
-                return (
-                  <div key={type} className="flex items-center gap-4 p-3 border rounded-lg">
-                    <span className="w-32 text-sm font-medium">{title}</span>
-                    {isEditing ? (
-                      <>
-                        <Input
-                          value={editedValues.english}
-                          onChange={(e) => setEditedValues(prev => ({ ...prev, english: e.target.value }))}
-                          className="flex-1"
-                          placeholder="English"
-                        />
-                        <Input
-                          value={editedValues.tamil}
-                          onChange={(e) => setEditedValues(prev => ({ ...prev, tamil: e.target.value }))}
-                          className="flex-1"
-                          placeholder="Tamil"
-                        />
-                        <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>Save</Button>
-                        <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                      </>
-                    ) : (
-                      <>
-                        <span className="flex-1 text-sm">{block.content_english}</span>
-                        <span className="flex-1 text-sm text-muted-foreground">{block.content_tamil}</span>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                        >
-                          Edit
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <Separator />
-
-            {/* Strike Periods */}
-            <div className="space-y-4">
-              <h4 className="font-medium">Period Definitions</h4>
-              {getBlocksByType('bill_of_sale_strike_period').map((block, index) => {
-                const parts = block.content_english.split('|');
-                const labelEn = parts[0] || '';
-                const labelTa = parts[1] || '';
-                const days = parts[2] || '30';
-                const isEditing = editingBlock === block.id;
-
-                return (
-                  <div key={block.id} className="p-4 border rounded-lg space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                        <Badge variant="secondary">Period {index + 1}</Badge>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {currentContent.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Scale className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">No Bill of Sale content configured</p>
+                <p className="text-sm mt-1">Click "Load Default Content" to start with a template, or "Edit Content" to add your own</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {currentContent.map((item, index) => (
+                  <div key={item.id || index} className="p-3 border rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0">
+                        {index + 1}
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteContentBlock(block.id)}
-                        disabled={saving || getBlocksByType('bill_of_sale_strike_period').length <= 1}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
+                      <div className="flex-1">
+                        <p className="text-xs font-medium text-muted-foreground mb-1">{item.label}</p>
+                        <p className="text-sm">{item.content_english}</p>
+                        {item.content_tamil && (
+                          <p className="text-sm text-muted-foreground mt-1">{item.content_tamil}</p>
+                        )}
+                      </div>
                     </div>
-                    
-                    {isEditing ? (
-                      <>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="space-y-2">
-                            <Label>Label (English)</Label>
-                            <Input
-                              value={editedValues.english.split('|')[0] || ''}
-                              onChange={(e) => {
-                                const parts = editedValues.english.split('|');
-                                parts[0] = e.target.value;
-                                setEditedValues(prev => ({ ...prev, english: parts.join('|') }));
-                              }}
-                              placeholder="e.g., 0-30 Days"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Label (Tamil)</Label>
-                            <Input
-                              value={editedValues.english.split('|')[1] || ''}
-                              onChange={(e) => {
-                                const parts = editedValues.english.split('|');
-                                parts[1] = e.target.value;
-                                setEditedValues(prev => ({ ...prev, english: parts.join('|') }));
-                              }}
-                              placeholder="e.g., 0-30 நாட்கள்"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Days (End)</Label>
-                            <Input
-                              type="number"
-                              value={editedValues.english.split('|')[2] || '30'}
-                              onChange={(e) => {
-                                const parts = editedValues.english.split('|');
-                                parts[2] = e.target.value;
-                                setEditedValues(prev => ({ ...prev, english: parts.join('|') }));
-                              }}
-                              min={1}
-                            />
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEditing(block.id)} disabled={saving}>
-                            {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={cancelEditing}>Cancel</Button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-3 gap-4 text-sm">
-                          <div>
-                            <span className="text-muted-foreground">English:</span> {labelEn}
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Tamil:</span> {labelTa}
-                          </div>
-                          <div>
-                            <span className="text-muted-foreground">Up to day:</span> {days}
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => startEditing(block.id, block.content_english, block.content_tamil)}
-                        >
-                          Edit
-                        </Button>
-                      </>
-                    )}
                   </div>
-                );
-              })}
-            </div>
-
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Strike prices are calculated automatically based on the loan principal, interest rate, and the day ranges you define here.
-              </AlertDescription>
-            </Alert>
-          </TabsContent>
-        </Tabs>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
+}
+
+function getLabelForBlockType(blockType: string, order: number): string {
+  const labelMap: Record<string, string> = {
+    'bill_of_sale_title': 'Document Title',
+    'bill_of_sale_legal_ref': 'Legal Reference',
+    'bill_of_sale_seller_title': 'Seller Title',
+    'bill_of_sale_buyer_title': 'Buyer Title',
+    'bill_of_sale_goods_title': 'Goods Section Title',
+    'bill_of_sale_goods_intro': 'Goods Section Intro',
+    'bill_of_sale_consideration_title': 'Consideration Title',
+    'bill_of_sale_consideration_intro': 'Consideration Intro',
+    'bill_of_sale_spot_price_label': 'Spot Price Label',
+    'bill_of_sale_repurchase_title': 'Repurchase Title',
+    'bill_of_sale_repurchase_intro': 'Repurchase Intro',
+    'bill_of_sale_expiry_note': 'Expiry Note',
+    'bill_of_sale_declarations_title': 'Declarations Title',
+    'bill_of_sale_declaration': `Declaration`,
+    'bill_of_sale_signature_seller': 'Seller Signature Label',
+    'bill_of_sale_signature_seller_note': 'Seller Signature Note',
+    'bill_of_sale_signature_buyer': 'Buyer Signature Label',
+    'bill_of_sale_signature_buyer_note': 'Buyer Signature Note',
+    'bill_of_sale_strike_period_header': 'Strike Price Table: Period Header',
+    'bill_of_sale_strike_price_header': 'Strike Price Table: Price Header',
+    'bill_of_sale_strike_status_header': 'Strike Price Table: Status Header',
+    'bill_of_sale_strike_period': `Strike Period`,
+  };
+  return labelMap[blockType] || blockType;
 }
