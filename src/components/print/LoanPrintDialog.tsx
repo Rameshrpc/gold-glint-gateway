@@ -263,7 +263,7 @@ export function LoanPrintDialog({
             customer={customer}
             goldItems={goldItems}
             companyName={companyName}
-            companyAddress={client?.address || ''}
+            companyAddress={(client as any)?.address || ''}
             gstin={(client as any)?.gstin}
             stateCode={(client as any)?.state_code || '33'}
             branchName={branchName}
@@ -286,7 +286,7 @@ export function LoanPrintDialog({
               customer={customer}
               goldItems={goldItems}
               companyName={companyName}
-              companyAddress={client?.address || ''}
+              companyAddress={(client as any)?.address || ''}
               gstin={(client as any)?.gstin}
               stateCode={(client as any)?.state_code || '33'}
               branchName={branchName}
