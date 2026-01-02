@@ -2182,21 +2182,18 @@ export default function SaleAgreements() {
         )}
 
         {/* Customer Creation Dialog */}
-        <Dialog open={showCustomerDialog} onOpenChange={setShowCustomerDialog}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Seller</DialogTitle>
-            </DialogHeader>
-            <InlineCustomerForm
-              onSuccess={(customerId) => {
-                setSelectedCustomerId(customerId);
-                setShowCustomerDialog(false);
-                fetchCustomers();
-              }}
-              onCancel={() => setShowCustomerDialog(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <InlineCustomerForm
+          open={showCustomerDialog}
+          onClose={() => setShowCustomerDialog(false)}
+          onCustomerCreated={(customerId) => {
+            setSelectedCustomerId(customerId);
+            setShowCustomerDialog(false);
+            fetchCustomers();
+          }}
+          clientId={client?.id || ''}
+          branches={branches}
+          defaultBranchId={selectedBranchId}
+        />
 
         {/* Edit Dialog */}
         {editingAgreement && (
