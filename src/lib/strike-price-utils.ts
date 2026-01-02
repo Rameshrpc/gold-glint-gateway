@@ -2,6 +2,7 @@
 // This reframes loan transactions as trading transactions under Sale of Goods Act, 1930
 
 import { addDays, format } from 'date-fns';
+import { calculateInterest } from './interestCalculations';
 
 export interface StrikePeriodConfig {
   days: number;
@@ -60,16 +61,18 @@ export function parseStrikePeriod(contentEnglish: string | null, contentTamil: s
 
 /**
  * Calculate strike prices for Bill of Sale document
+ * Uses the same interest calculation logic as interest payments:
+ * Interest = (Principal × Rate × Days) / (100 × 365)
  * 
  * The strike price bundles:
  * - Original purchase price (principal)
- * - Trade margin (interest component)
- * - Admin fee (processing fee - first month only)
- * 
- * Customer sees only the final strike price, not the breakdown.
+ * - Trade margin at shown rate (visible component)
+ * - Differential margin (effective_rate - shown_rate) 
+ * - Processing fee (first period only)
  * 
  * @param principal - The spot purchase price (loan principal)
- * @param monthlyInterestRate - Interest rate per month (e.g., 2 for 2%)
+ * @param annualShownRate - Shown rate per annum (e.g., 18 for 18% p.a.)
+ * @param annualEffectiveRate - Effective rate per annum (e.g., 36 for 36% p.a.)
  * @param processingFeePercentage - One-time processing fee (e.g., 1 for 1%)
  * @param loanDate - Date of the transaction
  * @param tenureDays - Total option period in days (default 90)
@@ -77,7 +80,8 @@ export function parseStrikePeriod(contentEnglish: string | null, contentTamil: s
  */
 export function calculateStrikePrices(
   principal: number,
-  monthlyInterestRate: number,
+  annualShownRate: number,
+  annualEffectiveRate: number = annualShownRate,
   processingFeePercentage: number = 0,
   loanDate: string,
   tenureDays: number = 90,
@@ -85,107 +89,54 @@ export function calculateStrikePrices(
 ): StrikePriceCalculation {
   const startDate = new Date(loanDate);
   
-  // Calculate monthly trade margin (hidden as "interest")
-  const monthlyMargin = Math.round(principal * (monthlyInterestRate / 100));
-  
-  // One-time admin fee (processing fee)
-  const adminFee = Math.round(principal * (processingFeePercentage / 100));
+  // One-time processing fee (added to first period only)
+  const processingFee = Math.round(principal * (processingFeePercentage / 100));
   
   const strikePrices: StrikePriceRow[] = [];
   
   // Use custom periods if provided, otherwise use default 30-day intervals
-  if (customPeriods && customPeriods.length > 0) {
-    // Sort periods by days
-    const sortedPeriods = [...customPeriods].sort((a, b) => a.days - b.days);
-    
-    let previousDays = 0;
-    let cumulativePrice = principal + adminFee;
-    
-    sortedPeriods.forEach((period, index) => {
-      // Calculate number of 30-day intervals for this period
-      const daysInPeriod = period.days - previousDays;
-      const monthsForPeriod = Math.ceil(daysInPeriod / 30);
-      
-      // Add margin for the months in this period
-      if (index === 0) {
-        // First period includes first month margin
-        cumulativePrice += monthlyMargin;
-      } else {
-        // Subsequent periods add margin for the months elapsed
-        cumulativePrice += monthlyMargin * Math.max(1, monthsForPeriod);
-      }
-      
-      strikePrices.push({
-        periodLabel: period.labelEnglish,
-        periodLabelTamil: period.labelTamil,
-        periodDays: { from: previousDays, to: period.days },
-        strikePrice: cumulativePrice,
-        status: index === 0 ? 'active' : 'future',
-        expiryDate: format(addDays(startDate, period.days), 'dd/MM/yyyy'),
-      });
-      
-      previousDays = period.days;
-    });
-  } else {
-    // Default: 30-day intervals
-    // 0-30 Days: Principal + 1 month margin + admin fee
-    const price30 = principal + monthlyMargin + adminFee;
-    strikePrices.push({
-      periodLabel: '0 - 30 Days',
-      periodLabelTamil: '0 - 30 நாட்கள்',
-      periodDays: { from: 0, to: 30 },
-      strikePrice: price30,
-      status: 'active',
-      expiryDate: format(addDays(startDate, 30), 'dd/MM/yyyy'),
-    });
-    
-    // 31-60 Days: Previous + 1 month margin
-    const price60 = price30 + monthlyMargin;
-    strikePrices.push({
-      periodLabel: '31 - 60 Days',
-      periodLabelTamil: '31 - 60 நாட்கள்',
-      periodDays: { from: 31, to: 60 },
-      strikePrice: price60,
-      status: 'future',
-      expiryDate: format(addDays(startDate, 60), 'dd/MM/yyyy'),
-    });
-    
-    // 61-90 Days: Previous + 1 month margin
-    const price90 = price60 + monthlyMargin;
-    strikePrices.push({
-      periodLabel: '61 - 90 Days',
-      periodLabelTamil: '61 - 90 நாட்கள்',
-      periodDays: { from: 61, to: 90 },
-      strikePrice: price90,
-      status: 'future',
-      expiryDate: format(addDays(startDate, 90), 'dd/MM/yyyy'),
-    });
-    
-    // If tenure is longer than 90 days, add additional periods
-    if (tenureDays > 90) {
-      const additionalMonths = Math.ceil((tenureDays - 90) / 30);
-      let previousPrice = price90;
-      
-      for (let i = 0; i < additionalMonths; i++) {
-        const startDay = 91 + (i * 30);
-        const endDay = Math.min(startDay + 29, tenureDays);
-        const newPrice = previousPrice + monthlyMargin;
-        
-        strikePrices.push({
-          periodLabel: `${startDay} - ${endDay} Days`,
-          periodLabelTamil: `${startDay} - ${endDay} நாட்கள்`,
-          periodDays: { from: startDay, to: endDay },
-          strikePrice: newPrice,
-          status: 'future',
-          expiryDate: format(addDays(startDate, endDay), 'dd/MM/yyyy'),
-        });
-        
-        previousPrice = newPrice;
-      }
-    }
-  }
+  const periods = customPeriods && customPeriods.length > 0
+    ? [...customPeriods].sort((a, b) => a.days - b.days)
+    : getDefaultPeriods(tenureDays);
   
-  const expiryDate = format(addDays(startDate, tenureDays), 'dd/MM/yyyy');
+  let previousDays = 0;
+  
+  periods.forEach((period, index) => {
+    // Calculate trade margin for the cumulative days using interest formula
+    // Trade Margin = (Principal × Rate × Days) / (100 × 365)
+    const cumulativeDays = period.days;
+    
+    // Calculate shown margin (customer sees this rate)
+    const shownMargin = calculateInterest(principal, annualShownRate, cumulativeDays);
+    
+    // Calculate differential margin (hidden component: effective - shown)
+    const differentialRate = annualEffectiveRate - annualShownRate;
+    const differentialMargin = differentialRate > 0 
+      ? calculateInterest(principal, differentialRate, cumulativeDays) 
+      : 0;
+    
+    // Total trade margin = shown + differential
+    const totalTradeMargin = shownMargin + differentialMargin;
+    
+    // Strike Price = Principal + Total Trade Margin + Processing Fee (first period only)
+    const strikePrice = principal + Math.round(totalTradeMargin) + (index === 0 ? processingFee : processingFee);
+    
+    strikePrices.push({
+      periodLabel: period.labelEnglish,
+      periodLabelTamil: period.labelTamil,
+      periodDays: { from: previousDays, to: period.days },
+      strikePrice: Math.round(strikePrice),
+      status: index === 0 ? 'active' : 'future',
+      expiryDate: format(addDays(startDate, period.days), 'dd/MM/yyyy'),
+    });
+    
+    previousDays = period.days;
+  });
+  
+  const finalExpiry = periods.length > 0 
+    ? periods[periods.length - 1].days 
+    : tenureDays;
+  const expiryDate = format(addDays(startDate, finalExpiry), 'dd/MM/yyyy');
   
   return {
     spotPurchasePrice: principal,
@@ -193,6 +144,47 @@ export function calculateStrikePrices(
     expiryDate,
     agreementRef: '', // Will be set by the caller using loan number
   };
+}
+
+/**
+ * Get default strike periods based on tenure
+ */
+function getDefaultPeriods(tenureDays: number): StrikePeriodConfig[] {
+  const periods: StrikePeriodConfig[] = [];
+  
+  // Standard 30-day intervals up to tenure
+  let currentDays = 30;
+  let periodNum = 1;
+  
+  while (currentDays <= tenureDays && periodNum <= 6) {
+    const startDay = (periodNum - 1) * 30 + 1;
+    if (periodNum === 1) {
+      periods.push({
+        labelEnglish: `0 - ${currentDays} Days`,
+        labelTamil: `0 - ${currentDays} நாட்கள்`,
+        days: currentDays,
+      });
+    } else {
+      periods.push({
+        labelEnglish: `${startDay} - ${currentDays} Days`,
+        labelTamil: `${startDay} - ${currentDays} நாட்கள்`,
+        days: currentDays,
+      });
+    }
+    currentDays += 30;
+    periodNum++;
+  }
+  
+  // If tenure doesn't align with 30-day intervals, add final period
+  if (tenureDays > 0 && periods.length === 0) {
+    periods.push({
+      labelEnglish: `0 - ${tenureDays} Days`,
+      labelTamil: `0 - ${tenureDays} நாட்கள்`,
+      days: tenureDays,
+    });
+  }
+  
+  return periods;
 }
 
 /**
@@ -216,4 +208,22 @@ export function formatCurrencyForSale(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+/**
+ * Parse scheme strike periods from JSONB format
+ */
+export function parseSchemeStrikePeriods(strikePeriods: unknown): StrikePeriodConfig[] | undefined {
+  if (!strikePeriods || !Array.isArray(strikePeriods)) {
+    return undefined;
+  }
+  
+  return strikePeriods
+    .map((period: any) => ({
+      days: typeof period.days === 'number' ? period.days : parseInt(period.days, 10),
+      labelEnglish: period.label_en || period.labelEnglish || `0-${period.days} Days`,
+      labelTamil: period.label_ta || period.labelTamil || `0-${period.days} நாட்கள்`,
+    }))
+    .filter(p => !isNaN(p.days) && p.days > 0)
+    .sort((a, b) => a.days - b.days);
 }

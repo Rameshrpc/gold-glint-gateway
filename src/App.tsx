@@ -27,6 +27,8 @@ import Approvals from "./pages/Approvals";
 import ItemGroups from "./pages/ItemGroups";
 import Reloan from "./pages/Reloan";
 import Auction from "./pages/Auction";
+import SaleAgreements from "./pages/SaleAgreements";
+import SaleSchemes from "./pages/SaleSchemes";
 import MarketRates from "./pages/MarketRates";
 import BanksNbfc from "./pages/BanksNbfc";
 import Loyalties from "./pages/Loyalties";
@@ -89,6 +91,11 @@ const App = () => (
             <Route path="/item-groups" element={<ProtectedRoute><ItemGroups /></ProtectedRoute>} />
             <Route path="/market-rates" element={<ProtectedRoute><MarketRates /></ProtectedRoute>} />
             <Route path="/auction" element={<ProtectedRoute><Auction /></ProtectedRoute>} />
+            
+            {/* Sale Agreements (Trading Format) */}
+            <Route path="/sale-agreements" element={<ProtectedRoute><SaleAgreements /></ProtectedRoute>} />
+            <Route path="/sale-schemes" element={<ProtectedRoute><SaleSchemes /></ProtectedRoute>} />
+            
             <Route path="/banks-nbfc" element={<ProtectedRoute><BanksNbfc /></ProtectedRoute>} />
             <Route path="/loyalties" element={<ProtectedRoute><Loyalties /></ProtectedRoute>} />
             <Route path="/gold-vault" element={<ProtectedRoute><GoldVault /></ProtectedRoute>} />

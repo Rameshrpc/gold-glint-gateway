@@ -1880,6 +1880,7 @@ export type Database = {
           status: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
           total_interest_paid: number | null
+          transaction_type: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1923,6 +1924,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
           total_interest_paid?: number | null
+          transaction_type?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1966,6 +1968,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days?: number
           total_interest_paid?: number | null
+          transaction_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -3276,7 +3279,9 @@ export type Database = {
           rate_per_gram: number | null
           scheme_code: string
           scheme_name: string
+          scheme_type: string | null
           shown_rate: number
+          strike_periods: Json | null
           updated_at: string | null
         }
         Insert: {
@@ -3303,7 +3308,9 @@ export type Database = {
           rate_per_gram?: number | null
           scheme_code: string
           scheme_name: string
+          scheme_type?: string | null
           shown_rate?: number
+          strike_periods?: Json | null
           updated_at?: string | null
         }
         Update: {
@@ -3330,7 +3337,9 @@ export type Database = {
           rate_per_gram?: number | null
           scheme_code?: string
           scheme_name?: string
+          scheme_type?: string | null
           shown_rate?: number
+          strike_periods?: Json | null
           updated_at?: string | null
         }
         Relationships: [
