@@ -380,10 +380,15 @@ export function BillOfSalePDF({
   const processingFeePercent = loan.processing_fee 
     ? (loan.processing_fee / loan.principal_amount) * 100 
     : 0;
+  
+  // Use effective rate if provided, otherwise use interest_rate for both
+  const shownRate = loan.interest_rate;
+  const effectiveRate = loan.interest_rate; // Could be passed as prop if needed
     
   const strikePriceData = calculateStrikePrices(
     loan.principal_amount,
-    loan.interest_rate,
+    shownRate,
+    effectiveRate,
     processingFeePercent,
     loan.loan_date,
     loan.tenure_days,

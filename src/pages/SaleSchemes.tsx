@@ -308,7 +308,7 @@ export default function SaleSchemes() {
                       <TableCell className="text-right">{scheme.effective_rate}%</TableCell>
                       <TableCell className="text-right">₹{scheme.rate_22kt?.toLocaleString() || '-'}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="secondary">{scheme.strike_periods?.length || 3}</Badge>
+                        <Badge variant="secondary">{Array.isArray(scheme.strike_periods) ? scheme.strike_periods.length : 3}</Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
