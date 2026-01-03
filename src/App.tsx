@@ -28,6 +28,8 @@ import ItemGroups from "./pages/ItemGroups";
 import Reloan from "./pages/Reloan";
 import Auction from "./pages/Auction";
 import SaleAgreements from "./pages/SaleAgreements";
+import SaleMarginRenewal from "./pages/SaleMarginRenewal";
+import SaleRepurchase from "./pages/SaleRepurchase";
 import SaleSchemes from "./pages/SaleSchemes";
 import MarketRates from "./pages/MarketRates";
 import BanksNbfc from "./pages/BanksNbfc";
@@ -95,6 +97,8 @@ const App = () => (
             {/* Sale Agreements (Trading Format) */}
             <Route path="/sale-agreements" element={<ProtectedRoute><SaleAgreements /></ProtectedRoute>} />
             <Route path="/sale-schemes" element={<ProtectedRoute><SaleSchemes /></ProtectedRoute>} />
+            <Route path="/sale-margin-renewal" element={<ProtectedRoute><SaleMarginRenewal /></ProtectedRoute>} />
+            <Route path="/sale-repurchase" element={<ProtectedRoute><SaleRepurchase /></ProtectedRoute>} />
             
             <Route path="/banks-nbfc" element={<ProtectedRoute><BanksNbfc /></ProtectedRoute>} />
             <Route path="/loyalties" element={<ProtectedRoute><Loyalties /></ProtectedRoute>} />

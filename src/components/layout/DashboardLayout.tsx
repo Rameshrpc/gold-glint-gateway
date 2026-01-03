@@ -89,6 +89,8 @@ const menuGroups: MenuGroup[] = [
     icon: Receipt,
     items: [
       { title: 'Agreements', icon: FileText, href: '/sale-agreements' },
+      { title: 'Margin Renewal', icon: CreditCard, href: '/sale-margin-renewal' },
+      { title: 'Repurchase', icon: Wallet, href: '/sale-repurchase' },
       { title: 'Sale Schemes', icon: Coins, href: '/sale-schemes', roles: ['super_admin', 'moderator', 'tenant_admin'] },
     ]
   },
