@@ -23,6 +23,7 @@ interface TrackedLoan {
   loan_date: string;
   principal_amount: number;
   customer_name: string;
+  transaction_type: string | null;
   gold_items: GoldItemWithTracking[];
   total_items: number;
   in_vault_count: number;
@@ -31,9 +32,10 @@ interface TrackedLoan {
 
 interface LoanTrackingViewProps {
   searchQuery: string;
+  transactionType?: 'loan' | 'sale_agreement' | 'all';
 }
 
-export default function LoanTrackingView({ searchQuery }: LoanTrackingViewProps) {
+export default function LoanTrackingView({ searchQuery, transactionType = 'all' }: LoanTrackingViewProps) {
   const { client } = useAuth();
   const [loading, setLoading] = useState(true);
   const [trackedLoans, setTrackedLoans] = useState<TrackedLoan[]>([]);
@@ -49,16 +51,18 @@ export default function LoanTrackingView({ searchQuery }: LoanTrackingViewProps)
 
     try {
       // Fetch all active loans with their gold items
-      const { data: loans, error } = await supabase
+      let query = supabase
         .from('loans')
         .select(`
-          id, loan_number, loan_date, principal_amount,
+          id, loan_number, loan_date, principal_amount, transaction_type,
           customer:customers(full_name),
           gold_items(id, item_type, net_weight_grams, appraised_value, is_repledged, repledge_packet_id)
         `)
         .eq('client_id', client.id)
         .eq('status', 'active')
         .order('loan_date', { ascending: false });
+
+      const { data: loans, error } = await query;
 
       if (error) throw error;
 
@@ -100,6 +104,7 @@ export default function LoanTrackingView({ searchQuery }: LoanTrackingViewProps)
           loan_date: loan.loan_date,
           principal_amount: loan.principal_amount,
           customer_name: (loan.customer as any)?.full_name || 'Unknown',
+          transaction_type: (loan as any).transaction_type || null,
           gold_items: goldItems,
           total_items: goldItems.length,
           in_vault_count: inVaultCount,
@@ -133,10 +138,15 @@ export default function LoanTrackingView({ searchQuery }: LoanTrackingViewProps)
     }).format(amount);
   };
 
-  const filteredLoans = trackedLoans.filter(loan =>
-    loan.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    loan.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredLoans = trackedLoans.filter(loan => {
+    const matchesSearch = loan.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loan.customer_name.toLowerCase().includes(searchQuery.toLowerCase());
+    if (transactionType === 'all') return matchesSearch;
+    if (transactionType === 'loan') {
+      return matchesSearch && loan.transaction_type !== 'sale_agreement';
+    }
+    return matchesSearch && loan.transaction_type === 'sale_agreement';
+  });
 
   const getStatusBadge = (loan: TrackedLoan) => {
     if (loan.repledged_count === 0) {
