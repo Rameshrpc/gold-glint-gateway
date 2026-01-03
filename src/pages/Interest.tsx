@@ -157,6 +157,7 @@ export default function Interest() {
         `)
         .eq('client_id', client.id)
         .in('status', ['active', 'overdue'])
+        .or('transaction_type.is.null,transaction_type.neq.sale_agreement')
         .order('loan_date', { ascending: false });
 
       if (error) throw error;

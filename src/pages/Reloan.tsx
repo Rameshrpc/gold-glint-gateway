@@ -256,7 +256,7 @@ export default function Reloan() {
 
       const customerIds = matchingCustomers?.map(c => c.id) || [];
 
-      // Build loans query
+      // Build loans query - exclude sale agreements (they don't support reloan)
       let loansQuery = supabase
         .from('loans')
         .select(`
@@ -265,7 +265,8 @@ export default function Reloan() {
           scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .or('transaction_type.is.null,transaction_type.neq.sale_agreement');
 
       // Search by loan_number OR by matching customer IDs
       if (customerIds.length > 0) {
