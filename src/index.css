@@ -11,44 +11,46 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Professional Light Theme - Warm, clean aesthetic */
+    --background: 40 25% 97%;
+    --foreground: 25 30% 12%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 40 20% 99%;
+    --card-foreground: 25 30% 12%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 40 20% 99%;
+    --popover-foreground: 25 30% 12%;
 
     --primary: 32 95% 44%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 35 20% 93%;
+    --secondary-foreground: 25 25% 20%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 40%;
+    --muted: 35 15% 94%;
+    --muted-foreground: 25 15% 45%;
 
-    --accent: 45 93% 47%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 38 85% 52%;
+    --accent-foreground: 25 30% 12%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 35 20% 88%;
+    --input: 35 20% 90%;
     --ring: 32 95% 44%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    /* Sidebar - Warm cream with gold accents */
+    --sidebar-background: 38 30% 95%;
+    --sidebar-foreground: 25 25% 25%;
+    --sidebar-primary: 32 95% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 38 25% 90%;
+    --sidebar-accent-foreground: 25 25% 20%;
+    --sidebar-border: 35 20% 85%;
+    --sidebar-ring: 32 95% 44%;
 
     /* Mobile-specific design tokens */
     --mobile-nav-height: 64px;
@@ -56,27 +58,27 @@ All colors MUST be HSL.
     --safe-area-top: env(safe-area-inset-top);
     --safe-area-bottom: env(safe-area-inset-bottom);
 
-    /* Mobile gradients - Gold/Finance theme */
+    /* Gradients - Gold/Finance theme */
     --gradient-primary-start: 32 95% 44%;
     --gradient-primary-end: 45 93% 47%;
-    --gradient-secondary-start: 222 47% 11%;
-    --gradient-secondary-end: 217 33% 17%;
+    --gradient-secondary-start: 38 30% 95%;
+    --gradient-secondary-end: 35 25% 92%;
     
     /* Glassmorphism */
-    --glass-background: 0 0% 100% / 0.7;
-    --glass-border: 0 0% 100% / 0.2;
+    --glass-background: 40 25% 99% / 0.85;
+    --glass-border: 35 20% 80% / 0.3;
     --glass-blur: 12px;
     
-    /* Mobile shadows */
-    --shadow-mobile-sm: 0 2px 8px -2px hsl(0 0% 0% / 0.1);
-    --shadow-mobile-md: 0 4px 16px -4px hsl(0 0% 0% / 0.12);
-    --shadow-mobile-lg: 0 8px 32px -8px hsl(0 0% 0% / 0.15);
-    --shadow-mobile-glow: 0 0 20px hsl(var(--gradient-primary-start) / 0.3);
+    /* Shadows - Warmer tones */
+    --shadow-mobile-sm: 0 2px 8px -2px hsl(25 30% 20% / 0.08);
+    --shadow-mobile-md: 0 4px 16px -4px hsl(25 30% 20% / 0.1);
+    --shadow-mobile-lg: 0 8px 32px -8px hsl(25 30% 20% / 0.12);
+    --shadow-mobile-glow: 0 0 20px hsl(var(--gradient-primary-start) / 0.25);
 
     /* Status colors */
     --status-success: 142 71% 45%;
     --status-warning: 38 92% 50%;
-    --status-error: 0 84% 60%;
+    --status-error: 0 72% 51%;
     --status-info: 217 91% 60%;
   }
 

@@ -1,4 +1,4 @@
-import { Moon, Sun, Monitor } from "lucide-react";
+import { Moon, Sun, Monitor, Check } from "lucide-react";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,15 +7,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 export function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
-
-  const getThemeLabel = () => {
-    if (theme === "system") return "System";
-    if (theme === "dark") return "Dark";
-    return "Light";
-  };
 
   const getCurrentIcon = () => {
     if (theme === "system") return Monitor;
@@ -25,27 +20,41 @@ export function ThemeToggle() {
 
   const CurrentIcon = getCurrentIcon();
 
+  const themes = [
+    { value: "light", label: "Light", icon: Sun },
+    { value: "dark", label: "Dark", icon: Moon },
+    { value: "system", label: "System", icon: Monitor },
+  ] as const;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-9 gap-2 px-3">
-          <CurrentIcon className="h-4 w-4" />
-          <span className="text-sm font-medium">{getThemeLabel()}</span>
+        <Button 
+          variant="outline" 
+          size="icon"
+          className="h-9 w-9 border-border/50 bg-background/50 backdrop-blur-sm hover:bg-accent/50 transition-all duration-200"
+        >
+          <CurrentIcon className="h-4 w-4 text-foreground/80" />
+          <span className="sr-only">Toggle theme</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          <Sun className="mr-2 h-4 w-4" />
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          <Moon className="mr-2 h-4 w-4" />
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          <Monitor className="mr-2 h-4 w-4" />
-          System
-        </DropdownMenuItem>
+      <DropdownMenuContent align="end" className="w-36">
+        {themes.map(({ value, label, icon: Icon }) => (
+          <DropdownMenuItem 
+            key={value}
+            onClick={() => setTheme(value)}
+            className={cn(
+              "flex items-center justify-between cursor-pointer",
+              theme === value && "bg-accent"
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Icon className="h-4 w-4" />
+              {label}
+            </span>
+            {theme === value && <Check className="h-4 w-4 text-primary" />}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
