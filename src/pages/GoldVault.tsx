@@ -94,11 +94,14 @@ interface InVaultLoan {
   loan_date: string;
   principal_amount: number;
   status: string;
+  transaction_type: string | null;
   customer?: { full_name: string };
   gold_items?: GoldItemDetail[];
   in_vault_items: number;
   total_items: number;
 }
+
+type VaultViewMode = 'loans' | 'sale_agreements';
 
 interface BankNbfc {
   id: string;
@@ -130,6 +133,7 @@ export default function GoldVault() {
   const [loyalties, setLoyalties] = useState<Loyalty[]>([]);
   const [loyaltyBankAccounts, setLoyaltyBankAccounts] = useState<LoyaltyBankAccount[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [vaultViewMode, setVaultViewMode] = useState<VaultViewMode>('loans');
 
   // Create packet dialog
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -229,7 +233,7 @@ export default function GoldVault() {
     const { data, error } = await supabase
       .from('loans')
       .select(`
-        id, loan_number, loan_date, principal_amount, status, 
+        id, loan_number, loan_date, principal_amount, status, transaction_type,
         customer:customers(full_name), 
         gold_items(id, net_weight_grams, appraised_value, is_repledged, repledge_packet_id)
       `)
@@ -249,6 +253,7 @@ export default function GoldVault() {
         const inVaultItems = items.filter((item: any) => !item.is_repledged);
         return {
           ...loan,
+          transaction_type: loan.transaction_type,
           gold_items: items as GoldItemDetail[],
           in_vault_items: inVaultItems.length,
           total_items: items.length
@@ -663,18 +668,29 @@ export default function GoldVault() {
     p.bank_reference_number?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredInVault = inVaultLoans.filter(l =>
-    l.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    l.customer?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filter by transaction type and search query
+  const filteredInVault = inVaultLoans.filter(l => {
+    const matchesSearch = l.loan_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      l.customer?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = vaultViewMode === 'loans' 
+      ? l.transaction_type !== 'sale_agreement'
+      : l.transaction_type === 'sale_agreement';
+    return matchesSearch && matchesType;
+  });
+
+  // Calculate stats from item-level data (filtered by view mode)
+  const filteredLoansForStats = inVaultLoans.filter(l => 
+    vaultViewMode === 'loans' 
+      ? l.transaction_type !== 'sale_agreement'
+      : l.transaction_type === 'sale_agreement'
   );
 
-  // Calculate stats from item-level data
-  const inVaultItemsWeight = inVaultLoans.reduce((sum, l) => {
+  const inVaultItemsWeight = filteredLoansForStats.reduce((sum, l) => {
     const vaultItems = l.gold_items?.filter(g => !g.is_repledged) || [];
     return sum + vaultItems.reduce((s, i) => s + i.net_weight_grams, 0);
   }, 0);
 
-  const inVaultItemsValue = inVaultLoans.reduce((sum, l) => {
+  const inVaultItemsValue = filteredLoansForStats.reduce((sum, l) => {
     const vaultItems = l.gold_items?.filter(g => !g.is_repledged) || [];
     return sum + vaultItems.reduce((s, i) => s + i.appraised_value, 0);
   }, 0);
@@ -866,12 +882,30 @@ export default function GoldVault() {
                 </TabsContent>
 
                 <TabsContent value="in-vault">
+                  {/* Toggle between Loans and Sale Agreements */}
+                  <div className="flex items-center gap-2 mb-4">
+                    <Button
+                      size="sm"
+                      variant={vaultViewMode === 'loans' ? 'default' : 'outline'}
+                      onClick={() => setVaultViewMode('loans')}
+                    >
+                      Loan Collateral
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={vaultViewMode === 'sale_agreements' ? 'default' : 'outline'}
+                      onClick={() => setVaultViewMode('sale_agreements')}
+                    >
+                      Purchased Goods
+                    </Button>
+                  </div>
+                  
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Loan #</TableHead>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Loan Date</TableHead>
+                        <TableHead>{vaultViewMode === 'loans' ? 'Loan #' : 'Agreement #'}</TableHead>
+                        <TableHead>{vaultViewMode === 'loans' ? 'Customer' : 'Seller'}</TableHead>
+                        <TableHead>{vaultViewMode === 'loans' ? 'Loan Date' : 'Purchase Date'}</TableHead>
                         <TableHead>Items in Vault</TableHead>
                         <TableHead>Vault Gold (g)</TableHead>
                         <TableHead>Vault Value</TableHead>
@@ -883,7 +917,10 @@ export default function GoldVault() {
                       {filteredInVault.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                            No loans with items in vault
+                            {vaultViewMode === 'loans' 
+                              ? 'No loans with items in vault'
+                              : 'No purchased goods in custody'
+                            }
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -908,11 +945,11 @@ export default function GoldVault() {
                               <TableCell>
                                 {isPartial ? (
                                   <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400">
-                                    Partial in Vault
+                                    {vaultViewMode === 'loans' ? 'Partial in Vault' : 'Partial Custody'}
                                   </Badge>
                                 ) : (
                                   <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
-                                    Fully in Vault
+                                    {vaultViewMode === 'loans' ? 'Fully in Vault' : 'Full Custody'}
                                   </Badge>
                                 )}
                               </TableCell>

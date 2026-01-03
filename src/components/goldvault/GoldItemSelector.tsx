@@ -38,12 +38,14 @@ interface GoldItemSelectorProps {
   clientId: string;
   selectedItems: SelectedItem[];
   onSelectionChange: (items: SelectedItem[]) => void;
+  transactionType?: 'loan' | 'sale_agreement' | 'all';
 }
 
 export default function GoldItemSelector({
   clientId,
   selectedItems,
   onSelectionChange,
+  transactionType = 'all',
 }: GoldItemSelectorProps) {
   const [loansWithItems, setLoansWithItems] = useState<LoanWithItems[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,12 +60,13 @@ export default function GoldItemSelector({
 
     try {
       // Fetch active loans with gold items
-      const { data: loans, error } = await supabase
+      let query = supabase
         .from('loans')
         .select(`
           id, 
           loan_number, 
           principal_amount,
+          transaction_type,
           customer:customers(full_name),
           gold_items(
             id, 
@@ -79,6 +82,8 @@ export default function GoldItemSelector({
         .eq('client_id', clientId)
         .eq('status', 'active')
         .order('loan_date', { ascending: false });
+
+      const { data: loans, error } = await query;
 
       if (error) throw error;
 
@@ -104,6 +109,14 @@ export default function GoldItemSelector({
 
       // Transform to LoanWithItems format, filtering loans that have available items
       const transformedLoans: LoanWithItems[] = (loans || [])
+        .filter(loan => {
+          // Filter by transaction type if specified
+          if (transactionType === 'all') return true;
+          if (transactionType === 'loan') {
+            return loan.transaction_type !== 'sale_agreement';
+          }
+          return loan.transaction_type === 'sale_agreement';
+        })
         .map(loan => {
           const goldItems: GoldItem[] = (loan.gold_items || []).map(gi => ({
             id: gi.id,
