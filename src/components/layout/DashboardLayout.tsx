@@ -411,6 +411,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content */}
       <main className="lg:pl-64 pt-14 lg:pt-0 min-h-screen">
+        {/* Desktop Header - Theme Toggle */}
+        <div className="hidden lg:flex fixed top-4 right-6 z-30 items-center gap-3">
+          <ThemeToggle />
+        </div>
+
         {/* No Role Warning Banner */}
         {roles.length === 0 && (
           <div className="bg-destructive/10 border-b border-destructive/20 px-4 py-2">
