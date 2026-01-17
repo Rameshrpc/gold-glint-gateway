@@ -14,7 +14,10 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer, FileSpreadsheet, CheckSquare, X } from 'lucide-react';
+import { Plus, FileText, Search, Eye, Trash2, ChevronDown, ChevronUp, IndianRupee, Calculator, Package, User, Settings, UserPlus, Camera, Pencil, Banknote, Printer, FileSpreadsheet, CheckSquare, X, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -178,6 +181,7 @@ export default function Loans() {
   const [goldItems, setGoldItems] = useState<GoldItem[]>([]);
   const [tenureDays, setTenureDays] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [selectedLoanDate, setSelectedLoanDate] = useState<Date>(new Date());
   
   // Image captures
   const [jewelPhotoUrl, setJewelPhotoUrl] = useState<string | null>(null);
@@ -418,6 +422,7 @@ export default function Loans() {
     setPaymentEntries([{ mode: 'cash', amount: '', reference: '', sourceType: 'cash', sourceBankId: '', sourceAccountId: '', selectedLoyaltyId: '' }]);
     setUserDocumentChargesPercent('');
     setApprovedLoanAmount('');
+    setSelectedLoanDate(new Date());
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -649,7 +654,7 @@ export default function Loans() {
       // Otherwise: status = 'pending'
       const approvalStatus = (!approvalRequired || userCanAutoApprove) ? 'approved' : 'pending';
       
-      const loanDate = new Date();
+      const loanDate = selectedLoanDate;
       const maturityDate = addDays(loanDate, parseInt(tenureDays));
       const nextInterestDueDate = addMonths(loanDate, loanCalculation.scheme.advance_interest_months || 3);
 
@@ -1036,7 +1041,7 @@ export default function Loans() {
                     <User className="h-4 w-4 text-amber-600" />
                     Customer, Branch & Agent
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="space-y-2">
                       <Label>Customer *</Label>
                       <div className="flex gap-2">
@@ -1126,6 +1131,33 @@ export default function Loans() {
                           ))}
                         </SelectContent>
                       </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Loan Date *</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full justify-start text-left font-normal",
+                              !selectedLoanDate && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedLoanDate ? format(selectedLoanDate, "dd/MM/yyyy") : <span>Pick a date</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={selectedLoanDate}
+                            onSelect={(date) => date && setSelectedLoanDate(date)}
+                            disabled={(date) => date > new Date()}
+                            initialFocus
+                            className={cn("p-3 pointer-events-auto")}
+                          />
+                        </PopoverContent>
+                      </Popover>
                     </div>
                     <div className="space-y-2">
                       <Label>Agent (Referral)</Label>
