@@ -572,8 +572,8 @@ export default function Loans() {
     // Processing fee on the final approved amount
     const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
 
-    // Net cash to customer = Total Appraised Value - Advance Interest - Interest Adjustment (differential)
-    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - advanceCalc.differential;
+    // Net cash to customer = Total Appraised Value - Advance Interest - (Interest Adjustment × 0.5) - Document Charges
+    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - (advanceCalc.differential * 0.5) - documentCharges;
     
     // Calculate rebate schedule for display
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
