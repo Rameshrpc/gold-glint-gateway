@@ -1876,6 +1876,7 @@ export type Database = {
           rebate_days: number | null
           remarks: string | null
           scheme_id: string
+          scheme_version_id: string | null
           shown_principal: number | null
           status: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
@@ -1920,6 +1921,7 @@ export type Database = {
           rebate_days?: number | null
           remarks?: string | null
           scheme_id: string
+          scheme_version_id?: string | null
           shown_principal?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days: number
@@ -1964,6 +1966,7 @@ export type Database = {
           rebate_days?: number | null
           remarks?: string | null
           scheme_id?: string
+          scheme_version_id?: string | null
           shown_principal?: number | null
           status?: Database["public"]["Enums"]["loan_status"]
           tenure_days?: number
@@ -2033,6 +2036,13 @@ export type Database = {
             columns: ["scheme_id"]
             isOneToOne: false
             referencedRelation: "schemes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_scheme_version_id_fkey"
+            columns: ["scheme_version_id"]
+            isOneToOne: false
+            referencedRelation: "scheme_versions"
             referencedColumns: ["id"]
           },
         ]
@@ -3254,11 +3264,117 @@ export type Database = {
           },
         ]
       }
+      scheme_versions: {
+        Row: {
+          advance_interest_months: number
+          change_reason: string | null
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          document_charges: number | null
+          effective_from: string
+          effective_rate: number | null
+          effective_to: string | null
+          grace_period_days: number | null
+          id: string
+          interest_rate: number
+          ltv_percentage: number
+          max_amount: number
+          max_tenure_days: number
+          min_amount: number
+          min_tenure_days: number
+          minimum_days: number
+          penalty_rate: number | null
+          processing_fee_percentage: number | null
+          rate_18kt: number | null
+          rate_22kt: number | null
+          rate_per_gram: number | null
+          scheme_id: string
+          shown_rate: number
+          strike_periods: Json | null
+          version_number: number
+        }
+        Insert: {
+          advance_interest_months?: number
+          change_reason?: string | null
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          document_charges?: number | null
+          effective_from?: string
+          effective_rate?: number | null
+          effective_to?: string | null
+          grace_period_days?: number | null
+          id?: string
+          interest_rate: number
+          ltv_percentage?: number
+          max_amount?: number
+          max_tenure_days?: number
+          min_amount?: number
+          min_tenure_days?: number
+          minimum_days?: number
+          penalty_rate?: number | null
+          processing_fee_percentage?: number | null
+          rate_18kt?: number | null
+          rate_22kt?: number | null
+          rate_per_gram?: number | null
+          scheme_id: string
+          shown_rate?: number
+          strike_periods?: Json | null
+          version_number?: number
+        }
+        Update: {
+          advance_interest_months?: number
+          change_reason?: string | null
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          document_charges?: number | null
+          effective_from?: string
+          effective_rate?: number | null
+          effective_to?: string | null
+          grace_period_days?: number | null
+          id?: string
+          interest_rate?: number
+          ltv_percentage?: number
+          max_amount?: number
+          max_tenure_days?: number
+          min_amount?: number
+          min_tenure_days?: number
+          minimum_days?: number
+          penalty_rate?: number | null
+          processing_fee_percentage?: number | null
+          rate_18kt?: number | null
+          rate_22kt?: number | null
+          rate_per_gram?: number | null
+          scheme_id?: string
+          shown_rate?: number
+          strike_periods?: Json | null
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheme_versions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheme_versions_scheme_id_fkey"
+            columns: ["scheme_id"]
+            isOneToOne: false
+            referencedRelation: "schemes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       schemes: {
         Row: {
           advance_interest_months: number
           client_id: string
           created_at: string | null
+          current_version_id: string | null
           description: string | null
           document_charges: number | null
           effective_rate: number | null
@@ -3288,6 +3404,7 @@ export type Database = {
           advance_interest_months?: number
           client_id: string
           created_at?: string | null
+          current_version_id?: string | null
           description?: string | null
           document_charges?: number | null
           effective_rate?: number | null
@@ -3317,6 +3434,7 @@ export type Database = {
           advance_interest_months?: number
           client_id?: string
           created_at?: string | null
+          current_version_id?: string | null
           description?: string | null
           document_charges?: number | null
           effective_rate?: number | null
@@ -3348,6 +3466,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schemes_current_version_id_fkey"
+            columns: ["current_version_id"]
+            isOneToOne: false
+            referencedRelation: "scheme_versions"
             referencedColumns: ["id"]
           },
         ]
