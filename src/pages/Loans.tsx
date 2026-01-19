@@ -28,7 +28,7 @@ import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
-import LoanEditDialog from '@/components/loans/LoanEditDialog';
+
 import { LoanPrintDialog } from '@/components/print/LoanPrintDialog';
 import { BulkOperationsDialog } from '@/components/loans/BulkOperationsDialog';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
@@ -174,6 +174,9 @@ export default function Loans() {
   
   // New loan form state
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingLoanId, setEditingLoanId] = useState<string | null>(null);
+  const [editingLoanNumber, setEditingLoanNumber] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedSchemeId, setSelectedSchemeId] = useState('');
   const [selectedBranchId, setSelectedBranchId] = useState('');
@@ -247,9 +250,6 @@ export default function Loans() {
   const [viewingLoan, setViewingLoan] = useState<Loan | null>(null);
   const [viewingGoldItems, setViewingGoldItems] = useState<GoldItem[]>([]);
   
-  // Edit loan dialog
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
   
   // Print dialog
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
@@ -423,6 +423,9 @@ export default function Loans() {
     setUserDocumentChargesPercent('');
     setApprovedLoanAmount('');
     setSelectedLoanDate(new Date());
+    setIsEditMode(false);
+    setEditingLoanId(null);
+    setEditingLoanNumber(null);
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -844,10 +847,211 @@ export default function Loans() {
     setViewDialogOpen(true);
   };
 
-  const handleEditLoan = (loan: Loan) => {
+  const handleEditLoan = async (loan: Loan) => {
     if (!attemptEdit()) return;
-    setEditingLoan(loan);
-    setEditDialogOpen(true);
+    
+    // Fetch gold items for the loan
+    const { data: loanGoldItems } = await supabase
+      .from('gold_items')
+      .select('*')
+      .eq('loan_id', loan.id);
+    
+    // Fetch disbursement entries
+    const { data: disbursements } = await supabase
+      .from('loan_disbursements')
+      .select('*')
+      .eq('loan_id', loan.id);
+    
+    // Populate form with loan data
+    setIsEditMode(true);
+    setEditingLoanId(loan.id);
+    setEditingLoanNumber(loan.loan_number);
+    setSelectedCustomerId(loan.customer.id);
+    setSelectedSchemeId(loan.scheme.id);
+    setSelectedBranchId(loan.branch_id);
+    setSelectedLoanDate(new Date(loan.loan_date));
+    setTenureDays(loan.tenure_days.toString());
+    
+    // Convert gold items to form format
+    if (loanGoldItems && loanGoldItems.length > 0) {
+      const formattedGoldItems: GoldItem[] = loanGoldItems.map(item => ({
+        id: item.id,
+        item_type: item.item_type,
+        item_id: item.item_id || undefined,
+        item_group_id: item.item_group_id || undefined,
+        description: item.description || '',
+        gross_weight_grams: item.gross_weight_grams,
+        net_weight_grams: item.net_weight_grams,
+        purity: item.purity,
+        purity_percentage: item.purity_percentage,
+        stone_weight_grams: item.stone_weight_grams || 0,
+        market_rate_per_gram: item.market_rate_per_gram,
+        appraised_value: item.appraised_value,
+        market_value: item.market_value || undefined,
+        market_rate_date: item.market_rate_date || undefined,
+      }));
+      setGoldItems(formattedGoldItems);
+    }
+    
+    // Convert disbursements to payment entries format
+    if (disbursements && disbursements.length > 0) {
+      const formattedPayments = disbursements.map(d => ({
+        mode: d.payment_mode,
+        amount: d.amount.toString(),
+        reference: d.reference_number || '',
+        sourceType: (d.source_type || 'cash') as 'cash' | 'company' | 'employee',
+        sourceBankId: d.source_bank_id || '',
+        sourceAccountId: d.source_account_id || '',
+        selectedLoyaltyId: '',
+      }));
+      setPaymentEntries(formattedPayments);
+    }
+    
+    // Open the form
+    setIsFormOpen(true);
+  };
+
+  const handleUpdateLoan = async () => {
+    if (!client || !editingLoanId) {
+      toast.error('Invalid edit state');
+      return;
+    }
+    if (!selectedCustomerId) {
+      toast.error('Please select a customer');
+      return;
+    }
+    if (!selectedBranchId) {
+      toast.error('Please select a branch');
+      return;
+    }
+    if (!selectedSchemeId) {
+      toast.error('Please select a scheme');
+      return;
+    }
+    if (goldItems.length === 0) {
+      toast.error('Please add at least one gold item');
+      return;
+    }
+    if (!tenureDays) {
+      toast.error('Tenure days not set');
+      return;
+    }
+    if (!loanCalculation) {
+      toast.error('Loan calculation failed');
+      return;
+    }
+
+    // Validate payment entries tally
+    const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+    if (totalPayments !== loanCalculation.netCashToCustomer) {
+      toast.error(`Payment amounts must total ${formatIndianCurrency(loanCalculation.netCashToCustomer)}. Current total: ${formatIndianCurrency(totalPayments)}`);
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const loanDate = selectedLoanDate;
+      const maturityDate = addDays(loanDate, parseInt(tenureDays));
+      const nextInterestDueDate = addMonths(loanDate, loanCalculation.scheme.advance_interest_months || 3);
+
+      // Update loan record
+      const loanUpdateData = {
+        branch_id: selectedBranchId,
+        customer_id: selectedCustomerId,
+        scheme_id: selectedSchemeId,
+        agent_id: selectedAgentId || null,
+        loan_date: format(loanDate, 'yyyy-MM-dd'),
+        principal_amount: loanCalculation.finalApprovedAmount,
+        shown_principal: loanCalculation.loanAmount,
+        actual_principal: loanCalculation.principalOnRecord,
+        interest_rate: loanCalculation.scheme.shown_rate || 18,
+        tenure_days: parseInt(tenureDays),
+        maturity_date: format(maturityDate, 'yyyy-MM-dd'),
+        processing_fee: loanCalculation.processingFee,
+        net_disbursed: loanCalculation.netCashToCustomer,
+        advance_interest_shown: loanCalculation.advanceCalc.shownInterest,
+        advance_interest_actual: loanCalculation.advanceCalc.actualInterest,
+        differential_capitalized: loanCalculation.advanceCalc.differential,
+        next_interest_due_date: format(nextInterestDueDate, 'yyyy-MM-dd'),
+        jewel_photo_url: jewelPhotoUrl,
+        appraiser_sheet_url: appraiserSheetUrl,
+        disbursement_mode: paymentEntries[0]?.mode || 'cash',
+        document_charges: loanCalculation.documentCharges,
+        payment_reference: paymentEntries[0]?.reference || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: loanError } = await supabase
+        .from('loans')
+        .update(loanUpdateData)
+        .eq('id', editingLoanId);
+
+      if (loanError) throw loanError;
+
+      // Delete existing gold items and insert new ones
+      await supabase
+        .from('gold_items')
+        .delete()
+        .eq('loan_id', editingLoanId);
+
+      const goldItemsData = goldItems.map(item => ({
+        loan_id: editingLoanId,
+        item_type: item.item_type as GoldItemType,
+        item_id: item.item_id || null,
+        item_group_id: item.item_group_id || null,
+        description: item.description,
+        gross_weight_grams: item.gross_weight_grams,
+        net_weight_grams: item.net_weight_grams,
+        purity: item.purity as GoldPurity,
+        purity_percentage: item.purity_percentage,
+        stone_weight_grams: item.stone_weight_grams,
+        market_rate_per_gram: item.market_rate_per_gram,
+        appraised_value: item.appraised_value,
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('gold_items')
+        .insert(goldItemsData);
+
+      if (itemsError) throw itemsError;
+
+      // Delete existing disbursements and insert new ones
+      await supabase
+        .from('loan_disbursements')
+        .delete()
+        .eq('loan_id', editingLoanId);
+
+      if (paymentEntries.length > 0) {
+        const disbursementsData = paymentEntries
+          .filter(entry => parseFloat(entry.amount) > 0)
+          .map(entry => ({
+            loan_id: editingLoanId,
+            payment_mode: entry.mode,
+            amount: parseFloat(entry.amount),
+            reference_number: entry.reference || null,
+            source_type: entry.sourceType,
+            source_bank_id: entry.sourceType === 'company' ? (entry.sourceBankId || null) : null,
+            source_account_id: entry.sourceType === 'employee' ? (entry.sourceAccountId || null) : null,
+          }));
+
+        if (disbursementsData.length > 0) {
+          const { error: disbursementError } = await supabase
+            .from('loan_disbursements')
+            .insert(disbursementsData);
+
+          if (disbursementError) throw disbursementError;
+        }
+      }
+
+      toast.success(`Loan ${editingLoanNumber} updated successfully`);
+      setIsFormOpen(false);
+      resetForm();
+      fetchLoans();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update loan');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handlePrintLoan = async (loan: Loan) => {
@@ -1023,7 +1227,15 @@ export default function Loans() {
           </div>
           {canManageLoans && (
             <Button 
-              onClick={() => setIsFormOpen(!isFormOpen)}
+              onClick={() => {
+                if (isFormOpen) {
+                  setIsFormOpen(false);
+                  resetForm();
+                } else {
+                  resetForm(); // Reset to ensure it's in create mode
+                  setIsFormOpen(true);
+                }
+              }}
               className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
             >
               {isFormOpen ? <ChevronUp className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
@@ -1038,8 +1250,17 @@ export default function Loans() {
             <Card className="border-amber-500/30 bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20">
               <CardHeader className="pb-4">
                 <CardTitle className="text-lg flex items-center gap-2">
-                  <Plus className="h-5 w-5 text-amber-600" />
-                  Create New Loan
+                  {isEditMode ? (
+                    <>
+                      <Pencil className="h-5 w-5 text-amber-600" />
+                      Edit Loan: {editingLoanNumber}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5 text-amber-600" />
+                      Create New Loan
+                    </>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -1861,18 +2082,18 @@ export default function Loans() {
                   </div>
                 )}
 
-                {/* Create Button */}
+                {/* Create/Update Button */}
                 <div className="flex justify-end gap-3 pt-4">
                   <Button variant="outline" onClick={() => { setIsFormOpen(false); resetForm(); }}>
                     Cancel
                   </Button>
                   <Button 
                     type="button"
-                    onClick={handleCreateLoan} 
+                    onClick={isEditMode ? handleUpdateLoan : handleCreateLoan} 
                     disabled={submitting || !selectedCustomerId || !selectedSchemeId || !selectedBranchId || goldItems.length === 0 || !tenureDays}
                     className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
                   >
-                    {submitting ? 'Creating...' : 'Create Loan'}
+                    {submitting ? (isEditMode ? 'Updating...' : 'Creating...') : (isEditMode ? 'Update Loan' : 'Create Loan')}
                   </Button>
                 </div>
               </CardContent>
@@ -2248,22 +2469,6 @@ export default function Loans() {
           />
         )}
 
-        {/* Edit Loan Dialog */}
-        {editingLoan && (
-          <LoanEditDialog
-            open={editDialogOpen}
-            onOpenChange={(open) => {
-              setEditDialogOpen(open);
-              if (!open) setEditingLoan(null);
-            }}
-            loan={editingLoan as any}
-            onSuccess={() => {
-              fetchLoans();
-              setEditDialogOpen(false);
-              setEditingLoan(null);
-            }}
-          />
-        )}
 
       </div>
     </DashboardLayout>
