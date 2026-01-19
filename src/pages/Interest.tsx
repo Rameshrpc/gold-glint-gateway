@@ -226,14 +226,18 @@ export default function Interest() {
         minimum_days: loan.scheme.minimum_days || 30,
         penalty_rate: loan.scheme.penalty_rate || 2,
         grace_period_days: loan.scheme.grace_period_days || 7,
-        advance_interest_months: 3,
+        advance_interest_months: 1, // Default 1 month = 30 days advance interest
       };
+
+      // Calculate advance interest days from scheme (default 30 days = 1 month)
+      const advanceInterestDays = scheme.advance_interest_months * 30;
 
       const interestDue = calculateDualRateInterest(
         loan.actual_principal || loan.principal_amount,
         scheme,
         daysSincePayment,
-        gracePeriod
+        gracePeriod,
+        advanceInterestDays  // Exclude advance interest period from billing
       );
 
       return {

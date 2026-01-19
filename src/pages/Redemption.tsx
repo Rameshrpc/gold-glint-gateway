@@ -299,7 +299,7 @@ export default function Redemption() {
       shown_rate: selectedLoan.scheme.shown_rate || 18,
       effective_rate: selectedLoan.scheme.effective_rate || selectedLoan.scheme.interest_rate * 12,
       minimum_days: selectedLoan.scheme.minimum_days || 30,
-      advance_interest_months: 3,
+      advance_interest_months: 1, // Default 1 month = 30 days advance interest
       penalty_rate: selectedLoan.scheme.penalty_rate || 2,
       grace_period_days: selectedLoan.scheme.grace_period_days || 7,
     };
@@ -307,15 +307,23 @@ export default function Redemption() {
     const lastPaidDate = selectedLoan.last_interest_paid_date || selectedLoan.loan_date;
     const daysSincePayment = differenceInDays(new Date(), parseISO(lastPaidDate));
     
+    // Days since loan creation - used for rebate calculation
+    const daysSinceLoan = differenceInDays(new Date(), parseISO(selectedLoan.loan_date));
+    
     // Use new slab-based rebate calculation with differential_capitalized
     const differentialCapitalized = selectedLoan.differential_capitalized || 0;
+    
+    // Calculate advance interest days from scheme (default 30 days = 1 month)
+    const advanceInterestDays = scheme.advance_interest_months * 30;
 
     return calculateRedemptionAmount(
       selectedLoan.actual_principal || selectedLoan.principal_amount,
       scheme,
-      daysSincePayment,
+      daysSincePayment,      // For interest calculation
+      daysSinceLoan,         // For rebate calculation (days since loan creation)
       selectedLoan.tenure_days,
-      differentialCapitalized
+      differentialCapitalized,
+      advanceInterestDays    // Exclude advance interest period from billing
     );
   }, [selectedLoan]);
 

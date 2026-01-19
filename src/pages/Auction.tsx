@@ -227,14 +227,18 @@ const Auction = () => {
     const scheme = {
       ...loan.scheme,
       effective_rate: loan.scheme.effective_rate || loan.scheme.shown_rate * 1.5,
-      advance_interest_months: 3,
+      advance_interest_months: 1, // Default 1 month = 30 days advance interest
     };
+    
+    // Calculate advance interest days from scheme (default 30 days = 1 month)
+    const advanceInterestDays = scheme.advance_interest_months * 30;
     
     const interestCalc = calculateDualRateInterest(
       actualPrincipal,
       scheme,
       daysSinceLoan,
-      loan.scheme.grace_period_days || 7
+      loan.scheme.grace_period_days || 7,
+      advanceInterestDays  // Exclude advance interest period from billing
     );
     
     return {
