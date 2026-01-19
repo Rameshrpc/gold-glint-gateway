@@ -979,6 +979,7 @@ export default function Loans() {
         advance_interest_actual: loanCalculation.advanceCalc.actualInterest,
         differential_capitalized: loanCalculation.advanceCalc.differential,
         next_interest_due_date: format(nextInterestDueDate, 'yyyy-MM-dd'),
+        last_interest_paid_date: format(loanDate, 'yyyy-MM-dd'),
         jewel_photo_url: jewelPhotoUrl,
         appraiser_sheet_url: appraiserSheetUrl,
         disbursement_mode: paymentEntries[0]?.mode || 'cash',
