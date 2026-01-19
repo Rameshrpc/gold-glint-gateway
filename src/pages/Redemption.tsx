@@ -223,7 +223,8 @@ export default function Redemption() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days),
+          scheme_version:scheme_versions(id, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
         .eq('status', 'active')
@@ -239,7 +240,27 @@ export default function Redemption() {
       const { data, error } = await loansQuery.limit(10);
 
       if (error) throw error;
-      setSearchResults(data || []);
+      
+      // Process results to use scheme_version data if available
+      const processedResults = (data || []).map(loan => {
+        if (loan.scheme_version && loan.scheme_version_id) {
+          return {
+            ...loan,
+            scheme: {
+              ...loan.scheme,
+              interest_rate: loan.scheme_version.interest_rate ?? loan.scheme.interest_rate,
+              shown_rate: loan.scheme_version.shown_rate ?? loan.scheme.shown_rate,
+              effective_rate: loan.scheme_version.effective_rate ?? loan.scheme.effective_rate,
+              minimum_days: loan.scheme_version.minimum_days ?? loan.scheme.minimum_days,
+              penalty_rate: loan.scheme_version.penalty_rate ?? loan.scheme.penalty_rate,
+              grace_period_days: loan.scheme_version.grace_period_days ?? loan.scheme.grace_period_days,
+            }
+          };
+        }
+        return loan;
+      });
+      
+      setSearchResults(processedResults || []);
     } catch (error: any) {
       toast.error('Search failed');
     } finally {

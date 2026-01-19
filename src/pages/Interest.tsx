@@ -153,7 +153,8 @@ export default function Interest() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days),
+          scheme_version:scheme_versions(id, scheme_name:id, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
         .in('status', ['active', 'overdue'])
@@ -161,7 +162,28 @@ export default function Interest() {
         .order('loan_date', { ascending: false });
 
       if (error) throw error;
-      setLoans(data || []);
+      
+      // Process loans to use scheme_version data if available
+      const processedLoans = (data || []).map(loan => {
+        if (loan.scheme_version && loan.scheme_version_id) {
+          // Use version data for scheme rates
+          return {
+            ...loan,
+            scheme: {
+              ...loan.scheme,
+              interest_rate: loan.scheme_version.interest_rate ?? loan.scheme.interest_rate,
+              shown_rate: loan.scheme_version.shown_rate ?? loan.scheme.shown_rate,
+              effective_rate: loan.scheme_version.effective_rate ?? loan.scheme.effective_rate,
+              minimum_days: loan.scheme_version.minimum_days ?? loan.scheme.minimum_days,
+              penalty_rate: loan.scheme_version.penalty_rate ?? loan.scheme.penalty_rate,
+              grace_period_days: loan.scheme_version.grace_period_days ?? loan.scheme.grace_period_days,
+            }
+          };
+        }
+        return loan;
+      });
+      
+      setLoans(processedLoans || []);
     } catch (error: any) {
       toast.error('Failed to fetch loans');
     } finally {

@@ -158,11 +158,7 @@ export default function Schemes() {
 
     setSubmitting(true);
     try {
-      const schemeData = {
-        client_id: client.id,
-        scheme_code: schemeCode.trim().toUpperCase(),
-        scheme_name: schemeName.trim(),
-        description: description.trim() || null,
+      const versionData = {
         interest_rate: parseFloat(interestRate),
         shown_rate: parseFloat(shownRate) || 18,
         effective_rate: parseFloat(effectiveRate) || 24,
@@ -183,17 +179,136 @@ export default function Schemes() {
       };
 
       if (editingScheme) {
-        const { error } = await supabase
-          .from('schemes')
-          .update(schemeData)
-          .eq('id', editingScheme.id);
-        if (error) throw error;
-        toast.success('Scheme updated successfully');
+        // Check if any loans exist with current version
+        const { count: loanCount } = await supabase
+          .from('loans')
+          .select('id', { count: 'exact', head: true })
+          .eq('scheme_id', editingScheme.id);
+
+        if (loanCount && loanCount > 0) {
+          // Create new version - get current max version number
+          const { data: existingVersions } = await supabase
+            .from('scheme_versions')
+            .select('version_number')
+            .eq('scheme_id', editingScheme.id)
+            .order('version_number', { ascending: false })
+            .limit(1);
+
+          const nextVersionNumber = (existingVersions?.[0]?.version_number || 0) + 1;
+          const today = new Date().toISOString().split('T')[0];
+
+          // Close old version
+          const { data: currentVersion } = await supabase
+            .from('schemes')
+            .select('current_version_id')
+            .eq('id', editingScheme.id)
+            .single();
+
+          if (currentVersion?.current_version_id) {
+            await supabase
+              .from('scheme_versions')
+              .update({ effective_to: today })
+              .eq('id', currentVersion.current_version_id);
+          }
+
+          // Create new version
+          const { data: newVersion, error: versionError } = await supabase
+            .from('scheme_versions')
+            .insert({
+              scheme_id: editingScheme.id,
+              client_id: client.id,
+              version_number: nextVersionNumber,
+              effective_from: today,
+              change_reason: 'Scheme updated - new version created for new loans',
+              ...versionData,
+            })
+            .select()
+            .single();
+
+          if (versionError) throw versionError;
+
+          // Update scheme with new current version and basic info
+          const { error: schemeError } = await supabase
+            .from('schemes')
+            .update({
+              scheme_code: schemeCode.trim().toUpperCase(),
+              scheme_name: schemeName.trim(),
+              description: description.trim() || null,
+              current_version_id: newVersion.id,
+              ...versionData,
+            })
+            .eq('id', editingScheme.id);
+
+          if (schemeError) throw schemeError;
+          toast.success(`Scheme updated. New version ${nextVersionNumber} created for future loans.`);
+        } else {
+          // No loans - update scheme and existing version in place
+          const { error: schemeError } = await supabase
+            .from('schemes')
+            .update({
+              scheme_code: schemeCode.trim().toUpperCase(),
+              scheme_name: schemeName.trim(),
+              description: description.trim() || null,
+              ...versionData,
+            })
+            .eq('id', editingScheme.id);
+
+          if (schemeError) throw schemeError;
+
+          // Also update the current version
+          const { data: currentScheme } = await supabase
+            .from('schemes')
+            .select('current_version_id')
+            .eq('id', editingScheme.id)
+            .single();
+
+          if (currentScheme?.current_version_id) {
+            await supabase
+              .from('scheme_versions')
+              .update(versionData)
+              .eq('id', currentScheme.current_version_id);
+          }
+
+          toast.success('Scheme updated successfully');
+        }
       } else {
-        const { error } = await supabase
+        // Create new scheme
+        const { data: newScheme, error: schemeError } = await supabase
           .from('schemes')
-          .insert(schemeData);
-        if (error) throw error;
+          .insert({
+            client_id: client.id,
+            scheme_code: schemeCode.trim().toUpperCase(),
+            scheme_name: schemeName.trim(),
+            description: description.trim() || null,
+            ...versionData,
+          })
+          .select()
+          .single();
+
+        if (schemeError) throw schemeError;
+
+        // Create initial version
+        const { data: newVersion, error: versionError } = await supabase
+          .from('scheme_versions')
+          .insert({
+            scheme_id: newScheme.id,
+            client_id: client.id,
+            version_number: 1,
+            effective_from: new Date().toISOString().split('T')[0],
+            change_reason: 'Initial version',
+            ...versionData,
+          })
+          .select()
+          .single();
+
+        if (versionError) throw versionError;
+
+        // Update scheme with current version id
+        await supabase
+          .from('schemes')
+          .update({ current_version_id: newVersion.id })
+          .eq('id', newScheme.id);
+
         toast.success('Scheme created successfully');
       }
 

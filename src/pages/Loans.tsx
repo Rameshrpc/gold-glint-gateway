@@ -658,11 +658,19 @@ export default function Loans() {
       const maturityDate = addDays(loanDate, parseInt(tenureDays));
       const nextInterestDueDate = addMonths(loanDate, loanCalculation.scheme.advance_interest_months || 3);
 
+      // Get scheme's current version id
+      const { data: schemeWithVersion } = await supabase
+        .from('schemes')
+        .select('current_version_id')
+        .eq('id', selectedSchemeId)
+        .single();
+
       const loanData = {
         client_id: client.id,
         branch_id: selectedBranchId,
         customer_id: selectedCustomerId,
         scheme_id: selectedSchemeId,
+        scheme_version_id: schemeWithVersion?.current_version_id || null,
         agent_id: selectedAgentId || null,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),
