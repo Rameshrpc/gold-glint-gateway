@@ -97,38 +97,39 @@ export function calculateRebateSchedule(differentialAmount: number): RebateSched
   return {
     differentialAmount,
     slots: [
-      { dayRange: '1-30 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
-      { dayRange: '30-45 days', percentage: 50, rebateAmount: Math.round(differentialAmount * 0.50) },
-      { dayRange: '45-60 days', percentage: 33.33, rebateAmount: Math.round(differentialAmount * 0.3333) },
-      { dayRange: '60-75 days', percentage: 16.67, rebateAmount: Math.round(differentialAmount * 0.1667) },
+      { dayRange: '1-30 days', percentage: 0, rebateAmount: 0 },
+      { dayRange: '30-45 days', percentage: 75, rebateAmount: Math.round(differentialAmount * 0.75) },
+      { dayRange: '45-60 days', percentage: 50, rebateAmount: Math.round(differentialAmount * 0.50) },
+      { dayRange: '60-75 days', percentage: 25, rebateAmount: Math.round(differentialAmount * 0.25) },
     ],
   };
 }
 
 /**
  * Calculate rebate at redemption based on days since loan
- * Uses slab-based percentages: 1-30 days = 66.67%, 30-45 = 50%, 45-60 = 33.33%, 60-75 = 16.67%
+ * Uses slab-based percentages: 1-30 days = 0%, 30-45 = 75%, 45-60 = 50%, 60-75 = 25%
  */
 export function calculateRebateAtRedemption(
   daysSinceLoan: number,
   differentialAmount: number
 ): RebateCalculation {
+  // No rebate within first 30 days
   if (daysSinceLoan >= 1 && daysSinceLoan < 30) {
     return {
-      eligible: true,
+      eligible: false,
       usedDays: daysSinceLoan,
       unusedDays: 0,
-      rebateAmount: Math.round(differentialAmount * 0.6667),
-      percentage: 66.67,
-      reason: 'Early release benefit (within 30 days)',
+      rebateAmount: 0,
+      percentage: 0,
+      reason: 'No early release benefit within first 30 days',
     };
   } else if (daysSinceLoan >= 30 && daysSinceLoan < 45) {
     return {
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
-      rebateAmount: Math.round(differentialAmount * 0.50),
-      percentage: 50,
+      rebateAmount: Math.round(differentialAmount * 0.75),
+      percentage: 75,
       reason: 'Early release benefit (30-45 days)',
     };
   } else if (daysSinceLoan >= 45 && daysSinceLoan < 60) {
@@ -136,8 +137,8 @@ export function calculateRebateAtRedemption(
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
-      rebateAmount: Math.round(differentialAmount * 0.3333),
-      percentage: 33.33,
+      rebateAmount: Math.round(differentialAmount * 0.50),
+      percentage: 50,
       reason: 'Early release benefit (45-60 days)',
     };
   } else if (daysSinceLoan >= 60 && daysSinceLoan < 75) {
@@ -145,8 +146,8 @@ export function calculateRebateAtRedemption(
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
-      rebateAmount: Math.round(differentialAmount * 0.1667),
-      percentage: 16.67,
+      rebateAmount: Math.round(differentialAmount * 0.25),
+      percentage: 25,
       reason: 'Early release benefit (60-75 days)',
     };
   }
