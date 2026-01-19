@@ -3,12 +3,14 @@ import { CustomerPortalLayout } from '@/components/customer-portal/CustomerPorta
 import { useCustomerLoanDetails } from '@/hooks/useCustomerPortalData';
 import { CustomerPaymentHistory } from '@/components/customer-portal/CustomerPaymentHistory';
 import { CustomerInterestDue } from '@/components/customer-portal/CustomerInterestDue';
+import { OutstandingSummaryCard } from '@/components/customer-portal/OutstandingSummaryCard';
+import { LoanTimeline } from '@/components/customer-portal/LoanTimeline';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatIndianCurrency } from '@/lib/interestCalculations';
-import { ArrowLeft, AlertTriangle, RefreshCw, Calendar, Coins, Scale, Receipt } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, RefreshCw, Calendar, Coins, Scale, Receipt, FileText } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
 export default function CustomerLoanDetails() {
@@ -170,9 +172,20 @@ export default function CustomerLoanDetails() {
           </CardContent>
         </Card>
 
-        {/* Interest Due - Only for active loans */}
+        {/* View Statement Button */}
+        {loan.status === 'active' && (
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => navigate(`/customer-portal/loan/${loan.id}/statement`)}
+          >
+            <FileText className="h-4 w-4 mr-2" /> View Full Statement
+          </Button>
+        )}
+
+        {/* Outstanding Summary - Only for active loans */}
         {loan.status === 'active' && loan.currentInterest && (
-          <CustomerInterestDue loan={loan} />
+          <OutstandingSummaryCard loan={loan} />
         )}
 
         {/* Gold Items */}
@@ -246,9 +259,12 @@ export default function CustomerLoanDetails() {
         {/* Payment History */}
         <CustomerPaymentHistory payments={payments || []} />
 
+        {/* Loan Timeline */}
+        <LoanTimeline loan={loan} payments={payments} redemption={data?.redemption} />
+
         {/* Redemption Info - if closed */}
         {loan.status === 'closed' && data?.redemption && (
-          <Card>
+          <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Redemption Details</CardTitle>
             </CardHeader>

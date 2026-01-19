@@ -57,6 +57,9 @@ import { CustomerProtectedRoute } from "@/components/customer-portal/CustomerPro
 import CustomerPortalAuth from "./pages/customer-portal/CustomerPortalAuth";
 import CustomerDashboard from "./pages/customer-portal/CustomerDashboard";
 import CustomerLoanDetails from "./pages/customer-portal/CustomerLoanDetails";
+import CustomerAllLoans from "./pages/customer-portal/CustomerAllLoans";
+import CustomerPayments from "./pages/customer-portal/CustomerPayments";
+import CustomerLoanStatement from "./pages/customer-portal/CustomerLoanStatement";
 
 const queryClient = new QueryClient();
 
@@ -132,7 +135,10 @@ const App = () => (
           <Routes>
             <Route path="/customer-portal" element={<CustomerAuthProvider><CustomerPortalAuth /></CustomerAuthProvider>} />
             <Route path="/customer-portal/dashboard" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerDashboard /></CustomerProtectedRoute></CustomerAuthProvider>} />
+            <Route path="/customer-portal/loans" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerAllLoans /></CustomerProtectedRoute></CustomerAuthProvider>} />
+            <Route path="/customer-portal/payments" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerPayments /></CustomerProtectedRoute></CustomerAuthProvider>} />
             <Route path="/customer-portal/loan/:loanId" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerLoanDetails /></CustomerProtectedRoute></CustomerAuthProvider>} />
+            <Route path="/customer-portal/loan/:loanId/statement" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerLoanStatement /></CustomerProtectedRoute></CustomerAuthProvider>} />
           </Routes>
         </AuthProvider>
       </BrowserRouter>
