@@ -282,7 +282,7 @@ export default function SaleRepurchase() {
       shown_rate: selectedAgreement.scheme.shown_rate || 18,
       effective_rate: selectedAgreement.scheme.effective_rate || selectedAgreement.scheme.interest_rate * 12,
       minimum_days: selectedAgreement.scheme.minimum_days || 30,
-      advance_interest_months: 3,
+      advance_interest_months: 1, // Default 1 month = 30 days advance margin
       penalty_rate: selectedAgreement.scheme.penalty_rate || 2,
       grace_period_days: selectedAgreement.scheme.grace_period_days || 7,
     };
@@ -290,14 +290,22 @@ export default function SaleRepurchase() {
     const lastPaidDate = selectedAgreement.last_interest_paid_date || selectedAgreement.loan_date;
     const daysSincePayment = differenceInDays(new Date(), parseISO(lastPaidDate));
     
+    // Days since agreement creation - used for rebate calculation
+    const daysSinceAgreement = differenceInDays(new Date(), parseISO(selectedAgreement.loan_date));
+    
     const differentialCapitalized = selectedAgreement.differential_capitalized || 0;
+    
+    // Calculate advance margin days from scheme (default 30 days = 1 month)
+    const advanceMarginDays = scheme.advance_interest_months * 30;
 
     return calculateRedemptionAmount(
       selectedAgreement.actual_principal || selectedAgreement.principal_amount,
       scheme,
-      daysSincePayment,
+      daysSincePayment,       // For margin calculation
+      daysSinceAgreement,     // For rebate calculation
       selectedAgreement.tenure_days,
-      differentialCapitalized
+      differentialCapitalized,
+      advanceMarginDays       // Exclude advance margin period from billing
     );
   }, [selectedAgreement]);
 

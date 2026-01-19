@@ -37,7 +37,8 @@ export interface DualRateInterest {
   differential: number;       // Part payment (reduces principal)
   penalty: number;            // Overdue penalty
   totalDue: number;           // Amount customer should pay
-  days: number;
+  days: number;               // Total days since last payment
+  billableDays: number;       // Days actually charged (excluding advance interest period)
 }
 
 export interface AdvanceInterestCalculation {
@@ -209,21 +210,30 @@ export function calculateAdvanceInterest(
  * Calculate interest due with dual-rate system
  * Customer pays: shown interest (18%) + penalty
  * Differential is shown as part payment reducing principal
+ * 
+ * IMPORTANT: Advance interest for first 30 days (or advance_interest_months * 30) 
+ * is already deducted at loan creation. So we only charge for days BEYOND that period.
  */
 export function calculateDualRateInterest(
   actualPrincipal: number,
   scheme: Scheme,
   days: number,
-  gracePeriodDays: number = 7
+  gracePeriodDays: number = 7,
+  advanceInterestDays: number = 30  // Days already covered by advance interest deducted at creation
 ): DualRateInterest {
-  // Calculate on actual principal
-  const shownInterest = calculateInterest(actualPrincipal, scheme.shown_rate, days);
-  const actualInterest = calculateInterest(actualPrincipal, scheme.effective_rate, days);
+  // Exclude advance interest days from billable period
+  // Customer already paid for first 30 days (or advance_interest_months * 30) at loan creation
+  const billableDays = Math.max(0, days - advanceInterestDays);
+  
+  // Calculate on actual principal for BILLABLE days only
+  const shownInterest = calculateInterest(actualPrincipal, scheme.shown_rate, billableDays);
+  const actualInterest = calculateInterest(actualPrincipal, scheme.effective_rate, billableDays);
   const differential = actualInterest - shownInterest;
   
-  // Penalty if overdue (beyond grace period after 30 days)
+  // Penalty if overdue (beyond grace period after 30 days from when billing starts)
+  // Grace period starts after the first billing cycle (30 days after advance period ends)
   let penalty = 0;
-  const overdueDays = Math.max(0, days - 30 - gracePeriodDays);
+  const overdueDays = Math.max(0, billableDays - 30 - gracePeriodDays);
   if (overdueDays > 0 && scheme.penalty_rate) {
     penalty = calculateInterest(actualPrincipal, scheme.penalty_rate * 12, overdueDays);
   }
@@ -239,6 +249,7 @@ export function calculateDualRateInterest(
     penalty: Math.round(penalty),
     totalDue: Math.round(totalDue),
     days,
+    billableDays,  // Days actually charged (for display/transparency)
   };
 }
 
@@ -356,13 +367,23 @@ export function calculateRebate(
 
 /**
  * Calculate full redemption amount
+ * 
+ * @param actualPrincipal - Current principal with differential capitalized
+ * @param scheme - Loan scheme with rates
+ * @param daysSinceLastPayment - Days since last interest payment (for interest calculation)
+ * @param daysSinceLoan - Days since loan creation (for rebate calculation)
+ * @param totalTenureDays - Total tenure in days
+ * @param differentialCapitalized - Differential amount capitalized at creation (for rebate)
+ * @param advanceInterestDays - Days covered by advance interest (default 30)
  */
 export function calculateRedemptionAmount(
   actualPrincipal: number,
   scheme: Scheme,
+  daysSinceLastPayment: number,
   daysSinceLoan: number,
   totalTenureDays: number,
-  differentialCapitalized?: number
+  differentialCapitalized?: number,
+  advanceInterestDays: number = 30
 ): {
   principalDue: number;
   interestDue: DualRateInterest;
@@ -376,14 +397,16 @@ export function calculateRedemptionAmount(
     total: number;
   };
 } {
+  // Calculate interest due with advance days excluded
   const interestDue = calculateDualRateInterest(
     actualPrincipal,
     scheme,
-    daysSinceLoan,
-    scheme.grace_period_days || 7
+    daysSinceLastPayment,
+    scheme.grace_period_days || 7,
+    advanceInterestDays
   );
   
-  // Use new slab-based rebate if differential is available
+  // Use new slab-based rebate based on days since LOAN creation (not last payment)
   const rebate = differentialCapitalized && differentialCapitalized > 0
     ? calculateRebateAtRedemption(daysSinceLoan, differentialCapitalized)
     : calculateRebate(scheme, daysSinceLoan, totalTenureDays, actualPrincipal);

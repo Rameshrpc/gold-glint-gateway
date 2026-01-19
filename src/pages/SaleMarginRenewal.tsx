@@ -204,14 +204,18 @@ export default function SaleMarginRenewal() {
         minimum_days: agreement.scheme.minimum_days || 30,
         penalty_rate: agreement.scheme.penalty_rate || 2,
         grace_period_days: agreement.scheme.grace_period_days || 7,
-        advance_interest_months: 3,
+        advance_interest_months: 1, // Default 1 month = 30 days advance margin
       };
+
+      // Calculate advance margin days from scheme (default 30 days = 1 month)
+      const advanceMarginDays = scheme.advance_interest_months * 30;
 
       const marginDue = calculateDualRateInterest(
         agreement.actual_principal || agreement.principal_amount,
         scheme,
         daysSincePayment,
-        gracePeriod
+        gracePeriod,
+        advanceMarginDays  // Exclude advance margin period from billing
       );
 
       return {
