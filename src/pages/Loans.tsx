@@ -141,6 +141,8 @@ interface Loan {
     ltv_percentage: number;
   };
   branch_id: string;
+  jewel_photo_url: string | null;
+  appraiser_sheet_url: string | null;
 }
 
 type GoldItemType = 'necklace' | 'chain' | 'bangle' | 'ring' | 'earring' | 'pendant' | 'coin' | 'bar' | 'other';
@@ -906,6 +908,10 @@ export default function Loans() {
       }));
       setPaymentEntries(formattedPayments);
     }
+    
+    // Restore image URLs
+    setJewelPhotoUrl(loan.jewel_photo_url || null);
+    setAppraiserSheetUrl(loan.appraiser_sheet_url || null);
     
     // Open the form
     setIsFormOpen(true);
