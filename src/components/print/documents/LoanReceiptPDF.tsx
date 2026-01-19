@@ -540,7 +540,7 @@ export function LoanReceiptPDF({
               {/* Rebate schedule rows */}
               <View style={compactStyles.earlyReleaseRow}>
                 <BilingualLabel english="Within 1-30 days" tamil="1-30 நாட்களுக்குள்" mode={language} fontSize={6} />
-                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[0].rebateAmount)}</Text>
+                <BilingualLabel english="No rebate" tamil="தள்ளுபடி இல்லை" mode={language} fontSize={6} color="#9ca3af" />
               </View>
               <View style={compactStyles.earlyReleaseRow}>
                 <BilingualLabel english="Within 30-45 days" tamil="30-45 நாட்களுக்குள்" mode={language} fontSize={6} />
