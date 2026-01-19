@@ -116,10 +116,11 @@ export function usePermissions() {
     return !!perm;
   }, [userPermissions]);
 
-  // EDIT permission: tenant_admin, super_admin, platform admin, AND branch_manager
+  // EDIT permission: tenant_admin, super_admin, platform admin, branch_manager, AND loan_officer
   const canEdit = useMemo((): boolean => {
     return hasRole('tenant_admin') || hasRole('super_admin') || 
-           hasRole('branch_manager') || isPlatformAdmin();
+           hasRole('branch_manager') || hasRole('loan_officer') || 
+           isPlatformAdmin();
   }, [hasRole, isPlatformAdmin]);
 
   // DELETE permission: ONLY tenant_admin, super_admin, platform admin (NO branch_manager)
