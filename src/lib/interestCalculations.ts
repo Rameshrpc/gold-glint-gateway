@@ -162,7 +162,7 @@ export function calculateRebateAtRedemption(
 
 /**
  * Calculate advance interest for loan creation (dual-rate)
- * Differential is calculated for FULL TENURE and added to principal
+ * Differential is calculated for (TENURE - ADVANCE DAYS) since advance interest is already deducted
  */
 export function calculateAdvanceInterest(
   principal: number,
@@ -181,8 +181,9 @@ export function calculateAdvanceInterest(
   // Differential rate = Effective - Shown
   const differentialRate = scheme.effective_rate - scheme.shown_rate;
   
-  // Differential for FULL TENURE (added to principal at creation)
-  const differential = calculateInterest(principal, differentialRate, tenureDays);
+  // Differential for (TENURE - ADVANCE DAYS) only, since advance interest is already deducted
+  const remainingDays = Math.max(0, tenureDays - advanceDays);
+  const differential = calculateInterest(principal, differentialRate, remainingDays);
   
   // Differential for advance months only (for reference)
   const differentialForAdvance = calculateInterest(principal, differentialRate, advanceDays);
@@ -190,7 +191,7 @@ export function calculateAdvanceInterest(
   // Customer receives: principal - shown interest
   const netCashToCustomer = principal - shownInterest;
   
-  // Actual principal = original + differential for full tenure (books entry)
+  // Actual principal = original + differential for remaining tenure (books entry)
   const actualPrincipal = principal + differential;
   
   return {
