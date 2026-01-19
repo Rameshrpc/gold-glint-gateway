@@ -2077,7 +2077,7 @@ export default function Loans() {
                               size="sm" 
                               onClick={() => handleEditLoan(loan)}
                               disabled={!canEdit}
-                              title={canEdit ? "Edit loan" : "Only tenant admin or branch manager can edit"}
+                              title={canEdit ? "Edit loan" : "Edit requires admin, manager, or loan officer role"}
                               className={!canEdit ? "opacity-50 cursor-not-allowed" : ""}
                             >
                               <Pencil className="h-4 w-4" />
@@ -2245,6 +2245,23 @@ export default function Loans() {
             loan={printingLoan}
             customer={printingCustomer}
             goldItems={printingGoldItems}
+          />
+        )}
+
+        {/* Edit Loan Dialog */}
+        {editingLoan && (
+          <LoanEditDialog
+            open={editDialogOpen}
+            onOpenChange={(open) => {
+              setEditDialogOpen(open);
+              if (!open) setEditingLoan(null);
+            }}
+            loan={editingLoan as any}
+            onSuccess={() => {
+              fetchLoans();
+              setEditDialogOpen(false);
+              setEditingLoan(null);
+            }}
           />
         )}
 
