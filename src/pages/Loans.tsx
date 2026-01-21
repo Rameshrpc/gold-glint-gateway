@@ -575,7 +575,7 @@ export default function Loans() {
     const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
 
     // NEW FORMULA: Net Cash = Total Appraised Value - Advance Interest - Document Charges
-    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - documentCharges;
+    const netCashToCustomer = Math.round(totalAppraisedValue - advanceCalc.shownInterest - documentCharges);
     
     // Calculate rebate schedule for display (using interest adjustment)
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
@@ -650,9 +650,9 @@ export default function Loans() {
       return;
     }
 
-    // Validate payment entries tally
+    // Validate payment entries tally (use tolerance for floating-point precision)
     const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-    if (totalPayments !== loanCalculation.netCashToCustomer) {
+    if (Math.abs(totalPayments - loanCalculation.netCashToCustomer) >= 0.01) {
       toast.error(`Payment amounts must total ${formatIndianCurrency(loanCalculation.netCashToCustomer)}. Current total: ${formatIndianCurrency(totalPayments)}`);
       return;
     }
@@ -957,9 +957,9 @@ export default function Loans() {
       return;
     }
 
-    // Validate payment entries tally
+    // Validate payment entries tally (use tolerance for floating-point precision)
     const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-    if (totalPayments !== loanCalculation.netCashToCustomer) {
+    if (Math.abs(totalPayments - loanCalculation.netCashToCustomer) >= 0.01) {
       toast.error(`Payment amounts must total ${formatIndianCurrency(loanCalculation.netCashToCustomer)}. Current total: ${formatIndianCurrency(totalPayments)}`);
       return;
     }
@@ -2087,8 +2087,8 @@ export default function Loans() {
                         <span>Total Disbursement</span>
                         {(() => {
                           const totalPayments = paymentEntries.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
-                          const isMatched = totalPayments === loanCalculation.netCashToCustomer;
                           const diff = loanCalculation.netCashToCustomer - totalPayments;
+                          const isMatched = Math.abs(diff) < 0.01;
                           return (
                             <div className="flex items-center gap-3">
                               <span className={isMatched ? "text-green-600" : "text-destructive"}>
