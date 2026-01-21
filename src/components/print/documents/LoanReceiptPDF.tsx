@@ -5,7 +5,7 @@ import { PDFHeader } from '../shared/PDFHeader';
 import { PDFFooter } from '../shared/PDFFooter';
 import { BilingualLabel, BilingualValueRow, LanguageMode } from '@/lib/bilingual-utils';
 import { fontsRegistered } from '@/lib/pdf-fonts';
-import { calculateRebateSchedule } from '@/lib/interestCalculations';
+import { calculateRebateSchedule, calculateClosureSchedule, type ClosureSchedule } from '@/lib/interestCalculations';
 
 // Ensure fonts are loaded
 const _fonts = fontsRegistered;
@@ -247,6 +247,51 @@ const compactStyles = StyleSheet.create({
   noRebateText: {
     fontSize: 7,
     color: '#9ca3af',
+  },
+  // Closure Schedule styles
+  closureScheduleBox: {
+    marginTop: 6,
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#7c3aed',
+    backgroundColor: '#faf5ff',
+    borderRadius: 3,
+  },
+  closureScheduleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    paddingBottom: 3,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#7c3aed',
+  },
+  closureScheduleTitle: {
+    fontSize: 8,
+    fontWeight: 'bold',
+    color: '#6d28d9',
+  },
+  closureTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#ede9fe',
+    padding: 3,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#7c3aed',
+  },
+  closureTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 2,
+    paddingHorizontal: 3,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e5e7eb',
+  },
+  closureTableCell: {
+    fontSize: 6,
+    textAlign: 'center',
+  },
+  closureTableCellBold: {
+    fontSize: 6,
+    textAlign: 'center',
+    fontWeight: 'bold',
   },
   signatureSection: {
     flexDirection: 'row',
@@ -606,6 +651,61 @@ export function LoanReceiptPDF({
                 <BilingualLabel english="After 75 days" tamil="75 நாட்களுக்கு பிறகு" mode={language} fontSize={6} />
                 <BilingualLabel english="No rebate" tamil="தள்ளுபடி இல்லை" mode={language} fontSize={6} color="#888" />
               </View>
+            </View>
+          );
+        })()}
+        
+        {/* Loan Schedule of Closure */}
+        {loan.actual_principal && loan.actual_principal > 0 && (() => {
+          const closureSchedule = calculateClosureSchedule(
+            loan.actual_principal,
+            loan.interest_rate || 18,
+            loan.tenure_days,
+            loan.differential_capitalized || 0
+          );
+          return (
+            <View style={compactStyles.closureScheduleBox}>
+              <View style={compactStyles.closureScheduleHeader}>
+                <View>
+                  <BilingualLabel
+                    english="Loan Schedule of Closure"
+                    tamil="கடன் முடிவு அட்டவணை"
+                    mode={language}
+                    fontSize={8}
+                    fontWeight="bold"
+                    color="#6d28d9"
+                  />
+                  <BilingualLabel
+                    english="Total payable at different intervals"
+                    tamil="வெவ்வேறு கால இடைவெளிகளில் மொத்த செலுத்த வேண்டியது"
+                    mode={language}
+                    fontSize={6}
+                    color="#666"
+                  />
+                </View>
+              </View>
+              
+              {/* Closure schedule table header */}
+              <View style={compactStyles.closureTableHeader}>
+                <Text style={[compactStyles.closureTableCell, { width: '18%', textAlign: 'left' }]}>Period</Text>
+                <Text style={[compactStyles.closureTableCell, { width: '22%' }]}>Principal</Text>
+                <Text style={[compactStyles.closureTableCell, { width: '20%' }]}>Interest</Text>
+                <Text style={[compactStyles.closureTableCell, { width: '18%' }]}>Rebate</Text>
+                <Text style={[compactStyles.closureTableCell, { width: '22%' }]}>Total</Text>
+              </View>
+              
+              {/* Closure schedule rows */}
+              {closureSchedule.entries.map((entry, index) => (
+                <View key={index} style={compactStyles.closureTableRow}>
+                  <Text style={[compactStyles.closureTableCell, { width: '18%', textAlign: 'left' }]}>{entry.dayRange}</Text>
+                  <Text style={[compactStyles.closureTableCell, { width: '22%' }]}>{formatCurrencyPrint(entry.principalOutstanding)}</Text>
+                  <Text style={[compactStyles.closureTableCell, { width: '20%' }]}>{formatCurrencyPrint(entry.interestAccrued)}</Text>
+                  <Text style={[compactStyles.closureTableCell, { width: '18%', color: '#059669' }]}>
+                    {entry.rebateAmount > 0 ? `-${formatCurrencyPrint(entry.rebateAmount)}` : '-'}
+                  </Text>
+                  <Text style={[compactStyles.closureTableCellBold, { width: '22%' }]}>{formatCurrencyPrint(entry.totalClosureAmount)}</Text>
+                </View>
+              ))}
             </View>
           );
         })()}
