@@ -14,6 +14,7 @@ import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientTerms } from '@/hooks/useClientTerms';
 import { useBillOfSaleContentForPDF } from '@/hooks/useBillOfSaleContent';
+import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import { getSignedCustomerDocumentUrl, getSignedLoanDocumentUrl } from '@/lib/storage-utils';
 
 import { LoanReceiptPDF } from './documents/LoanReceiptPDF';
@@ -111,6 +112,7 @@ export function LoanPrintDialog({
   const { settings: effectiveSettings } = useEffectivePrintSettings(currentBranch?.id);
   const { data: terms = [] } = useClientTerms('loan');
   const billOfSaleContent = useBillOfSaleContentForPDF();
+  const { data: marketRate } = useTodayMarketRate();
   
   const [generating, setGenerating] = useState(false);
   const [selection, setSelection] = useState<DocumentSelection>({
@@ -228,6 +230,7 @@ export function LoanPrintDialog({
             sloganTamil={effectiveSettings.company_slogan_tamil}
             logoUrl={effectiveSettings.logo_url}
             copyType="customer"
+            marketRate={marketRate}
           />
         );
         const customerBlob = await pdf(customerDoc).toBlob();
@@ -250,6 +253,7 @@ export function LoanPrintDialog({
               sloganTamil={effectiveSettings.company_slogan_tamil}
               logoUrl={effectiveSettings.logo_url}
               copyType="office"
+              marketRate={marketRate}
             />
           );
           const officeBlob = await pdf(officeDoc).toBlob();
