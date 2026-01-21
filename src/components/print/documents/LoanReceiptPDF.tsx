@@ -451,11 +451,11 @@ export function LoanReceiptPDF({
               <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>Gross Wt</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>Net Wt</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>Purity</Text>
+              <View style={[compactStyles.tableHeaderCell, { width: '18%' }]}>
+                <BilingualLabel english="Loan Value" tamil="கடன் மதிப்பு" mode={language} fontSize={7} fontWeight="bold" />
+              </View>
               <View style={[compactStyles.tableHeaderCell, { width: '17%' }]}>
                 <BilingualLabel english="Market Value" tamil="சந்தை மதிப்பு" mode={language} fontSize={7} fontWeight="bold" />
-              </View>
-              <View style={[compactStyles.tableHeaderCell, { width: '18%' }]}>
-                <BilingualLabel english="Value" tamil="மதிப்பு" mode={language} fontSize={7} fontWeight="bold" />
               </View>
             </View>
             
@@ -466,8 +466,8 @@ export function LoanReceiptPDF({
                 <Text style={[compactStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
                 <Text style={[compactStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
                 <Text style={[compactStyles.tableCell, { width: '12%' }]}>{item.purity}</Text>
-                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.market_value || 0)}</Text>
                 <Text style={[compactStyles.tableCell, { width: '18%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.market_value || 0)}</Text>
               </View>
             ))}
             
@@ -479,8 +479,8 @@ export function LoanReceiptPDF({
               <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>-</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
               <Text style={[compactStyles.tableHeaderCell, { width: '18%' }]}>{formatCurrencyPrint(totalAppraisedValue)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
             </View>
           </View>
         </View>
