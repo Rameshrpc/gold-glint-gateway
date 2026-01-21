@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
-import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule } from '@/lib/interestCalculations';
+import { calculateAdvanceInterest, calculateRebateSchedule, calculateClosureSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule, type ClosureSchedule } from '@/lib/interestCalculations';
 import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
@@ -579,6 +579,14 @@ export default function Loans() {
     
     // Calculate rebate schedule for display (using interest adjustment)
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
+    
+    // Calculate closure schedule for display
+    const closureSchedule = calculateClosureSchedule(
+      principalOnRecord,
+      scheme.shown_rate || 18,
+      selectedTenure,
+      advanceCalc.differential
+    );
 
     return {
       totalAppraisedValue,
@@ -593,6 +601,7 @@ export default function Loans() {
       advanceCalc,
       netCashToCustomer,
       rebateSchedule,
+      closureSchedule,
       scheme,
     };
   }, [goldItems, selectedSchemeId, schemes, tenureDays, userDocumentChargesPercent, approvedLoanAmount]);
@@ -1780,6 +1789,43 @@ export default function Loans() {
                         </CardContent>
                       </Card>
                     </div>
+
+                    {/* Loan Schedule of Closure */}
+                    <Card className="border-violet-500/30 bg-violet-50/50 dark:bg-violet-950/20">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm text-violet-700 dark:text-violet-400 flex items-center gap-2">
+                          <CalendarIcon className="h-4 w-4" />
+                          Loan Schedule of Closure
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">Total payable at different intervals</p>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">Period</TableHead>
+                              <TableHead className="text-right text-xs">Principal</TableHead>
+                              <TableHead className="text-right text-xs">Interest</TableHead>
+                              <TableHead className="text-right text-xs">Rebate</TableHead>
+                              <TableHead className="text-right text-xs">Total Payable</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {loanCalculation.closureSchedule.entries.map((entry, index) => (
+                              <TableRow key={index}>
+                                <TableCell className="text-xs">{entry.dayRange}</TableCell>
+                                <TableCell className="text-right text-xs">{formatIndianCurrency(entry.principalOutstanding)}</TableCell>
+                                <TableCell className="text-right text-xs">{formatIndianCurrency(entry.interestAccrued)}</TableCell>
+                                <TableCell className="text-right text-xs text-green-600">
+                                  {entry.rebateAmount > 0 ? `-${formatIndianCurrency(entry.rebateAmount)}` : '-'}
+                                </TableCell>
+                                <TableCell className="text-right text-xs font-bold">{formatIndianCurrency(entry.totalClosureAmount)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
 
                     {tenureDays && (
                       <div className="text-sm text-muted-foreground">

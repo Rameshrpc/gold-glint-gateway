@@ -79,6 +79,21 @@ export interface RebateSchedule {
   slots: RebateSlot[];
 }
 
+export interface ClosureScheduleEntry {
+  dayRange: string;
+  daysFromLoan: number;
+  principalOutstanding: number;
+  interestAccrued: number;
+  rebateAmount: number;
+  totalClosureAmount: number;
+}
+
+export interface ClosureSchedule {
+  principalOnRecord: number;
+  shownRate: number;
+  entries: ClosureScheduleEntry[];
+}
+
 /**
  * Calculate simple interest for exact days
  */
@@ -104,6 +119,52 @@ export function calculateRebateSchedule(differentialAmount: number): RebateSched
       { dayRange: '60-75 days', percentage: 25, rebateAmount: Math.round(differentialAmount * 0.25) },
     ],
   };
+}
+
+/**
+ * Calculate loan closure schedule showing total payable at various intervals
+ * Shows principal, interest accrued, rebate, and total closure amount
+ */
+export function calculateClosureSchedule(
+  principalOnRecord: number,
+  shownRate: number,
+  tenureDays: number,
+  differentialAmount: number = 0
+): ClosureSchedule {
+  // Standard intervals: 30, 45, 60, 75, 90 days (or up to tenure)
+  const standardIntervals = [30, 45, 60, 75, 90];
+  const intervals = standardIntervals.filter(d => d <= tenureDays);
+  
+  // Add tenure if not already in the list
+  if (!intervals.includes(tenureDays) && tenureDays > 0) {
+    intervals.push(tenureDays);
+    intervals.sort((a, b) => a - b);
+  }
+  
+  const entries: ClosureScheduleEntry[] = intervals.map(days => {
+    // Interest accrued at shown rate for customer transparency
+    // For first 30 days, advance interest is already paid, so interest accrued = 0
+    const interestAccrued = days <= 30 
+      ? 0 
+      : calculateInterest(principalOnRecord, shownRate, days - 30); // Exclude advance interest period
+    
+    // Get rebate based on day range (using existing rebate logic)
+    const rebate = calculateRebateAtRedemption(days, differentialAmount);
+    
+    // Total = Principal + Interest - Rebate
+    const totalClosureAmount = principalOnRecord + interestAccrued - rebate.rebateAmount;
+    
+    return {
+      dayRange: `${days} days`,
+      daysFromLoan: days,
+      principalOutstanding: principalOnRecord,
+      interestAccrued: Math.round(interestAccrued),
+      rebateAmount: rebate.rebateAmount,
+      totalClosureAmount: Math.round(totalClosureAmount),
+    };
+  });
+  
+  return { principalOnRecord, shownRate, entries };
 }
 
 /**
