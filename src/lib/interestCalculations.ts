@@ -108,16 +108,17 @@ export function calculateInterest(
 /**
  * Calculate rebate schedule for loan agreement display
  * Shows rebate amounts (not percentages) for each time slab
- * Updated schedule: 1-30d = 66.67%, 30-45d = 66.67%, 45-60d = 50%, 60-75d = 33.33%, after 75d = 0%
+ * Updated schedule: 1-15d = 66.67%, 16-30d = 66.67%, 31-45d = 50%, 46-60d = 33.33%, 61-75d = 16.67%, after 75d = 0%
  */
 export function calculateRebateSchedule(differentialAmount: number): RebateSchedule {
   return {
     differentialAmount,
     slots: [
-      { dayRange: '1-30 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
-      { dayRange: '30-45 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
-      { dayRange: '45-60 days', percentage: 50, rebateAmount: Math.round(differentialAmount * 0.50) },
-      { dayRange: '60-75 days', percentage: 33.33, rebateAmount: Math.round(differentialAmount * 0.3333) },
+      { dayRange: 'Within 1-15 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
+      { dayRange: 'Within 16-30 days', percentage: 66.67, rebateAmount: Math.round(differentialAmount * 0.6667) },
+      { dayRange: 'Within 31-45 days', percentage: 50, rebateAmount: Math.round(differentialAmount * 0.50) },
+      { dayRange: 'Within 46-60 days', percentage: 33.33, rebateAmount: Math.round(differentialAmount * 0.3333) },
+      { dayRange: 'Within 61-75 days', percentage: 16.67, rebateAmount: Math.round(differentialAmount * 0.1667) },
       { dayRange: 'After 75 days', percentage: 0, rebateAmount: 0 },
     ],
   };
@@ -133,8 +134,8 @@ export function calculateClosureSchedule(
   tenureDays: number,
   differentialAmount: number = 0
 ): ClosureSchedule {
-  // Standard intervals: 30, 45, 60, 75, 90 days (or up to tenure)
-  const standardIntervals = [30, 45, 60, 75, 90];
+  // Standard intervals: 15, 30, 45, 60, 75, 90 days (synced with rebate slabs)
+  const standardIntervals = [15, 30, 45, 60, 75, 90];
   const intervals = standardIntervals.filter(d => d <= tenureDays);
   
   // Add tenure if not already in the list
@@ -171,54 +172,65 @@ export function calculateClosureSchedule(
 
 /**
  * Calculate rebate at redemption based on days since loan
- * Updated slab-based percentages: 1-30d = 66.67%, 30-45d = 66.67%, 45-60d = 50%, 60-75d = 33.33%, after 75d = 0%
+ * Updated slab-based percentages: 1-15d = 66.67%, 16-30d = 66.67%, 31-45d = 50%, 46-60d = 33.33%, 61-75d = 16.67%, after 75d = 0%
  */
 export function calculateRebateAtRedemption(
   daysSinceLoan: number,
   differentialAmount: number
 ): RebateCalculation {
-  // Within 1-30 days: 66.67% rebate
-  if (daysSinceLoan >= 1 && daysSinceLoan <= 30) {
+  // Within 1-15 days: 66.67% rebate
+  if (daysSinceLoan >= 1 && daysSinceLoan <= 15) {
     return {
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
       rebateAmount: Math.round(differentialAmount * 0.6667),
       percentage: 66.67,
-      reason: 'Early release benefit (Within 1-30 days)',
+      reason: 'Early release benefit (Within 1-15 days)',
     };
   } 
-  // 30-45 days: 66.67% rebate
-  else if (daysSinceLoan > 30 && daysSinceLoan <= 45) {
+  // Within 16-30 days: 66.67% rebate
+  else if (daysSinceLoan >= 16 && daysSinceLoan <= 30) {
     return {
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
       rebateAmount: Math.round(differentialAmount * 0.6667),
       percentage: 66.67,
-      reason: 'Early release benefit (30-45 days)',
+      reason: 'Early release benefit (Within 16-30 days)',
     };
   } 
-  // 45-60 days: 50% rebate
-  else if (daysSinceLoan > 45 && daysSinceLoan <= 60) {
+  // Within 31-45 days: 50% rebate
+  else if (daysSinceLoan >= 31 && daysSinceLoan <= 45) {
     return {
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
       rebateAmount: Math.round(differentialAmount * 0.50),
       percentage: 50,
-      reason: 'Early release benefit (45-60 days)',
+      reason: 'Early release benefit (Within 31-45 days)',
     };
   } 
-  // 60-75 days: 33.33% rebate
-  else if (daysSinceLoan > 60 && daysSinceLoan <= 75) {
+  // Within 46-60 days: 33.33% rebate
+  else if (daysSinceLoan >= 46 && daysSinceLoan <= 60) {
     return {
       eligible: true,
       usedDays: daysSinceLoan,
       unusedDays: 0,
       rebateAmount: Math.round(differentialAmount * 0.3333),
       percentage: 33.33,
-      reason: 'Early release benefit (60-75 days)',
+      reason: 'Early release benefit (Within 46-60 days)',
+    };
+  } 
+  // Within 61-75 days: 16.67% rebate
+  else if (daysSinceLoan >= 61 && daysSinceLoan <= 75) {
+    return {
+      eligible: true,
+      usedDays: daysSinceLoan,
+      unusedDays: 0,
+      rebateAmount: Math.round(differentialAmount * 0.1667),
+      percentage: 16.67,
+      reason: 'Early release benefit (Within 61-75 days)',
     };
   }
   // After 75 days: No rebate
