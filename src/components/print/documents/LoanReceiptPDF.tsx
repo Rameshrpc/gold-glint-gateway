@@ -5,7 +5,7 @@ import { PDFHeader } from '../shared/PDFHeader';
 import { PDFFooter } from '../shared/PDFFooter';
 import { BilingualLabel, BilingualValueRow, LanguageMode } from '@/lib/bilingual-utils';
 import { fontsRegistered } from '@/lib/pdf-fonts';
-import { calculateRebateSchedule, calculateClosureSchedule, type ClosureSchedule } from '@/lib/interestCalculations';
+import { calculateClosureSchedule, type ClosureSchedule } from '@/lib/interestCalculations';
 
 // Ensure fonts are loaded
 const _fonts = fontsRegistered;
@@ -200,53 +200,6 @@ const compactStyles = StyleSheet.create({
   amountTotalValue: {
     fontSize: 10,
     fontWeight: 'bold',
-  },
-  // Early Release Benefit styles
-  earlyReleaseBox: {
-    marginTop: 6,
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#d97706',
-    backgroundColor: '#fffbeb',
-    borderRadius: 3,
-  },
-  earlyReleaseHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    paddingBottom: 3,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#d97706',
-  },
-  earlyReleaseTitle: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    color: '#b45309',
-  },
-  earlyReleaseSubtitle: {
-    fontSize: 6,
-    color: '#78716c',
-    marginTop: 1,
-  },
-  earlyReleaseRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 2,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e5e7eb',
-  },
-  earlyReleaseDays: {
-    fontSize: 7,
-    color: '#374151',
-  },
-  earlyReleaseAmount: {
-    fontSize: 7,
-    fontWeight: 'bold',
-    color: '#059669',
-  },
-  noRebateText: {
-    fontSize: 7,
-    color: '#9ca3af',
   },
   // Closure Schedule styles
   closureScheduleBox: {
@@ -605,55 +558,6 @@ export function LoanReceiptPDF({
           </View>
         )}
         
-        {/* Early Release Benefit - show if differential_capitalized exists */}
-        {loan.differential_capitalized && loan.differential_capitalized > 0 && (() => {
-          const rebateSchedule = calculateRebateSchedule(loan.differential_capitalized);
-          return (
-            <View style={compactStyles.earlyReleaseBox}>
-              <View style={compactStyles.earlyReleaseHeader}>
-                <View>
-                  <BilingualLabel
-                    english="Early Release Benefit"
-                    tamil="முன்கூட்டிய விடுவிப்பு சலுகை"
-                    mode={language}
-                    fontSize={8}
-                    fontWeight="bold"
-                    color="#b45309"
-                  />
-                  <BilingualLabel
-                    english="Rebate on early loan closure"
-                    tamil="கடன் முன்கூட்டியே முடிக்கும் போது தள்ளுபடி"
-                    mode={language}
-                    fontSize={6}
-                    color="#666"
-                  />
-                </View>
-              </View>
-              
-              {/* Rebate schedule rows */}
-              <View style={compactStyles.earlyReleaseRow}>
-                <BilingualLabel english="Within 1-30 days" tamil="1-30 நாட்களுக்குள்" mode={language} fontSize={6} />
-                <BilingualLabel english="No rebate" tamil="தள்ளுபடி இல்லை" mode={language} fontSize={6} color="#9ca3af" />
-              </View>
-              <View style={compactStyles.earlyReleaseRow}>
-                <BilingualLabel english="Within 30-45 days" tamil="30-45 நாட்களுக்குள்" mode={language} fontSize={6} />
-                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[1].rebateAmount)}</Text>
-              </View>
-              <View style={compactStyles.earlyReleaseRow}>
-                <BilingualLabel english="Within 45-60 days" tamil="45-60 நாட்களுக்குள்" mode={language} fontSize={6} />
-                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[2].rebateAmount)}</Text>
-              </View>
-              <View style={compactStyles.earlyReleaseRow}>
-                <BilingualLabel english="Within 60-75 days" tamil="60-75 நாட்களுக்குள்" mode={language} fontSize={6} />
-                <Text style={compactStyles.earlyReleaseAmount}>{formatCurrencyPrint(rebateSchedule.slots[3].rebateAmount)}</Text>
-              </View>
-              <View style={[compactStyles.earlyReleaseRow, { borderBottomWidth: 0 }]}>
-                <BilingualLabel english="After 75 days" tamil="75 நாட்களுக்கு பிறகு" mode={language} fontSize={6} />
-                <BilingualLabel english="No rebate" tamil="தள்ளுபடி இல்லை" mode={language} fontSize={6} color="#888" />
-              </View>
-            </View>
-          );
-        })()}
         
         {/* Loan Schedule of Closure */}
         {loan.actual_principal && loan.actual_principal > 0 && (() => {
