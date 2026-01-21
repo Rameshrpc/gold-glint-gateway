@@ -164,45 +164,50 @@ export function calculateRebateAtRedemption(
 
 /**
  * Calculate advance interest for loan creation (dual-rate)
- * Differential is calculated for (TENURE - ADVANCE DAYS) since advance interest is already deducted
+ * 
+ * NEW FORMULAS:
+ * - Interest Adjustment = (Effective Rate - Shown Rate) × Appraised Value × Tenure / 365
+ * - Principal on Record = Appraised Value + Interest Adjustment
+ * - Advance Interest = Shown Rate × Appraised Value × Advance Days / 365
+ * - Net Cash = Appraised Value - Advance Interest - Document Charges (calculated separately)
  */
 export function calculateAdvanceInterest(
-  principal: number,
+  appraisedValue: number,  // Total appraised value (not loan amount)
   scheme: Scheme,
   tenureDays: number = 90
 ): AdvanceInterestCalculation {
   const months = scheme.advance_interest_months;
   const advanceDays = months * 30;
   
-  // Shown interest (18% or shown_rate) for advance months - deducted from disbursement
-  const shownInterest = calculateInterest(principal, scheme.shown_rate, advanceDays);
-  
-  // Actual interest (effective rate) for advance months
-  const actualInterest = calculateInterest(principal, scheme.effective_rate, advanceDays);
-  
   // Differential rate = Effective - Shown
   const differentialRate = scheme.effective_rate - scheme.shown_rate;
   
-  // Differential for (TENURE - ADVANCE DAYS) only, since advance interest is already deducted
-  const remainingDays = Math.max(0, tenureDays - advanceDays);
-  const differential = calculateInterest(principal, differentialRate, remainingDays);
+  // Interest Adjustment = (Effective - Shown) × Appraised Value × Full Tenure / 365
+  const interestAdjustment = calculateInterest(appraisedValue, differentialRate, tenureDays);
+  
+  // Advance Interest (1 month) = Shown Rate × Appraised Value × Advance Days / 365
+  const shownInterest = calculateInterest(appraisedValue, scheme.shown_rate, advanceDays);
+  
+  // Actual interest for advance months (for internal records)
+  const actualInterest = calculateInterest(appraisedValue, scheme.effective_rate, advanceDays);
   
   // Differential for advance months only (for reference)
-  const differentialForAdvance = calculateInterest(principal, differentialRate, advanceDays);
+  const differentialForAdvance = calculateInterest(appraisedValue, differentialRate, advanceDays);
   
-  // Customer receives: principal - shown interest
-  const netCashToCustomer = principal - shownInterest;
+  // Principal on Record = Appraised Value + Interest Adjustment
+  const principalOnRecord = appraisedValue + interestAdjustment;
   
-  // Actual principal = original + differential for remaining tenure (books entry)
-  const actualPrincipal = principal + differential;
+  // Net Cash (before doc charges) = Appraised Value - Advance Interest
+  // Document charges are deducted separately in the calling code
+  const netCashToCustomer = appraisedValue - shownInterest;
   
   return {
-    shownInterest: Math.round(shownInterest),
-    actualInterest: Math.round(actualInterest),
-    differential: Math.round(differential),
+    shownInterest: Math.round(shownInterest),       // Advance Interest (deducted from disbursement)
+    actualInterest: Math.round(actualInterest),     // Internal calculation
+    differential: Math.round(interestAdjustment),   // Interest Adjustment (full tenure)
     differentialForAdvance: Math.round(differentialForAdvance),
     netCashToCustomer: Math.round(netCashToCustomer),
-    actualPrincipal: Math.round(actualPrincipal),
+    actualPrincipal: Math.round(principalOnRecord), // Principal on Record
   };
 }
 
