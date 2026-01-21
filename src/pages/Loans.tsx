@@ -1777,14 +1777,12 @@ export default function Loans() {
                           <div className="space-y-2">
                             {loanCalculation.rebateSchedule.slots.map((slot, index) => (
                               <div key={index} className="flex justify-between items-center py-1 border-b border-amber-200/50 dark:border-amber-800/50 last:border-0">
-                                <span className="text-muted-foreground">Within {slot.dayRange}</span>
-                                <span className="font-medium text-green-600">{formatIndianCurrency(slot.rebateAmount)}</span>
+                                <span className="text-muted-foreground">{slot.dayRange}</span>
+                                <span className={`font-medium ${slot.rebateAmount > 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                  {slot.rebateAmount > 0 ? formatIndianCurrency(slot.rebateAmount) : 'No rebate'}
+                                </span>
                               </div>
                             ))}
-                            <div className="flex justify-between items-center py-1 pt-2">
-                              <span className="text-muted-foreground">After 75 days</span>
-                              <span className="font-medium text-muted-foreground">No rebate</span>
-                            </div>
                           </div>
                         </CardContent>
                       </Card>
