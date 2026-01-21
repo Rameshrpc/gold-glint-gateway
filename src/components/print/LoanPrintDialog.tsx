@@ -32,6 +32,7 @@ interface GoldItem {
   purity: string;
   purity_percentage: number;
   appraised_value: number;
+  market_value?: number | null;
   image_url?: string | null;
 }
 
