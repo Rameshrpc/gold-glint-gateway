@@ -546,8 +546,8 @@ export default function Loans() {
     // Use selected tenure or default to max tenure
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
     
-    // Calculate dual-rate advance interest with tenure for differential
-    const advanceCalc = calculateAdvanceInterest(loanAmount, {
+    // NEW LOGIC: Pass Total Appraised Value (not loan amount) to calculate interest adjustment
+    const advanceCalc = calculateAdvanceInterest(totalAppraisedValue, {
       id: scheme.id,
       scheme_name: scheme.scheme_name,
       shown_rate: scheme.shown_rate || 18,
@@ -556,7 +556,7 @@ export default function Loans() {
       advance_interest_months: scheme.advance_interest_months || 3,
     }, selectedTenure);
 
-    // Principal on Record = Loan Amount + Differential
+    // Principal on Record = Total Appraised Value + Interest Adjustment
     const principalOnRecord = advanceCalc.actualPrincipal;
     
     // Max Approved Amount = Principal on Record × 1.10 (10% above)
@@ -568,21 +568,22 @@ export default function Loans() {
     // User-input document charges percentage (defaults to scheme value if not set)
     const docChargesPercent = userDocumentChargesPercent ? parseFloat(userDocumentChargesPercent) : (scheme.document_charges || 0);
     
-    // Document charges calculated on Principal on Record (not approved amount)
-    const documentCharges = Math.round(principalOnRecord * (docChargesPercent / 100));
+    // Document charges calculated on Approved Loan Amount
+    const documentCharges = Math.round(finalApprovedAmount * (docChargesPercent / 100));
     
     // Processing fee on the final approved amount
     const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
 
-    // Net cash to customer = Total Appraised Value - Advance Interest - (Interest Adjustment × 0.5) - Document Charges
-    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - (advanceCalc.differential * 0.5) - documentCharges;
+    // NEW FORMULA: Net Cash = Total Appraised Value - Advance Interest - Document Charges
+    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - documentCharges;
     
-    // Calculate rebate schedule for display
+    // Calculate rebate schedule for display (using interest adjustment)
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
 
     return {
       totalAppraisedValue,
       loanAmount,
+      interestAdjustment: advanceCalc.differential,  // Expose interest adjustment
       principalOnRecord,
       maxApprovedAmount,
       finalApprovedAmount,

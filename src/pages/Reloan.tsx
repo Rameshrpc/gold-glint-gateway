@@ -412,7 +412,8 @@ export default function Reloan() {
     
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
     
-    const advanceCalc = calculateAdvanceInterest(loanAmount, {
+    // NEW LOGIC: Pass Total Appraised Value (not loan amount) to calculate interest adjustment
+    const advanceCalc = calculateAdvanceInterest(totalAppraisedValue, {
       id: scheme.id,
       scheme_name: scheme.scheme_name,
       shown_rate: scheme.shown_rate || 18,
@@ -421,19 +422,23 @@ export default function Reloan() {
       advance_interest_months: scheme.advance_interest_months || 3,
     }, selectedTenure);
 
+    // Principal on Record = Total Appraised Value + Interest Adjustment
     const principalOnRecord = advanceCalc.actualPrincipal;
     const maxApprovedAmount = Math.round(principalOnRecord * 1.10);
     const finalApprovedAmount = approvedLoanAmount ? parseFloat(approvedLoanAmount) : principalOnRecord;
     
+    // Document charges on Approved Loan Amount
     const docChargesPercent = userDocumentChargesPercent ? parseFloat(userDocumentChargesPercent) : (scheme.document_charges || 0);
-    const documentCharges = Math.round(principalOnRecord * (docChargesPercent / 100));
+    const documentCharges = Math.round(finalApprovedAmount * (docChargesPercent / 100));
     const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
 
-    const netCashToCustomer = finalApprovedAmount - advanceCalc.shownInterest - processingFee - documentCharges;
+    // NEW FORMULA: Net Cash = Total Appraised Value - Advance Interest - Document Charges
+    const netCashToCustomer = totalAppraisedValue - advanceCalc.shownInterest - documentCharges;
 
     return {
       totalAppraisedValue,
       loanAmount,
+      interestAdjustment: advanceCalc.differential,  // Expose interest adjustment
       principalOnRecord,
       maxApprovedAmount,
       finalApprovedAmount,
