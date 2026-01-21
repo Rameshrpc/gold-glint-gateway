@@ -22,6 +22,12 @@ interface GoldItem {
   market_value?: number | null;
 }
 
+interface MarketRateData {
+  rate_24kt: number;
+  rate_22kt: number;
+  rate_18kt: number;
+}
+
 interface Customer {
   customer_code: string;
   full_name: string;
@@ -65,7 +71,33 @@ interface LoanReceiptPDFProps {
   sloganTamil?: string | null;
   logoUrl?: string | null;
   copyType?: 'customer' | 'office';
+  marketRate?: MarketRateData | null;
 }
+
+// Helper function to calculate market value based on purity and latest market rate
+const calculateMarketValue = (item: GoldItem, marketRate?: MarketRateData | null): number => {
+  if (!marketRate) return 0;
+  
+  const purityLower = item.purity.toLowerCase();
+  let ratePerGram = 0;
+  
+  // Map purity to the corresponding rate
+  if (purityLower.includes('24k') || purityLower === '24k') {
+    ratePerGram = marketRate.rate_24kt;
+  } else if (purityLower.includes('22k') || purityLower === '22k') {
+    ratePerGram = marketRate.rate_22kt;
+  } else if (purityLower.includes('18k') || purityLower === '18k') {
+    ratePerGram = marketRate.rate_18kt;
+  } else {
+    // For other purities (e.g., 20k, 21k), interpolate based on purity_percentage
+    // Pure gold (24k) = ~99.9%, use purity_percentage to calculate proportional rate
+    const purityRatio = item.purity_percentage / 100;
+    ratePerGram = marketRate.rate_24kt * purityRatio;
+  }
+  
+  // Market Value = Rate per gram × Net Weight
+  return ratePerGram * item.net_weight_grams;
+};
 
 // Compact styles for single-page receipt
 const compactStyles = StyleSheet.create({
@@ -273,13 +305,20 @@ export function LoanReceiptPDF({
   sloganTamil,
   logoUrl,
   copyType,
+  marketRate,
 }: LoanReceiptPDFProps) {
   const pageSize = PAPER_SIZES[paperSize];
+  
+  // Calculate market values for each item based on latest market rate
+  const goldItemsWithCalculatedMarketValue = goldItems.map(item => ({
+    ...item,
+    calculatedMarketValue: calculateMarketValue(item, marketRate)
+  }));
   
   const totalGrossWeight = goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0);
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
   const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
-  const totalMarketValue = goldItems.reduce((sum, item) => sum + (item.market_value || 0), 0);
+  const totalMarketValue = goldItemsWithCalculatedMarketValue.reduce((sum, item) => sum + item.calculatedMarketValue, 0);
   
   const displayPrincipal = loan.actual_principal || loan.principal_amount;
   
@@ -459,7 +498,7 @@ export function LoanReceiptPDF({
               </View>
             </View>
             
-            {goldItems.map((item, index) => (
+            {goldItemsWithCalculatedMarketValue.map((item, index) => (
               <View key={item.id || index} style={compactStyles.tableRow}>
                 <Text style={[compactStyles.tableCell, { width: '5%' }]}>{index + 1}</Text>
                 <Text style={[compactStyles.tableCellLeft, { width: '20%' }]}>{item.item_type}</Text>
@@ -467,7 +506,7 @@ export function LoanReceiptPDF({
                 <Text style={[compactStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
                 <Text style={[compactStyles.tableCell, { width: '12%' }]}>{item.purity}</Text>
                 <Text style={[compactStyles.tableCell, { width: '18%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
-                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.market_value || 0)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.calculatedMarketValue)}</Text>
               </View>
             ))}
             
