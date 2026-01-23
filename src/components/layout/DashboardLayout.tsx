@@ -14,7 +14,7 @@ import {
   Building2, LayoutDashboard, Users, FileText, CreditCard, Wallet, Package, 
   Settings, X, ChevronDown, ChevronRight, LogOut, User, Building, UserCog, 
   Gavel, Bell, BarChart3, Calculator, MessageCircle, Send, RefreshCw, Layers,
-  Landmark, Gift, Vault, Receipt, Coins, Database, TrendingUp, Menu
+  Landmark, Gift, Vault, Receipt, Coins, Database, TrendingUp, Menu, Activity
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -114,6 +114,7 @@ const menuGroups: MenuGroup[] = [
     icon: BarChart3,
     items: [
       { title: 'MIS Reports', icon: BarChart3, href: '/mis-reports', roles: ['super_admin', 'moderator', 'tenant_admin', 'branch_manager', 'auditor'], moduleKey: 'reports' },
+      { title: 'Activity Log', icon: Activity, href: '/activity-log', roles: ['tenant_admin'] },
       { title: 'Audit Logs', icon: Database, href: '/audit-logs', roles: ['super_admin', 'moderator', 'tenant_admin', 'auditor'] },
       { title: 'Notifications', icon: Bell, href: '/notifications', moduleKey: 'notifications' },
       { title: 'WhatsApp', icon: MessageCircle, href: '/whatsapp' },

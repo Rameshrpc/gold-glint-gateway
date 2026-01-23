@@ -47,6 +47,7 @@ import LedgerStatement from "./pages/LedgerStatement";
 import DayBook from "./pages/DayBook";
 import Reports from "./pages/Reports";
 import AuditLogs from "./pages/AuditLogs";
+import ActivityLog from "./pages/ActivityLog";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotificationLogs from "./pages/NotificationLogs";
 import NotFound from "./pages/NotFound";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="/reports" element={<Navigate to="/mis-reports" replace />} />
             <Route path="/mis-reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
             <Route path="/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
+            <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
             <Route path="/trial-balance" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
             <Route path="/profit-loss" element={<ProtectedRoute><ProfitAndLoss /></ProtectedRoute>} />
             <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheet /></ProtectedRoute>} />

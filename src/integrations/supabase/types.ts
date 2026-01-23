@@ -129,6 +129,69 @@ export type Database = {
           },
         ]
       }
+      activity_logs: {
+        Row: {
+          action: string
+          branch_id: string | null
+          client_id: string
+          created_at: string | null
+          description: string | null
+          entity_id: string | null
+          entity_identifier: string | null
+          entity_type: string | null
+          id: string
+          metadata: Json | null
+          module: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          branch_id?: string | null
+          client_id: string
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_identifier?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          module: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          branch_id?: string | null
+          client_id?: string
+          created_at?: string | null
+          description?: string | null
+          entity_id?: string | null
+          entity_identifier?: string | null
+          entity_type?: string | null
+          id?: string
+          metadata?: Json | null
+          module?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "activity_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_commissions: {
         Row: {
           agent_id: string

@@ -26,6 +26,7 @@ import { useApprovalWorkflow } from '@/hooks/useApprovalWorkflow';
 import { ApprovalBadge } from '@/components/approvals';
 import { toast } from 'sonner';
 import { format, differenceInDays, parseISO } from 'date-fns';
+import { logActivity } from '@/lib/activity-logger';
 import {
   calculateRedemptionAmount,
   formatIndianCurrency,
@@ -497,6 +498,16 @@ export default function Redemption() {
         });
 
         toast.success(`Loan ${selectedLoan.loan_number} redeemed successfully`);
+
+        // Log activity
+        logActivity({
+          action: 'redeem',
+          module: 'redemption',
+          entityType: 'loan',
+          entityId: selectedLoan.id,
+          entityIdentifier: selectedLoan.loan_number,
+          description: `Redeemed loan ${selectedLoan.loan_number} - Settlement: ₹${redemptionCalc.totalPayable.toLocaleString('en-IN')}`,
+        });
       }
 
       // Reset form
