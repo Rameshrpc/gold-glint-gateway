@@ -21,6 +21,7 @@ import { getSignedUrl } from '@/lib/storage';
 import { CustomerStatementPDF } from '@/components/print/documents';
 import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { pdf } from '@react-pdf/renderer';
+import { logCreate, logUpdate, logDelete } from '@/lib/activity-logger';
 
 type NomineeRelation = 'father' | 'mother' | 'spouse' | 'son' | 'daughter' | 
                        'brother' | 'sister' | 'grandfather' | 'grandmother' | 
@@ -541,6 +542,14 @@ export default function Customers() {
       }
 
       toast.success(editingCustomer ? 'Customer updated successfully' : 'Customer created successfully');
+      
+      // Log activity
+      if (editingCustomer) {
+        logUpdate('customers', 'customer', customerId, customerCode, `Updated customer ${customerCode} - ${fullName}`);
+      } else {
+        logCreate('customers', 'customer', customerId, customerCode, `Created customer ${customerCode} - ${fullName}`);
+      }
+      
       setDialogOpen(false);
       resetForm();
       fetchCustomers();

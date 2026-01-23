@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { logActivity } from '@/lib/activity-logger';
 
 type AppRole = 'super_admin' | 'moderator' | 'tenant_admin' | 'branch_manager' | 'loan_officer' | 'appraiser' | 'collection_agent' | 'auditor';
 
@@ -227,6 +228,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: new Error('Your account does not belong to this organization. Please check the client code.') };
       }
 
+      // Log successful login
+      logActivity({
+        action: 'login',
+        module: 'auth',
+        description: `User logged in successfully`,
+      });
+
       return { error: null };
     } catch (error) {
       console.error('Sign in error:', error);
@@ -334,6 +342,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     try {
+      // Log logout before signing out (while we still have user context)
+      await logActivity({
+        action: 'logout',
+        module: 'auth',
+        description: 'User logged out',
+      });
+      
       await supabase.auth.signOut({ scope: 'local' });
     } catch (error) {
       console.error('Sign out error:', error);

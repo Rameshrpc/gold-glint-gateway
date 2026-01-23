@@ -24,6 +24,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
 import { calculateAdvanceInterest, calculateRebateSchedule, calculateClosureSchedule, formatIndianCurrency, type AdvanceInterestCalculation, type RebateSchedule, type ClosureSchedule } from '@/lib/interestCalculations';
+import { logCreate, logPrint, logExport } from '@/lib/activity-logger';
 import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
@@ -814,6 +815,16 @@ export default function Loans() {
       }
 
       toast.success(`Loan ${loanResult.loan_number} created successfully`);
+
+      // Log activity
+      logCreate(
+        'loans',
+        'loan',
+        loanResult.id,
+        loanResult.loan_number,
+        `Created loan ${loanResult.loan_number} for ${customers.find(c => c.id === selectedCustomerId)?.full_name} - Amount: ₹${loanAmount.toLocaleString('en-IN')}`
+      );
+      
       
       // If approval is required, submit for approval
       if (approvalStatus === 'pending') {
