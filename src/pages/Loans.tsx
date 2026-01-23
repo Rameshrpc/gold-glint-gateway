@@ -112,6 +112,8 @@ interface GoldItem {
   appraised_value: number;
   market_value?: number;
   market_rate_date?: string;
+  item_count: number;
+  remarks?: string;
 }
 
 interface Loan {
@@ -246,6 +248,8 @@ export default function Loans() {
     gross_weight_grams: 0,
     stone_weight_grams: 0,
     purity: '22k',
+    item_count: 1,
+    remarks: '',
   });
   
   // View loan dialog
@@ -438,6 +442,8 @@ export default function Loans() {
       gross_weight_grams: 0,
       stone_weight_grams: 0,
       purity: '22k',
+      item_count: 1,
+      remarks: '',
     });
   };
 
@@ -516,6 +522,8 @@ export default function Loans() {
       appraised_value: appraisedValue,
       market_value: marketValue,
       market_rate_date: todayMarketRate?.rate_date || today,
+      item_count: currentItem.item_count || 1,
+      remarks: currentItem.remarks || '',
     };
 
     setGoldItems([...goldItems, newItem]);
@@ -528,6 +536,8 @@ export default function Loans() {
       gross_weight_grams: 0,
       stone_weight_grams: 0,
       purity: '22k',
+      item_count: 1,
+      remarks: '',
     });
   };
 
@@ -758,6 +768,8 @@ export default function Loans() {
         stone_weight_grams: item.stone_weight_grams,
         market_rate_per_gram: item.market_rate_per_gram,
         appraised_value: item.appraised_value,
+        item_count: item.item_count || 1,
+        remarks: item.remarks || null,
       }));
 
       const { error: itemsError } = await supabase
@@ -912,6 +924,8 @@ export default function Loans() {
         appraised_value: item.appraised_value,
         market_value: item.market_value || undefined,
         market_rate_date: item.market_rate_date || undefined,
+        item_count: (item as any).item_count || 1,
+        remarks: (item as any).remarks || '',
       }));
       setGoldItems(formattedGoldItems);
     }
@@ -1594,18 +1608,29 @@ export default function Loans() {
                           </Select>
                         </div>
                       </div>
-                      <div className="flex gap-3 items-end">
-                        <div className="flex-1 space-y-1">
-                          <Label className="text-xs">Description (Optional)</Label>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Item Nos</Label>
                           <Input
-                            value={currentItem.description || ''}
-                            onChange={(e) => setCurrentItem({...currentItem, description: e.target.value})}
-                            placeholder="Additional details"
+                            type="number"
+                            min="1"
+                            value={currentItem.item_count || 1}
+                            onChange={(e) => setCurrentItem({...currentItem, item_count: parseInt(e.target.value) || 1})}
                           />
                         </div>
-                        <Button type="button" onClick={addGoldItem} variant="outline" size="sm">
-                          <Plus className="h-4 w-4 mr-1" /> Add Item
-                        </Button>
+                        <div className="space-y-1 md:col-span-2">
+                          <Label className="text-xs">Remarks (Optional)</Label>
+                          <Input
+                            value={currentItem.remarks || ''}
+                            onChange={(e) => setCurrentItem({...currentItem, remarks: e.target.value})}
+                            placeholder="Additional remarks"
+                          />
+                        </div>
+                        <div className="flex items-end">
+                          <Button type="button" onClick={addGoldItem} variant="outline" size="sm" className="w-full">
+                            <Plus className="h-4 w-4 mr-1" /> Add Item
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -1616,24 +1641,32 @@ export default function Loans() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead>Type</TableHead>
-                              <TableHead>Net Wt (g)</TableHead>
+                              <TableHead className="w-[50px]">S.No</TableHead>
+                              <TableHead>Item</TableHead>
+                              <TableHead className="text-center">Item Nos</TableHead>
+                              <TableHead>Gross Wt</TableHead>
+                              <TableHead>Net Wt</TableHead>
                               <TableHead>Purity</TableHead>
                               <TableHead className="text-right">Market Value</TableHead>
-                              <TableHead className="text-right">Loan Value</TableHead>
+                              <TableHead>Remarks</TableHead>
                               <TableHead></TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {goldItems.map((item, index) => (
                               <TableRow key={index}>
+                                <TableCell>{index + 1}</TableCell>
                                 <TableCell className="capitalize">{item.item_type}</TableCell>
-                                <TableCell>{item.net_weight_grams.toFixed(3)}</TableCell>
+                                <TableCell className="text-center">{item.item_count || 1}</TableCell>
+                                <TableCell>{item.gross_weight_grams.toFixed(3)}g</TableCell>
+                                <TableCell>{item.net_weight_grams.toFixed(3)}g</TableCell>
                                 <TableCell>{item.purity}</TableCell>
-                                <TableCell className="text-right text-muted-foreground">
+                                <TableCell className="text-right">
                                   {item.market_value ? formatIndianCurrency(item.market_value) : '-'}
                                 </TableCell>
-                                <TableCell className="text-right font-medium">{formatIndianCurrency(item.appraised_value)}</TableCell>
+                                <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">
+                                  {item.remarks || '-'}
+                                </TableCell>
                                 <TableCell>
                                   <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
                                     <Trash2 className="h-4 w-4 text-destructive" />
@@ -1642,14 +1675,16 @@ export default function Loans() {
                               </TableRow>
                             ))}
                             <TableRow className="bg-muted/50">
-                              <TableCell colSpan={3} className="font-semibold">Totals</TableCell>
-                              <TableCell className="text-right text-muted-foreground">
+                              <TableCell className="font-semibold">Total</TableCell>
+                              <TableCell></TableCell>
+                              <TableCell className="text-center font-semibold">{goldItems.reduce((sum, item) => sum + (item.item_count || 1), 0)}</TableCell>
+                              <TableCell className="font-semibold">{goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0).toFixed(3)}g</TableCell>
+                              <TableCell className="font-semibold">{goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0).toFixed(3)}g</TableCell>
+                              <TableCell></TableCell>
+                              <TableCell className="text-right font-semibold">
                                 {formatIndianCurrency(goldItems.reduce((sum, item) => sum + (item.market_value || 0), 0))}
                               </TableCell>
-                              <TableCell className="text-right font-semibold">
-                                {formatIndianCurrency(goldItems.reduce((sum, item) => sum + item.appraised_value, 0))}
-                              </TableCell>
-                              <TableCell></TableCell>
+                              <TableCell colSpan={2}></TableCell>
                             </TableRow>
                           </TableBody>
                         </Table>
@@ -2498,19 +2533,27 @@ export default function Loans() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Net Weight</TableHead>
+                        <TableHead className="w-[50px]">S.No</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Item Nos</TableHead>
+                        <TableHead>Gross Wt</TableHead>
+                        <TableHead>Net Wt</TableHead>
                         <TableHead>Purity</TableHead>
-                        <TableHead className="text-right">Value</TableHead>
+                        <TableHead className="text-right">Market Value</TableHead>
+                        <TableHead>Remarks</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {viewingGoldItems.map((item) => (
+                      {viewingGoldItems.map((item, index) => (
                         <TableRow key={item.id}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell className="capitalize">{item.item_type}</TableCell>
+                          <TableCell className="text-center">{(item as any).item_count || 1}</TableCell>
+                          <TableCell>{item.gross_weight_grams.toFixed(3)}g</TableCell>
                           <TableCell>{item.net_weight_grams.toFixed(3)}g</TableCell>
                           <TableCell>{item.purity}</TableCell>
-                          <TableCell className="text-right">{formatIndianCurrency(item.appraised_value)}</TableCell>
+                          <TableCell className="text-right">{item.market_value ? formatIndianCurrency(item.market_value) : formatIndianCurrency(item.appraised_value)}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{(item as any).remarks || '-'}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

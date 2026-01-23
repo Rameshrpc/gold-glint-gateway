@@ -16,6 +16,9 @@ interface GoldItem {
   net_weight_grams: number;
   purity: string;
   appraised_value: number;
+  market_value?: number | null;
+  item_count?: number;
+  remarks?: string | null;
 }
 
 interface Auction {
@@ -85,6 +88,9 @@ export function AuctionNoticePDF({
   const pageSize = PAPER_SIZES[paperSize];
   
   const totalGrossWeight = goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0);
+  const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
+  const totalItemCount = goldItems.reduce((sum, item) => sum + (item.item_count || 1), 0);
+  const totalMarketValue = goldItems.reduce((sum, item) => sum + (item.market_value || item.appraised_value), 0);
   
   return (
     <Document>
@@ -231,31 +237,37 @@ export function AuctionNoticePDF({
           
           <View style={pdfStyles.table}>
             <View style={pdfStyles.tableHeader}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '8%' }]}>S.No</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '27%', textAlign: 'left' }]}>Item / பொருள்</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>Gross Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>Net Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '12%' }]}>Purity</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>Value</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '6%' }]}>S.No</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '20%', textAlign: 'left' }]}>Item / பொருள்</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '8%' }]}>Nos</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>Gross Wt</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>Net Wt</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '10%' }]}>Purity</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>Market Value</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>Remarks</Text>
             </View>
             
             {goldItems.map((item, index) => (
               <View key={item.id} style={pdfStyles.tableRow}>
-                <Text style={[pdfStyles.tableCell, { width: '8%' }]}>{index + 1}</Text>
-                <Text style={[pdfStyles.tableCellLeft, { width: '27%' }]}>{item.item_type}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '18%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '18%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '12%' }]}>{item.purity}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '6%' }]}>{index + 1}</Text>
+                <Text style={[pdfStyles.tableCellLeft, { width: '20%' }]}>{item.item_type}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '8%' }]}>{item.item_count || 1}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '10%' }]}>{item.purity}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%' }]}>{formatCurrencyPrint(item.market_value || item.appraised_value)}</Text>
+                <Text style={[pdfStyles.tableCellLeft, { width: '14%', fontSize: 8 }]}>{item.remarks || '-'}</Text>
               </View>
             ))}
             
             <View style={[pdfStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '35%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '18%' }]}>-</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '12%' }]}>-</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(auction.total_appraised_value ?? 0)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '26%', textAlign: 'right' }]}>Total / மொத்தம்</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '8%' }]}>{totalItemCount}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '10%' }]}>-</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%' }]}></Text>
             </View>
           </View>
         </View>

@@ -10,11 +10,14 @@ import { useAuth } from '@/hooks/useAuth';
 interface GoldItemWithTracking {
   id: string;
   item_type: string;
+  gross_weight_grams: number;
   net_weight_grams: number;
   appraised_value: number;
   is_repledged: boolean;
   repledge_packet_id: string | null;
   packet_number?: string;
+  item_count?: number;
+  remarks?: string | null;
 }
 
 interface TrackedLoan {
@@ -56,7 +59,7 @@ export default function LoanTrackingView({ searchQuery, transactionType = 'all' 
         .select(`
           id, loan_number, loan_date, principal_amount, transaction_type,
           customer:customers(full_name),
-          gold_items(id, item_type, net_weight_grams, appraised_value, is_repledged, repledge_packet_id)
+          gold_items(id, item_type, gross_weight_grams, net_weight_grams, appraised_value, is_repledged, repledge_packet_id, item_count, remarks)
         `)
         .eq('client_id', client.id)
         .eq('status', 'active')
@@ -221,18 +224,26 @@ export default function LoanTrackingView({ searchQuery, transactionType = 'all' 
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Item Type</TableHead>
-                        <TableHead>Weight (g)</TableHead>
-                        <TableHead>Value</TableHead>
+                        <TableHead className="w-[50px]">S.No</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead className="text-center">Nos</TableHead>
+                        <TableHead>Gross Wt</TableHead>
+                        <TableHead>Net Wt</TableHead>
+                        <TableHead className="text-right">Value</TableHead>
+                        <TableHead>Remarks</TableHead>
                         <TableHead>Location</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {loan.gold_items.map((item) => (
+                      {loan.gold_items.map((item, index) => (
                         <TableRow key={item.id}>
+                          <TableCell>{index + 1}</TableCell>
                           <TableCell className="font-medium">{item.item_type}</TableCell>
-                          <TableCell>{item.net_weight_grams.toFixed(2)}g</TableCell>
-                          <TableCell>{formatCurrency(item.appraised_value)}</TableCell>
+                          <TableCell className="text-center">{item.item_count || 1}</TableCell>
+                          <TableCell>{item.gross_weight_grams?.toFixed(3) || '-'}g</TableCell>
+                          <TableCell>{item.net_weight_grams.toFixed(3)}g</TableCell>
+                          <TableCell className="text-right">{formatCurrency(item.appraised_value)}</TableCell>
+                          <TableCell className="text-muted-foreground text-sm max-w-[100px] truncate">{item.remarks || '-'}</TableCell>
                           <TableCell>
                             {item.is_repledged ? (
                               <Badge variant="default" className="font-mono">
