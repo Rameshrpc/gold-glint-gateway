@@ -58,7 +58,7 @@ export default function SaleSchemes() {
     effective_rate: '',
     minimum_days: '30',
     advance_interest_months: '3',
-    ltv_percentage: '75',
+    ltv_percentage: '100',
     min_amount: '5000',
     max_amount: '10000000',
     min_tenure_days: '30',
@@ -109,7 +109,7 @@ export default function SaleSchemes() {
       effective_rate: '',
       minimum_days: '30',
       advance_interest_months: '3',
-      ltv_percentage: '75',
+      ltv_percentage: '100',
       min_amount: '5000',
       max_amount: '10000000',
       min_tenure_days: '30',
@@ -494,7 +494,16 @@ export default function SaleSchemes() {
               {/* Limits */}
               <div>
                 <h3 className="font-medium mb-3">Amount & Tenure Limits</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                  <div className="space-y-2">
+                    <Label>LTV %</Label>
+                    <Input 
+                      type="number"
+                      value={formData.ltv_percentage}
+                      onChange={e => setFormData({ ...formData, ltv_percentage: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">100% for sale agreements</p>
+                  </div>
                   <div className="space-y-2">
                     <Label>Min Amount</Label>
                     <Input 
