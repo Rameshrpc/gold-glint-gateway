@@ -78,6 +78,9 @@ interface GoldItem {
   net_weight_grams: number;
   purity: string;
   appraised_value: number;
+  market_value?: number;
+  item_count?: number;
+  remarks?: string;
 }
 
 interface Redemption {
@@ -662,19 +665,27 @@ export default function Redemption() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-[50px]">S.No</TableHead>
                           <TableHead>Item</TableHead>
-                          <TableHead className="text-right">Weight (g)</TableHead>
+                          <TableHead className="text-center">Item Nos</TableHead>
+                          <TableHead className="text-right">Gross Wt</TableHead>
+                          <TableHead className="text-right">Net Wt</TableHead>
                           <TableHead>Purity</TableHead>
-                          <TableHead className="text-right">Value</TableHead>
+                          <TableHead className="text-right">Market Value</TableHead>
+                          <TableHead>Remarks</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {goldItems.map((item) => (
+                        {goldItems.map((item, index) => (
                           <TableRow key={item.id}>
+                            <TableCell>{index + 1}</TableCell>
                             <TableCell className="capitalize">{item.item_type}</TableCell>
-                            <TableCell className="text-right">{item.gross_weight_grams.toFixed(2)}</TableCell>
+                            <TableCell className="text-center">{item.item_count || 1}</TableCell>
+                            <TableCell className="text-right">{item.gross_weight_grams.toFixed(3)}g</TableCell>
+                            <TableCell className="text-right">{item.net_weight_grams.toFixed(3)}g</TableCell>
                             <TableCell className="uppercase">{item.purity}</TableCell>
-                            <TableCell className="text-right">{formatIndianCurrency(item.appraised_value)}</TableCell>
+                            <TableCell className="text-right">{formatIndianCurrency(item.market_value || item.appraised_value)}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{item.remarks || '-'}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

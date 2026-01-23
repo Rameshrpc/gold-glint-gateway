@@ -1485,6 +1485,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_repledged: boolean | null
+          item_count: number
           item_group_id: string | null
           item_id: string | null
           item_type: string
@@ -1495,6 +1496,7 @@ export type Database = {
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
+          remarks: string | null
           repledge_packet_id: string | null
           stone_weight_grams: number | null
         }
@@ -1506,6 +1508,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_repledged?: boolean | null
+          item_count?: number
           item_group_id?: string | null
           item_id?: string | null
           item_type: string
@@ -1516,6 +1519,7 @@ export type Database = {
           net_weight_grams: number
           purity: Database["public"]["Enums"]["gold_purity"]
           purity_percentage: number
+          remarks?: string | null
           repledge_packet_id?: string | null
           stone_weight_grams?: number | null
         }
@@ -1527,6 +1531,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_repledged?: boolean | null
+          item_count?: number
           item_group_id?: string | null
           item_id?: string | null
           item_type?: string
@@ -1537,6 +1542,7 @@ export type Database = {
           net_weight_grams?: number
           purity?: Database["public"]["Enums"]["gold_purity"]
           purity_percentage?: number
+          remarks?: string | null
           repledge_packet_id?: string | null
           stone_weight_grams?: number | null
         }

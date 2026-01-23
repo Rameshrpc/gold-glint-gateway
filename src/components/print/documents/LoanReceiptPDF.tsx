@@ -20,6 +20,8 @@ interface GoldItem {
   purity_percentage: number;
   appraised_value: number;
   market_value?: number | null;
+  item_count?: number;
+  remarks?: string | null;
 }
 
 interface MarketRateData {
@@ -317,6 +319,7 @@ export function LoanReceiptPDF({
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
   const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
   const totalMarketValue = goldItemsWithCalculatedMarketValue.reduce((sum, item) => sum + item.calculatedMarketValue, 0);
+  const totalItemCount = goldItems.reduce((sum, item) => sum + (item.item_count || 1), 0);
   
   const displayPrincipal = loan.actual_principal || loan.principal_amount;
   
@@ -482,42 +485,43 @@ export function LoanReceiptPDF({
           <View style={compactStyles.table}>
             <View style={compactStyles.tableHeader}>
               <Text style={[compactStyles.tableHeaderCell, { width: '5%' }]}>S.No</Text>
-              <View style={[compactStyles.tableHeaderCell, { width: '20%', textAlign: 'left' }]}>
+              <View style={[compactStyles.tableHeaderCell, { width: '18%', textAlign: 'left' }]}>
                 <BilingualLabel english="Item" tamil="பொருள்" mode={language} fontSize={7} fontWeight="bold" />
               </View>
-              <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>Gross Wt</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>Net Wt</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>Purity</Text>
-              <View style={[compactStyles.tableHeaderCell, { width: '18%' }]}>
-                <BilingualLabel english="Loan Value" tamil="கடன் மதிப்பு" mode={language} fontSize={7} fontWeight="bold" />
-              </View>
-              <View style={[compactStyles.tableHeaderCell, { width: '17%' }]}>
+              <Text style={[compactStyles.tableHeaderCell, { width: '8%' }]}>Nos</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>Gross Wt</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>Net Wt</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '10%' }]}>Purity</Text>
+              <View style={[compactStyles.tableHeaderCell, { width: '15%' }]}>
                 <BilingualLabel english="Market Value" tamil="சந்தை மதிப்பு" mode={language} fontSize={7} fontWeight="bold" />
               </View>
+              <Text style={[compactStyles.tableHeaderCell, { width: '20%' }]}>Remarks</Text>
             </View>
             
             {goldItemsWithCalculatedMarketValue.map((item, index) => (
               <View key={item.id || index} style={compactStyles.tableRow}>
                 <Text style={[compactStyles.tableCell, { width: '5%' }]}>{index + 1}</Text>
-                <Text style={[compactStyles.tableCellLeft, { width: '20%' }]}>{item.item_type}</Text>
-                <Text style={[compactStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
-                <Text style={[compactStyles.tableCell, { width: '14%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
-                <Text style={[compactStyles.tableCell, { width: '12%' }]}>{item.purity}</Text>
-                <Text style={[compactStyles.tableCell, { width: '18%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
-                <Text style={[compactStyles.tableCell, { width: '17%' }]}>{formatCurrencyPrint(item.calculatedMarketValue)}</Text>
+                <Text style={[compactStyles.tableCellLeft, { width: '18%' }]}>{item.item_type}</Text>
+                <Text style={[compactStyles.tableCell, { width: '8%' }]}>{item.item_count || 1}</Text>
+                <Text style={[compactStyles.tableCell, { width: '12%' }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '12%' }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
+                <Text style={[compactStyles.tableCell, { width: '10%' }]}>{item.purity}</Text>
+                <Text style={[compactStyles.tableCell, { width: '15%' }]}>{formatCurrencyPrint(item.calculatedMarketValue)}</Text>
+                <Text style={[compactStyles.tableCellLeft, { width: '20%', fontSize: 6 }]}>{item.remarks || '-'}</Text>
               </View>
             ))}
             
             {/* Totals row */}
             <View style={[compactStyles.tableRow, { backgroundColor: '#f0f0f0' }]}>
-              <View style={[compactStyles.tableHeaderCell, { width: '25%', textAlign: 'right' }]}>
+              <View style={[compactStyles.tableHeaderCell, { width: '23%', textAlign: 'right' }]}>
                 <BilingualLabel english="Total" tamil="மொத்தம்" mode={language} fontSize={7} fontWeight="bold" />
               </View>
-              <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '14%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>-</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '18%' }]}>{formatCurrencyPrint(totalAppraisedValue)}</Text>
-              <Text style={[compactStyles.tableHeaderCell, { width: '17%' }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '8%' }]}>{totalItemCount}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>{formatWeightPrint(totalGrossWeight)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '12%' }]}>{formatWeightPrint(totalNetWeight)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '10%' }]}>-</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '15%' }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
+              <Text style={[compactStyles.tableHeaderCell, { width: '20%' }]}></Text>
             </View>
           </View>
         </View>

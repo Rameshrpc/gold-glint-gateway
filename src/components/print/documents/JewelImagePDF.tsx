@@ -16,6 +16,9 @@ interface GoldItem {
   purity: string;
   purity_percentage: number;
   appraised_value: number;
+  market_value?: number | null;
+  item_count?: number;
+  remarks?: string | null;
 }
 
 interface JewelImagePDFProps {
@@ -47,7 +50,8 @@ export function JewelImagePDF({
   
   const totalGrossWeight = goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0);
   const totalNetWeight = goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0);
-  const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
+  const totalMarketValue = goldItems.reduce((sum, item) => sum + (item.market_value || item.appraised_value), 0);
+  const totalItemCount = goldItems.reduce((sum, item) => sum + (item.item_count || 1), 0);
   
   return (
     <Document>
@@ -125,39 +129,45 @@ export function JewelImagePDF({
           
           <View style={pdfStyles.table}>
             <View style={[pdfStyles.tableHeader, { paddingVertical: 2 }]}>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '8%', fontSize: 7 }]}>S.No</Text>
-              <View style={[pdfStyles.tableHeaderCell, { width: '27%', textAlign: 'left' }]}>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '6%', fontSize: 7 }]}>S.No</Text>
+              <View style={[pdfStyles.tableHeaderCell, { width: '20%', textAlign: 'left' }]}>
                 <BilingualLabel english="Item" tamil="பொருள்" mode={language} fontSize={7} fontWeight="bold" />
               </View>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%', fontSize: 7 }]}>Gross Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%', fontSize: 7 }]}>Net Wt</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '13%', fontSize: 7 }]}>Purity</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '20%', fontSize: 7 }]}>Value</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '8%', fontSize: 7 }]}>Nos</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>Gross Wt</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>Net Wt</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '10%', fontSize: 7 }]}>Purity</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>Market Value</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>Remarks</Text>
             </View>
             
             {goldItems.map((item, index) => (
               <View key={item.id || index} style={[pdfStyles.tableRow, { paddingVertical: 1 }]}>
-                <Text style={[pdfStyles.tableCell, { width: '8%', fontSize: 7 }]}>{index + 1}</Text>
-                <Text style={[pdfStyles.tableCellLeft, { width: '27%', fontSize: 7 }]}>
+                <Text style={[pdfStyles.tableCell, { width: '6%', fontSize: 7 }]}>{index + 1}</Text>
+                <Text style={[pdfStyles.tableCellLeft, { width: '20%', fontSize: 7 }]}>
                   {item.item_type}
                   {item.description && <Text style={{ color: '#666', fontSize: 6 }}>{'\n'}{item.description}</Text>}
                 </Text>
-                <Text style={[pdfStyles.tableCell, { width: '16%', fontSize: 7 }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '16%', fontSize: 7 }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '13%', fontSize: 7 }]}>{item.purity}</Text>
-                <Text style={[pdfStyles.tableCell, { width: '20%', fontSize: 7 }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '8%', fontSize: 7 }]}>{item.item_count || 1}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%', fontSize: 7 }]}>{formatWeightPrint(item.gross_weight_grams)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%', fontSize: 7 }]}>{formatWeightPrint(item.net_weight_grams)}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '10%', fontSize: 7 }]}>{item.purity}</Text>
+                <Text style={[pdfStyles.tableCell, { width: '14%', fontSize: 7 }]}>{formatCurrencyPrint(item.market_value || item.appraised_value)}</Text>
+                <Text style={[pdfStyles.tableCellLeft, { width: '14%', fontSize: 6 }]}>{item.remarks || '-'}</Text>
               </View>
             ))}
             
             {/* Totals row */}
             <View style={[pdfStyles.tableRow, { backgroundColor: '#f0f0f0', paddingVertical: 1 }]}>
-              <View style={[pdfStyles.tableHeaderCell, { width: '35%', textAlign: 'right' }]}>
+              <View style={[pdfStyles.tableHeaderCell, { width: '26%', textAlign: 'right' }]}>
                 <BilingualLabel english="Total" tamil="மொத்தம்" mode={language} fontSize={7} fontWeight="bold" />
               </View>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%', fontSize: 7 }]}>{formatWeightPrint(totalGrossWeight)}</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '16%', fontSize: 7 }]}>{formatWeightPrint(totalNetWeight)}</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '13%', fontSize: 7 }]}>-</Text>
-              <Text style={[pdfStyles.tableHeaderCell, { width: '20%', fontSize: 7 }]}>{formatCurrencyPrint(totalAppraisedValue)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '8%', fontSize: 7 }]}>{totalItemCount}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>{formatWeightPrint(totalGrossWeight)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>{formatWeightPrint(totalNetWeight)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '10%', fontSize: 7 }]}>-</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}>{formatCurrencyPrint(totalMarketValue)}</Text>
+              <Text style={[pdfStyles.tableHeaderCell, { width: '14%', fontSize: 7 }]}></Text>
             </View>
           </View>
         </View>

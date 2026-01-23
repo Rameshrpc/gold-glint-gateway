@@ -10,11 +10,14 @@ interface GoldItem {
   loan_id: string;
   item_type: string;
   description: string | null;
+  gross_weight_grams: number;
   net_weight_grams: number;
   appraised_value: number;
   purity: string;
   is_repledged: boolean;
   repledge_packet_id: string | null;
+  item_count?: number;
+  remarks?: string | null;
 }
 
 interface LoanWithItems {
@@ -72,11 +75,14 @@ export default function GoldItemSelector({
             id, 
             item_type, 
             description, 
+            gross_weight_grams,
             net_weight_grams, 
             appraised_value, 
             purity,
             is_repledged,
-            repledge_packet_id
+            repledge_packet_id,
+            item_count,
+            remarks
           )
         `)
         .eq('client_id', clientId)
@@ -123,11 +129,14 @@ export default function GoldItemSelector({
             loan_id: loan.id,
             item_type: gi.item_type,
             description: gi.description,
+            gross_weight_grams: gi.gross_weight_grams || 0,
             net_weight_grams: gi.net_weight_grams,
             appraised_value: gi.appraised_value,
             purity: gi.purity,
             is_repledged: gi.is_repledged || false,
             repledge_packet_id: gi.repledge_packet_id,
+            item_count: gi.item_count || 1,
+            remarks: gi.remarks,
           }));
           
           return {
