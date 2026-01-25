@@ -232,9 +232,9 @@ export default function Loans() {
   const [loyalties, setLoyalties] = useState<Loyalty[]>([]);
   const [loyaltyBankAccountsMap, setLoyaltyBankAccountsMap] = useState<Record<string, LoyaltyBankAccount[]>>({});
   
-  // User-input document charges and approved loan amount
+  // User-input document charges and editable loan amount
   const [userDocumentChargesPercent, setUserDocumentChargesPercent] = useState('');
-  const [approvedLoanAmount, setApprovedLoanAmount] = useState('');
+  const [editableLoanAmount, setEditableLoanAmount] = useState('');
   
   // Customer creation dialog
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
@@ -428,7 +428,7 @@ export default function Loans() {
     setAppraiserSheetUrl(null);
     setPaymentEntries([{ mode: 'cash', amount: '', reference: '', sourceType: 'cash', sourceBankId: '', sourceAccountId: '', selectedLoyaltyId: '' }]);
     setUserDocumentChargesPercent('');
-    setApprovedLoanAmount('');
+    setEditableLoanAmount('');
     setSelectedLoanDate(new Date());
     setIsEditMode(false);
     setEditingLoanId(null);
@@ -551,14 +551,23 @@ export default function Loans() {
     if (!scheme || goldItems.length === 0) return null;
 
     const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
-    const maxLoanAmount = totalAppraisedValue * (scheme.ltv_percentage / 100);
-    const loanAmount = Math.round(Math.min(Math.max(maxLoanAmount, scheme.min_amount), scheme.max_amount));
+    // Total market value = sum of all gold items' market values
+    const totalMarketValue = goldItems.reduce((sum, item) => sum + (item.market_value || item.appraised_value), 0);
+    
+    // Default loan amount based on LTV
+    const defaultLoanAmount = Math.round(totalAppraisedValue * (scheme.ltv_percentage / 100));
+    
+    // Use user-entered editable loan amount OR default to LTV calculation
+    const userLoanAmount = editableLoanAmount ? parseFloat(editableLoanAmount) : defaultLoanAmount;
+    
+    // Cap the loan amount at market value
+    const cappedLoanAmount = Math.min(userLoanAmount, totalMarketValue);
     
     // Use selected tenure or default to max tenure
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
     
-    // NEW LOGIC: Pass Total Appraised Value (not loan amount) to calculate interest adjustment
-    const advanceCalc = calculateAdvanceInterest(totalAppraisedValue, {
+    // Calculate interest adjustment based on the capped loan amount (not total appraised value)
+    const advanceCalc = calculateAdvanceInterest(cappedLoanAmount, {
       id: scheme.id,
       scheme_name: scheme.scheme_name,
       shown_rate: scheme.shown_rate || 18,
@@ -567,26 +576,20 @@ export default function Loans() {
       advance_interest_months: scheme.advance_interest_months || 3,
     }, selectedTenure);
 
-    // Principal on Record = Total Appraised Value + Interest Adjustment
+    // Principal on Record = Capped Loan Amount + Interest Adjustment
     const principalOnRecord = advanceCalc.actualPrincipal;
-    
-    // Max Approved Amount = Principal on Record × 1.10 (10% above)
-    const maxApprovedAmount = Math.round(principalOnRecord * 1.10);
-    
-    // Use user-entered approved amount or default to principal on record
-    const finalApprovedAmount = approvedLoanAmount ? parseFloat(approvedLoanAmount) : principalOnRecord;
     
     // User-input document charges percentage (defaults to scheme value if not set)
     const docChargesPercent = userDocumentChargesPercent ? parseFloat(userDocumentChargesPercent) : (scheme.document_charges || 0);
     
-    // Document charges calculated on Approved Loan Amount
-    const documentCharges = Math.round(finalApprovedAmount * (docChargesPercent / 100));
+    // Document charges calculated on Principal on Record
+    const documentCharges = Math.round(principalOnRecord * (docChargesPercent / 100));
     
-    // Processing fee on the final approved amount
-    const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
+    // Processing fee on the principal on record
+    const processingFee = Math.round(principalOnRecord * ((scheme.processing_fee_percentage || 0) / 100));
 
-    // NEW FORMULA: Net Cash = Total Appraised Value - Advance Interest - Document Charges
-    const netCashToCustomer = Math.round(totalAppraisedValue - advanceCalc.shownInterest - documentCharges);
+    // Net Cash = Capped Loan Amount - Advance Interest - Document Charges
+    const netCashToCustomer = Math.round(cappedLoanAmount - advanceCalc.shownInterest - documentCharges);
     
     // Calculate rebate schedule for display (using interest adjustment)
     const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
@@ -601,11 +604,11 @@ export default function Loans() {
 
     return {
       totalAppraisedValue,
-      loanAmount,
-      interestAdjustment: advanceCalc.differential,  // Expose interest adjustment
+      totalMarketValue,
+      loanAmount: cappedLoanAmount,
+      defaultLoanAmount,
+      interestAdjustment: advanceCalc.differential,
       principalOnRecord,
-      maxApprovedAmount,
-      finalApprovedAmount,
       processingFee,
       documentCharges,
       documentChargesPercentage: docChargesPercent,
@@ -615,7 +618,7 @@ export default function Loans() {
       closureSchedule,
       scheme,
     };
-  }, [goldItems, selectedSchemeId, schemes, tenureDays, userDocumentChargesPercent, approvedLoanAmount]);
+  }, [goldItems, selectedSchemeId, schemes, tenureDays, userDocumentChargesPercent, editableLoanAmount]);
 
   const generateLoanNumber = () => {
     const prefix = 'GL';
@@ -655,9 +658,9 @@ export default function Loans() {
       return;
     }
 
-    // Validate approved loan amount
-    if (loanCalculation.finalApprovedAmount > loanCalculation.maxApprovedAmount) {
-      toast.error(`Approved amount cannot exceed ${formatIndianCurrency(loanCalculation.maxApprovedAmount)} (10% above Principal on Record)`);
+    // Validate loan amount doesn't exceed market value
+    if (loanCalculation.loanAmount > loanCalculation.totalMarketValue) {
+      toast.error(`Loan amount cannot exceed Market Value of ${formatIndianCurrency(loanCalculation.totalMarketValue)}`);
       return;
     }
 
@@ -671,7 +674,7 @@ export default function Loans() {
     setSubmitting(true);
     try {
       // Check if approval is required for this loan amount
-      const loanAmount = loanCalculation.finalApprovedAmount;
+      const loanAmount = loanCalculation.principalOnRecord;
       const { required: approvalRequired } = await checkApprovalRequired('loan', loanAmount);
       const userCanAutoApprove = await canAutoApprove('loan');
       
@@ -700,8 +703,8 @@ export default function Loans() {
         agent_id: selectedAgentId || null,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),
-        principal_amount: loanCalculation.finalApprovedAmount, // Use approved loan amount as final
-        shown_principal: loanCalculation.loanAmount,
+        principal_amount: loanCalculation.principalOnRecord, // Principal on Record (includes interest adjustment)
+        shown_principal: loanCalculation.loanAmount, // The base loan amount (user editable)
         actual_principal: loanCalculation.principalOnRecord, // Principal on Record
         interest_rate: loanCalculation.scheme.shown_rate || 18,
         tenure_days: parseInt(tenureDays),
@@ -784,7 +787,7 @@ export default function Loans() {
         branchId: selectedBranchId,
         loanId: loanResult.id,
         loanNumber: loanResult.loan_number,
-        principalAmount: loanCalculation.finalApprovedAmount,
+        principalAmount: loanCalculation.principalOnRecord,
         actualPrincipal: loanCalculation.principalOnRecord, // Principal on Record (includes capitalized differential)
         netDisbursed: loanCalculation.netCashToCustomer,
         processingFee: loanCalculation.processingFee,
@@ -1002,7 +1005,7 @@ export default function Loans() {
         scheme_id: selectedSchemeId,
         agent_id: selectedAgentId || null,
         loan_date: format(loanDate, 'yyyy-MM-dd'),
-        principal_amount: loanCalculation.finalApprovedAmount,
+        principal_amount: loanCalculation.principalOnRecord,
         shown_principal: loanCalculation.loanAmount,
         actual_principal: loanCalculation.principalOnRecord,
         interest_rate: loanCalculation.scheme.shown_rate || 18,
@@ -1703,44 +1706,41 @@ export default function Loans() {
                       Loan Calculation
                     </h3>
 
-                    {/* Approved Loan Amount Section */}
+                    {/* Loan Amount Section */}
                     <Card className="border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm text-blue-700 dark:text-blue-400 flex items-center gap-2">
                           <IndianRupee className="h-4 w-4" />
-                          Loan Amount Approval
+                          Loan Amount
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Loan Amount (LTV)</Label>
-                            <div className="text-sm font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Principal on Record</Label>
-                            <div className="text-sm font-medium text-amber-600">{formatIndianCurrency(loanCalculation.principalOnRecord)}</div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-muted-foreground">Max Approved (+10%)</Label>
-                            <div className="text-sm font-medium text-blue-600">{formatIndianCurrency(loanCalculation.maxApprovedAmount)}</div>
+                            <Label className="text-xs text-muted-foreground">Market Value (Max Limit)</Label>
+                            <div className="text-sm font-medium text-blue-600">{formatIndianCurrency(loanCalculation.totalMarketValue)}</div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs font-medium">Approved Loan Amount *</Label>
+                            <Label className="text-xs font-medium">Loan Amount (LTV) *</Label>
                             <Input
                               type="number"
-                              value={approvedLoanAmount}
-                              onChange={(e) => setApprovedLoanAmount(e.target.value)}
-                              placeholder={loanCalculation.principalOnRecord.toString()}
+                              value={editableLoanAmount}
+                              onChange={(e) => setEditableLoanAmount(e.target.value)}
+                              placeholder={loanCalculation.defaultLoanAmount.toString()}
                               className={`${
-                                approvedLoanAmount && parseFloat(approvedLoanAmount) > loanCalculation.maxApprovedAmount
+                                editableLoanAmount && parseFloat(editableLoanAmount) > loanCalculation.totalMarketValue
                                   ? 'border-destructive focus-visible:ring-destructive'
                                   : ''
                               }`}
                             />
-                            {approvedLoanAmount && parseFloat(approvedLoanAmount) > loanCalculation.maxApprovedAmount && (
-                              <p className="text-xs text-destructive">Cannot exceed {formatIndianCurrency(loanCalculation.maxApprovedAmount)}</p>
+                            {editableLoanAmount && parseFloat(editableLoanAmount) > loanCalculation.totalMarketValue && (
+                              <p className="text-xs text-destructive">Cannot exceed Market Value of {formatIndianCurrency(loanCalculation.totalMarketValue)}</p>
                             )}
+                            <p className="text-xs text-muted-foreground">Default: {formatIndianCurrency(loanCalculation.defaultLoanAmount)} ({loanCalculation.scheme.ltv_percentage}% LTV)</p>
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs text-muted-foreground">Principal on Record</Label>
+                            <div className="text-sm font-medium text-amber-600">{formatIndianCurrency(loanCalculation.principalOnRecord)}</div>
                           </div>
                         </div>
                       </CardContent>
@@ -1761,8 +1761,13 @@ export default function Loans() {
                             <span className="font-medium">{formatIndianCurrency(loanCalculation.totalAppraisedValue)}</span>
                           </div>
                           <div className="flex justify-between">
-                            <span>Loan Amount (@ {loanCalculation.scheme.ltv_percentage}% LTV)</span>
-                            <span className="font-medium">{formatIndianCurrency(loanCalculation.loanAmount)}</span>
+                            <span>Total Market Value</span>
+                            <span className="font-medium text-blue-600">{formatIndianCurrency(loanCalculation.totalMarketValue)}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between font-semibold">
+                            <span>Loan Amount</span>
+                            <span>{formatIndianCurrency(loanCalculation.loanAmount)}</span>
                           </div>
                           <div className="flex justify-between text-amber-600">
                             <span>Interest Adjustment</span>
@@ -1771,11 +1776,6 @@ export default function Loans() {
                           <div className="flex justify-between font-semibold text-amber-700">
                             <span>Principal on Record</span>
                             <span>{formatIndianCurrency(loanCalculation.principalOnRecord)}</span>
-                          </div>
-                          <Separator />
-                          <div className="flex justify-between font-bold text-blue-600">
-                            <span>Approved Loan Amount</span>
-                            <span>{formatIndianCurrency(loanCalculation.finalApprovedAmount)}</span>
                           </div>
                           <Separator />
                           <div className="flex justify-between text-muted-foreground">
