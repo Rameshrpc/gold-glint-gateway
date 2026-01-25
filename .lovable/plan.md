@@ -1,39 +1,139 @@
 
 
-## Plan: Replace Approved Loan Amount with Editable Loan Amount (LTV)
+## Plan: Add Appraised Value Column and Edit Button to Gold Items Table
 
 ### Overview
 
-Currently, the loan form has:
-1. **Loan Amount (LTV)** - Display-only, calculated as `Total Appraised Value × LTV%`
-2. **Approved Loan Amount** - Editable input field, can go up to +10% above Principal on Record
-
-The request is to:
-1. **Remove** the "Approved Loan Amount" field entirely
-2. **Make "Loan Amount (LTV)" editable** - this becomes the editable appraised amount
-3. **Constrain it to not exceed Market Value** (sum of all gold items' market values)
-4. **Recalculate all loan values** based on the changed amount
+This plan adds:
+1. **Appraised Value column** - displayed next to the Purity column
+2. **Edit button** - alongside the existing Delete button to allow editing gold items
 
 ---
 
-### Current Calculation Flow
+### Current Table Structure
 
-```text
-Total Appraised Value (from gold items) 
-    → Loan Amount (LTV) = Appraised × LTV%
-    → Interest Adjustment = (Effective - Shown Rate) × Appraised × Tenure / 365
-    → Principal on Record = Appraised + Interest Adjustment
-    → Approved Loan Amount = User input (default: Principal on Record)
+| S.No | Item | Item Nos | Gross Wt | Net Wt | Purity | Market Value | Remarks | Actions |
+|------|------|----------|----------|--------|--------|--------------|---------|---------|
+| 1 | OTHER - Other | 1 | 323.400g | 323.300g | 22k | - | - | Delete |
+
+### New Table Structure
+
+| S.No | Item | Item Nos | Gross Wt | Net Wt | Purity | Appraised Value | Market Value | Remarks | Actions |
+|------|------|----------|----------|--------|--------|-----------------|--------------|---------|---------|
+| 1 | OTHER - Other | 1 | 323.400g | 323.300g | 22k | ₹25,60,000 | - | - | Edit / Delete |
+
+---
+
+### Changes Required
+
+#### 1. Add Edit Functionality State
+
+Add a new state variable to track which item is being edited:
+
+```typescript
+const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 ```
 
-### New Calculation Flow
+#### 2. Create Edit Gold Item Function
 
-```text
-Total Market Value (from gold items)
-    → Loan Amount (LTV) = User Editable (max: Market Value)
-    → Interest Adjustment = (Effective - Shown Rate) × Loan Amount × Tenure / 365
-    → Principal on Record = Loan Amount + Interest Adjustment
-    → (No Approved Loan Amount - removed)
+```typescript
+const editGoldItem = (index: number) => {
+  const item = goldItems[index];
+  // Populate currentItem form with the item being edited
+  setCurrentItem({
+    item_type: item.item_type,
+    item_id: item.item_id,
+    selectedItemGroupId: item.item_group_id,
+    description: item.description,
+    gross_weight_grams: item.gross_weight_grams,
+    stone_weight_grams: item.stone_weight_grams,
+    purity: item.purity,
+    item_count: item.item_count,
+    remarks: item.remarks,
+  });
+  setEditingItemIndex(index);
+};
+```
+
+#### 3. Update Add Item Function
+
+Modify `addGoldItem` to handle both add and edit operations:
+- If `editingItemIndex !== null`, replace the item at that index
+- Reset `editingItemIndex` to null after update
+
+#### 4. Update Table Headers
+
+Add new "Appraised Value" header between "Purity" and "Market Value":
+
+**Location**: Lines 1645-1656
+
+```typescript
+<TableHead>Purity</TableHead>
+<TableHead className="text-right">Appraised Value</TableHead>  // NEW
+<TableHead className="text-right">Market Value</TableHead>
+```
+
+#### 5. Update Table Body Cells
+
+Add Appraised Value cell and Edit button:
+
+**Location**: Lines 1659-1678
+
+```typescript
+<TableCell>{item.purity}</TableCell>
+<TableCell className="text-right">
+  {formatIndianCurrency(item.appraised_value)}
+</TableCell>
+<TableCell className="text-right">
+  {item.market_value ? formatIndianCurrency(item.market_value) : '-'}
+</TableCell>
+<TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">
+  {item.remarks || '-'}
+</TableCell>
+<TableCell>
+  <div className="flex items-center gap-1">
+    <Button variant="ghost" size="sm" onClick={() => editGoldItem(index)}>
+      <Pencil className="h-4 w-4 text-muted-foreground" />
+    </Button>
+    <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
+      <Trash2 className="h-4 w-4 text-destructive" />
+    </Button>
+  </div>
+</TableCell>
+```
+
+#### 6. Update Table Footer
+
+Add empty cell for the new Appraised Value column to maintain alignment:
+
+**Location**: Lines 1680-1691
+
+```typescript
+<TableCell></TableCell>  // Purity
+<TableCell className="text-right font-semibold">
+  {formatIndianCurrency(goldItems.reduce((sum, item) => sum + item.appraised_value, 0))}
+</TableCell>
+<TableCell className="text-right font-semibold">
+  {formatIndianCurrency(goldItems.reduce((sum, item) => sum + (item.market_value || 0), 0))}
+</TableCell>
+```
+
+#### 7. Update Add Item Button Text
+
+When editing, change button text to "Update Item":
+
+```typescript
+<Button type="button" onClick={addGoldItem} variant="outline" size="sm" className="w-full">
+  {editingItemIndex !== null ? (
+    <>
+      <Pencil className="h-4 w-4 mr-1" /> Update Item
+    </>
+  ) : (
+    <>
+      <Plus className="h-4 w-4 mr-1" /> Add Item
+    </>
+  )}
+</Button>
 ```
 
 ---
@@ -42,127 +142,30 @@ Total Market Value (from gold items)
 
 | File | Changes |
 |------|---------|
-| `src/pages/Loans.tsx` | Remove `approvedLoanAmount` state, add `editableLoanAmount` state, update UI and calculations |
-| `src/lib/interestCalculations.ts` | No changes needed - already accepts appraised value as parameter |
+| `src/pages/Loans.tsx` | Add edit state, edit function, update table headers/body/footer, modify add button |
 
 ---
 
-### Detailed Changes in Loans.tsx
+### Technical Details
 
-#### 1. State Changes (Lines 235-237)
+**Lines affected in Loans.tsx:**
+- ~Line 240: Add `editingItemIndex` state
+- ~Lines 471-542: Modify `addGoldItem` to handle edit mode
+- ~Lines 1645-1656: Update table headers
+- ~Lines 1659-1678: Update table body cells
+- ~Lines 1680-1691: Update table footer
+- ~Lines 1632-1636: Update Add Item button
 
-**Remove:**
-```typescript
-const [approvedLoanAmount, setApprovedLoanAmount] = useState('');
-```
-
-**Add:**
-```typescript
-const [editableLoanAmount, setEditableLoanAmount] = useState('');
-```
-
-#### 2. Loan Calculation (Lines 548-618)
-
-Update the `useMemo` calculation:
-
-**Current:**
-- Uses `totalAppraisedValue` for all calculations
-- `loanAmount = totalAppraisedValue × LTV%`
-- `finalApprovedAmount` comes from user input or defaults to `principalOnRecord`
-
-**New:**
-- Calculate `totalMarketValue` from gold items (sum of `market_value`)
-- Use `editableLoanAmount` if set, otherwise default to current `loanAmount` calculation
-- Cap `editableLoanAmount` at `totalMarketValue`
-- Use `editableLoanAmount` (instead of `totalAppraisedValue`) for interest calculations
-
-```typescript
-const totalMarketValue = goldItems.reduce((sum, item) => sum + (item.market_value || item.appraised_value), 0);
-const defaultLoanAmount = Math.round(totalAppraisedValue * (scheme.ltv_percentage / 100));
-const userLoanAmount = editableLoanAmount ? parseFloat(editableLoanAmount) : defaultLoanAmount;
-const cappedLoanAmount = Math.min(userLoanAmount, totalMarketValue);
-
-// Use cappedLoanAmount for interest calculations
-const advanceCalc = calculateAdvanceInterest(cappedLoanAmount, scheme, selectedTenure);
-```
-
-#### 3. Reset Form (Lines 420-445)
-
-Reset `editableLoanAmount` when form is reset:
-```typescript
-setEditableLoanAmount('');
-```
-
-#### 4. UI Changes - Loan Amount Approval Section (Lines 1706-1747)
-
-**Remove:**
-- The entire "Approved Loan Amount" input field and its validation
-
-**Modify:**
-- Change "Loan Amount (LTV)" from display-only to an editable input
-- Add validation to show error when amount exceeds Market Value
-- Add display of "Total Market Value" for reference
-
-**New UI structure:**
-```
-┌────────────────────────────────────────────────────────────────────┐
-│ Loan Amount Approval                                               │
-├────────────────────────────────────────────────────────────────────┤
-│ Market Value           Loan Amount (LTV)*        Principal on Rec. │
-│ ₹70,00,000             [₹61,74,000    ]         ₹64,48,024         │
-│                        Max: ₹70,00,000                              │
-└────────────────────────────────────────────────────────────────────┘
-```
-
-#### 5. Validation (Lines 658-662)
-
-**Remove:**
-- Validation against `maxApprovedAmount` (+10% above Principal)
-
-**Add:**
-- Validation that `editableLoanAmount` does not exceed `totalMarketValue`
-
-```typescript
-if (loanCalculation.cappedLoanAmount > loanCalculation.totalMarketValue) {
-  toast.error(`Loan amount cannot exceed Market Value of ${formatIndianCurrency(loanCalculation.totalMarketValue)}`);
-  return;
-}
-```
-
-#### 6. Loan Calculation Display (Lines 1758-1780)
-
-Update the display to reflect new structure:
-- Show "Loan Amount" (editable value) instead of "Loan Amount (@ LTV%)"
-- Remove "Approved Loan Amount" line
-- Keep "Principal on Record" calculation (now based on editable loan amount)
+**Icon already imported**: `Pencil` is already imported on line 17
 
 ---
 
-### Summary of Changes
+### Result
 
-| Item | Current | New |
-|------|---------|-----|
-| Approved Loan Amount | Editable input | **Removed** |
-| Loan Amount (LTV) | Display-only | **Editable input** |
-| Maximum constraint | Principal on Record + 10% | **Market Value** |
-| Calculation base | Total Appraised Value | **Editable Loan Amount** |
-
----
-
-### Technical Notes
-
-1. **Interest Adjustment** will now be calculated on the editable loan amount
-2. **Principal on Record** = Editable Loan Amount + Interest Adjustment
-3. **Net Cash to Customer** = Editable Loan Amount - Advance Interest - Document Charges
-4. **Document Charges** calculated on Principal on Record (unchanged)
-5. The `calculateAdvanceInterest` function already accepts any value as the first parameter, so no changes needed there
-
----
-
-### Impact on Other Modules
-
-No changes required in other modules. The loan is saved with:
-- `principal_amount` = Principal on Record
-- `shown_principal` = Editable Loan Amount (the base before interest adjustment)
-- All downstream calculations (interest, redemption) use stored values
+After implementation:
+- Gold items table shows **Appraised Value** column next to Purity
+- Each row has both **Edit** and **Delete** buttons
+- Clicking Edit populates the form with item data for modification
+- Add button changes to "Update Item" when in edit mode
+- Footer shows total Appraised Value alongside Market Value
 
