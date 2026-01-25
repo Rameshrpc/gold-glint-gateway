@@ -239,6 +239,9 @@ export default function Loans() {
   // Customer creation dialog
   const [showCustomerDialog, setShowCustomerDialog] = useState(false);
   
+  // Editing gold item index
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  
   // Current gold item being added
   const [currentItem, setCurrentItem] = useState<Partial<GoldItem & { selectedItemGroupId?: string }>>({
     item_type: '',
@@ -526,7 +529,16 @@ export default function Loans() {
       remarks: currentItem.remarks || '',
     };
 
-    setGoldItems([...goldItems, newItem]);
+    // If editing, update existing item; otherwise add new
+    if (editingItemIndex !== null) {
+      const updatedItems = [...goldItems];
+      updatedItems[editingItemIndex] = newItem;
+      setGoldItems(updatedItems);
+      setEditingItemIndex(null);
+    } else {
+      setGoldItems([...goldItems, newItem]);
+    }
+    
     const goldGroup = itemGroups.find(g => g.group_code === 'GOLD');
     setCurrentItem({
       item_type: '',
@@ -541,8 +553,31 @@ export default function Loans() {
     });
   };
 
+  const editGoldItem = (index: number) => {
+    const item = goldItems[index];
+    setCurrentItem({
+      item_type: item.item_type,
+      item_id: item.item_id,
+      selectedItemGroupId: item.item_group_id,
+      description: item.description,
+      gross_weight_grams: item.gross_weight_grams,
+      stone_weight_grams: item.stone_weight_grams,
+      purity: item.purity,
+      item_count: item.item_count,
+      remarks: item.remarks,
+    });
+    setEditingItemIndex(index);
+  };
+
   const removeGoldItem = (index: number) => {
     setGoldItems(goldItems.filter((_, i) => i !== index));
+    // Reset editing state if the removed item was being edited
+    if (editingItemIndex === index) {
+      setEditingItemIndex(null);
+    } else if (editingItemIndex !== null && editingItemIndex > index) {
+      // Adjust index if editing an item after the removed one
+      setEditingItemIndex(editingItemIndex - 1);
+    }
   };
 
   // Calculate loan with dual-rate system
@@ -1631,7 +1666,15 @@ export default function Loans() {
                         </div>
                         <div className="flex items-end">
                           <Button type="button" onClick={addGoldItem} variant="outline" size="sm" className="w-full">
-                            <Plus className="h-4 w-4 mr-1" /> Add Item
+                            {editingItemIndex !== null ? (
+                              <>
+                                <Pencil className="h-4 w-4 mr-1" /> Update Item
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="h-4 w-4 mr-1" /> Add Item
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -1650,6 +1693,7 @@ export default function Loans() {
                               <TableHead>Gross Wt</TableHead>
                               <TableHead>Net Wt</TableHead>
                               <TableHead>Purity</TableHead>
+                              <TableHead className="text-right">Appraised Value</TableHead>
                               <TableHead className="text-right">Market Value</TableHead>
                               <TableHead>Remarks</TableHead>
                               <TableHead></TableHead>
@@ -1657,7 +1701,7 @@ export default function Loans() {
                           </TableHeader>
                           <TableBody>
                             {goldItems.map((item, index) => (
-                              <TableRow key={index}>
+                              <TableRow key={index} className={editingItemIndex === index ? 'bg-amber-50 dark:bg-amber-950/30' : ''}>
                                 <TableCell>{index + 1}</TableCell>
                                 <TableCell className="capitalize">{item.item_type}</TableCell>
                                 <TableCell className="text-center">{item.item_count || 1}</TableCell>
@@ -1665,15 +1709,23 @@ export default function Loans() {
                                 <TableCell>{item.net_weight_grams.toFixed(3)}g</TableCell>
                                 <TableCell>{item.purity}</TableCell>
                                 <TableCell className="text-right">
+                                  {formatIndianCurrency(item.appraised_value)}
+                                </TableCell>
+                                <TableCell className="text-right">
                                   {item.market_value ? formatIndianCurrency(item.market_value) : '-'}
                                 </TableCell>
                                 <TableCell className="text-muted-foreground text-sm max-w-[150px] truncate">
                                   {item.remarks || '-'}
                                 </TableCell>
                                 <TableCell>
-                                  <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
-                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="sm" onClick={() => editGoldItem(index)}>
+                                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
+                                    <Button variant="ghost" size="sm" onClick={() => removeGoldItem(index)}>
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1684,6 +1736,9 @@ export default function Loans() {
                               <TableCell className="font-semibold">{goldItems.reduce((sum, item) => sum + item.gross_weight_grams, 0).toFixed(3)}g</TableCell>
                               <TableCell className="font-semibold">{goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0).toFixed(3)}g</TableCell>
                               <TableCell></TableCell>
+                              <TableCell className="text-right font-semibold">
+                                {formatIndianCurrency(goldItems.reduce((sum, item) => sum + item.appraised_value, 0))}
+                              </TableCell>
                               <TableCell className="text-right font-semibold">
                                 {formatIndianCurrency(goldItems.reduce((sum, item) => sum + (item.market_value || 0), 0))}
                               </TableCell>
