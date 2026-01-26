@@ -1,82 +1,97 @@
 
 
-## Plan: Add Sale Agreement Modules to Client Rights Settings
+## Plan: Sync Feature Flags with Module Toggles in Client Rights Settings
 
 ### Problem
-The Modules toggle list in Client Rights Settings is missing the Sale Agreement-related modules. Currently, it only shows 15 modules related to Loans and general features, but the Sale Agreement module and its sub-modules (Margin Renewal, Repurchase, Sale Schemes) are not available for toggling.
+The Sale Agreements module is enabled in Client Rights Settings (via the `client_modules` table), but the sidebar doesn't show it because:
+1. **Sidebar filtering** checks `clients.supports_sale_agreements` column (currently `false`)
+2. **Module toggles** only update the `client_modules` table
+3. These two systems are **not synchronized**
 
----
+### Current Database State
 
-### Root Cause
-The `MODULES` array in `src/lib/modules.ts` only defines 15 modules. It does not include:
-- Sale Agreements
-- Margin Renewal (Sale)
-- Repurchase (Sale)
-- Sale Schemes
+| Client | supports_loans | supports_sale_agreements |
+|--------|----------------|-------------------------|
+| Platform Administration | true | **false** |
+| Zenith Finance | true | **false** |
+| tect co | true | **false** |
+
+Even though you enabled Sale Agreements modules in the toggle list, the `supports_sale_agreements` column remains `false`.
 
 ---
 
 ### Solution
-Add the Sale Agreement-related modules to the `MODULES` array in `src/lib/modules.ts`.
+When saving Client Rights, also update the `supports_loans` and `supports_sale_agreements` columns based on module toggle states.
 
 ---
 
 ### File to Modify
 
-**File: `src/lib/modules.ts`**
+**File: `src/components/settings/ClientRightsSheet.tsx`**
 
-Add 4 new module definitions to the `MODULES` array:
+Update the `handleSave` function to sync feature flags:
 
-| Module Key | Label | Icon | Description |
-|------------|-------|------|-------------|
-| `sale_agreements` | Sale Agreements | FileText | Create and manage sale agreements |
-| `sale_margin` | Margin Renewal | CreditCard | Collect margin payments |
-| `sale_repurchase` | Repurchase | Wallet | Process agreement buybacks |
-| `sale_schemes` | Sale Schemes | Percent | Manage sale agreement schemes |
-
-**Updated MODULES array (after line 43):**
+**Lines 116-127** - Add feature flag sync:
 
 ```typescript
-{ key: 'sale_agreements', label: 'Sale Agreements', icon: FileText, description: 'Create and manage sale agreements' },
-{ key: 'sale_margin', label: 'Margin Renewal', icon: CreditCard, description: 'Collect margin payments' },
-{ key: 'sale_repurchase', label: 'Repurchase', icon: Wallet, description: 'Process agreement buybacks' },
-{ key: 'sale_schemes', label: 'Sale Schemes', icon: Percent, description: 'Manage sale agreement schemes' },
+// Determine feature flag states from module toggles
+const supportsLoans = modules['loans'] ?? true;
+const supportsSaleAgreements = modules['sale_agreements'] ?? false;
+
+// Update client limits AND feature flags
+const { error: clientError } = await supabase
+  .from('clients')
+  .update({
+    max_branches: maxBranches,
+    max_users: maxUsers,
+    plan_name: planName,
+    supports_loans: supportsLoans,              // NEW
+    supports_sale_agreements: supportsSaleAgreements,  // NEW
+  })
+  .eq('id', client.id);
 ```
+
+---
+
+### Logic Mapping
+
+| Module Toggle State | Feature Flag Updated |
+|---------------------|---------------------|
+| `loans` = true | `supports_loans` = true |
+| `loans` = false | `supports_loans` = false |
+| `sale_agreements` = true | `supports_sale_agreements` = true |
+| `sale_agreements` = false | `supports_sale_agreements` = false |
 
 ---
 
 ### Impact
 
 After implementation:
-- Client Rights Settings will show **19 modules** (15 existing + 4 new Sale Agreement modules)
-- Platform admins can toggle Sale Agreement modules on/off for each client
-- The module count display will update to "X/19 modules"
+1. When you toggle "Loans" ON/OFF → `clients.supports_loans` updates
+2. When you toggle "Sale Agreements" ON/OFF → `clients.supports_sale_agreements` updates
+3. Sidebar dynamically shows/hides menu groups based on these flags
+4. Dashboard quick actions also respect these flags
+
+---
+
+### Immediate Fix (for existing clients)
+
+After code deployment, you'll need to save the Client Rights again to sync the flags. Alternatively, we can run a one-time data fix:
+
+```sql
+-- Update Zenith Finance to enable Sale Agreements
+UPDATE clients 
+SET supports_sale_agreements = true 
+WHERE client_code = 'ZENITH01';
+```
 
 ---
 
 ### Result
 
-The Modules section in Client Rights will display:
-
-| # | Module | Toggle |
-|---|--------|--------|
-| 1 | Dashboard | ✓ |
-| 2 | Quick View | ✓ |
-| 3 | Loans / Pledges | ✓ |
-| 4 | Interest Payment | ✓ |
-| 5 | Redemption | ✓ |
-| 6 | Re-pledge Module | ✓ |
-| 7 | Takeover | ✓ |
-| 8 | Customers 360 | ✓ |
-| 9 | Agents | ✓ |
-| 10 | Loyalties | ✓ |
-| 11 | Team Board | ✓ |
-| 12 | Notifications | ✓ |
-| 13 | Reports | ✓ |
-| 14 | Accounting | ✓ |
-| 15 | Settings | ✓ |
-| **16** | **Sale Agreements** | **NEW** |
-| **17** | **Margin Renewal** | **NEW** |
-| **18** | **Repurchase** | **NEW** |
-| **19** | **Sale Schemes** | **NEW** |
+| Before | After |
+|--------|-------|
+| Toggle Sale Agreements ON in settings | Sidebar shows Sale Agreements menu |
+| Toggle Sale Agreements OFF in settings | Sidebar hides Sale Agreements menu |
+| Toggle Loans OFF in settings | Sidebar hides Operations menu |
 
