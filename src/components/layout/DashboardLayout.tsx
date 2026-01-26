@@ -173,6 +173,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const filterMenuGroup = (group: MenuGroup) => {
+    // Feature flag checks for entire menu groups
+    if (group.title === 'Operations' && client && !client.supports_loans) {
+      return false;
+    }
+    if (group.title === 'Sale Agreements' && client && !client.supports_sale_agreements) {
+      return false;
+    }
+    
+    // Role-based checks
     if (group.roles) {
       if (!isPlatformAdmin() && !group.roles.some(role => hasRole(role))) {
         return false;

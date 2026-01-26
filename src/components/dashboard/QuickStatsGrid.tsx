@@ -1,11 +1,25 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { Users, FileText, IndianRupee, TrendingUp, AlertCircle } from 'lucide-react';
+import { Users, FileText, IndianRupee, TrendingUp, AlertCircle, Receipt, LucideIcon } from 'lucide-react';
 import { DashboardStats } from '@/hooks/useDashboardData';
 import { Badge } from '@/components/ui/badge';
 
 interface QuickStatsGridProps {
   stats: DashboardStats;
   isLoading?: boolean;
+  showLoans?: boolean;
+  showSaleAgreements?: boolean;
+}
+
+interface StatItem {
+  title: string;
+  value: string;
+  icon: LucideIcon;
+  subtitle: string;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  iconBg: string;
+  badge?: { text: string; variant: 'destructive' } | null;
 }
 
 const formatCurrency = (value: number) => {
@@ -15,8 +29,9 @@ const formatCurrency = (value: number) => {
   return `₹${value.toFixed(0)}`;
 };
 
-export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
-  const statItems = [
+export function QuickStatsGrid({ stats, isLoading, showLoans = true, showSaleAgreements = false }: QuickStatsGridProps) {
+  // Base stats
+  const statItems: StatItem[] = [
     {
       title: 'Customers',
       value: stats.totalCustomers.toLocaleString(),
@@ -27,7 +42,11 @@ export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
       borderColor: 'border-blue-200 dark:border-blue-800',
       iconBg: 'bg-blue-100 dark:bg-blue-900/50',
     },
-    {
+  ];
+
+  // Add Loans stat if enabled
+  if (showLoans) {
+    statItems.push({
       title: 'Active Loans',
       value: stats.activeLoans.toLocaleString(),
       icon: FileText,
@@ -37,28 +56,47 @@ export function QuickStatsGrid({ stats, isLoading }: QuickStatsGridProps) {
       borderColor: 'border-green-200 dark:border-green-800',
       iconBg: 'bg-green-100 dark:bg-green-900/50',
       badge: stats.overdueLoans > 0 ? { text: `${stats.overdueLoans}`, variant: 'destructive' as const } : null,
-    },
-    {
-      title: 'Total AUM',
-      value: formatCurrency(stats.totalAUM),
-      icon: IndianRupee,
-      subtitle: 'Active portfolio',
-      color: 'text-amber-600 dark:text-amber-400',
-      bgColor: 'bg-amber-50 dark:bg-amber-950/50',
-      borderColor: 'border-amber-200 dark:border-amber-800',
-      iconBg: 'bg-amber-100 dark:bg-amber-900/50',
-    },
-    {
-      title: 'Monthly Collection',
-      value: formatCurrency(stats.monthlyCollection),
-      icon: TrendingUp,
-      subtitle: 'Interest this month',
-      color: 'text-purple-600 dark:text-purple-400',
-      bgColor: 'bg-purple-50 dark:bg-purple-950/50',
-      borderColor: 'border-purple-200 dark:border-purple-800',
-      iconBg: 'bg-purple-100 dark:bg-purple-900/50',
-    },
-  ];
+    });
+  }
+
+  // Add Sale Agreements stat if enabled
+  if (showSaleAgreements) {
+    statItems.push({
+      title: 'Active Agreements',
+      value: stats.activeSaleAgreements.toLocaleString(),
+      icon: Receipt,
+      subtitle: stats.overdueSaleAgreements > 0 ? `${stats.overdueSaleAgreements} overdue` : 'All on track',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-50 dark:bg-emerald-950/50',
+      borderColor: 'border-emerald-200 dark:border-emerald-800',
+      iconBg: 'bg-emerald-100 dark:bg-emerald-900/50',
+      badge: stats.overdueSaleAgreements > 0 ? { text: `${stats.overdueSaleAgreements}`, variant: 'destructive' as const } : null,
+    });
+  }
+
+  // AUM stat
+  statItems.push({
+    title: 'Total AUM',
+    value: formatCurrency(stats.totalAUM),
+    icon: IndianRupee,
+    subtitle: 'Active portfolio',
+    color: 'text-amber-600 dark:text-amber-400',
+    bgColor: 'bg-amber-50 dark:bg-amber-950/50',
+    borderColor: 'border-amber-200 dark:border-amber-800',
+    iconBg: 'bg-amber-100 dark:bg-amber-900/50',
+  });
+
+  // Monthly Collection stat
+  statItems.push({
+    title: 'Monthly Collection',
+    value: formatCurrency(stats.monthlyCollection),
+    icon: TrendingUp,
+    subtitle: showLoans && showSaleAgreements ? 'All payments this month' : showLoans ? 'Interest this month' : 'Margin this month',
+    color: 'text-purple-600 dark:text-purple-400',
+    bgColor: 'bg-purple-50 dark:bg-purple-950/50',
+    borderColor: 'border-purple-200 dark:border-purple-800',
+    iconBg: 'bg-purple-100 dark:bg-purple-900/50',
+  });
 
   if (isLoading) {
     return (
