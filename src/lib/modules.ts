@@ -14,6 +14,7 @@ import {
   BarChart3,
   Calculator,
   Settings,
+  Percent,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +42,10 @@ export const MODULES: ModuleDefinition[] = [
   { key: 'reports', label: 'Reports', icon: BarChart3, description: 'Analytics and reports' },
   { key: 'accounting', label: 'Accounting', icon: Calculator, description: 'Financial accounting' },
   { key: 'settings', label: 'Settings', icon: Settings, description: 'System settings' },
+  { key: 'sale_agreements', label: 'Sale Agreements', icon: FileText, description: 'Create and manage sale agreements' },
+  { key: 'sale_margin', label: 'Margin Renewal', icon: CreditCard, description: 'Collect margin payments' },
+  { key: 'sale_repurchase', label: 'Repurchase', icon: Wallet, description: 'Process agreement buybacks' },
+  { key: 'sale_schemes', label: 'Sale Schemes', icon: Percent, description: 'Manage sale agreement schemes' },
 ];
 
 export const MODULE_KEYS = MODULES.map(m => m.key);
