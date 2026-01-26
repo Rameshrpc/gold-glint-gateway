@@ -21,6 +21,8 @@ interface Client {
   id: string;
   client_code: string;
   company_name: string;
+  supports_loans: boolean;
+  supports_sale_agreements: boolean;
 }
 
 interface Branch {
@@ -87,15 +89,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileData) {
         setProfile(profileData as Profile);
 
-        // Fetch client
+        // Fetch client with feature flags
         const { data: clientData } = await supabase
           .from('clients')
-          .select('id, client_code, company_name')
+          .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
           .eq('id', profileData.client_id)
           .maybeSingle();
 
         if (clientData) {
-          setClient(clientData as Client);
+          setClient({
+            ...clientData,
+            supports_loans: clientData.supports_loans ?? true,
+            supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+          } as Client);
         }
 
         // Fetch branches

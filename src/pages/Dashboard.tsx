@@ -32,15 +32,31 @@ export default function Dashboard() {
   const { profile, client, currentBranch, roles, hasRole } = useAuth();
   const { autoSync, syncStatus } = useBackfillVouchers();
   const hasAutoSynced = useRef(false);
-  const dashboardData = useDashboardData();
+  
+  // Feature flags
+  const supportsLoans = client?.supports_loans ?? true;
+  const supportsSaleAgreements = client?.supports_sale_agreements ?? false;
+  
+  const dashboardData = useDashboardData({ 
+    includeLoans: supportsLoans, 
+    includeSaleAgreements: supportsSaleAgreements 
+  });
 
   const isTenantAdmin = hasRole('tenant_admin') || hasRole('super_admin');
 
+  // Build quick actions based on feature flags
   const quickActions = [
-    { title: 'New Loan', icon: Plus, href: '/loans?action=new', color: 'bg-green-600 hover:bg-green-700' },
-    { title: 'Interest', icon: CreditCard, href: '/interest', color: 'bg-blue-600 hover:bg-blue-700' },
-    { title: 'Redemption', icon: Wallet, href: '/redemption', color: 'bg-purple-600 hover:bg-purple-700' },
-    { title: 'Reloan', icon: RefreshCw, href: '/reloan', color: 'bg-amber-600 hover:bg-amber-700' },
+    ...(supportsLoans ? [
+      { title: 'New Loan', icon: Plus, href: '/loans?action=new', color: 'bg-green-600 hover:bg-green-700' },
+      { title: 'Interest', icon: CreditCard, href: '/interest', color: 'bg-blue-600 hover:bg-blue-700' },
+      { title: 'Redemption', icon: Wallet, href: '/redemption', color: 'bg-purple-600 hover:bg-purple-700' },
+      { title: 'Reloan', icon: RefreshCw, href: '/reloan', color: 'bg-amber-600 hover:bg-amber-700' },
+    ] : []),
+    ...(supportsSaleAgreements ? [
+      { title: 'New Agreement', icon: Plus, href: '/sale-agreements?action=new', color: 'bg-emerald-600 hover:bg-emerald-700' },
+      { title: 'Margin Payment', icon: CreditCard, href: '/sale-margin-renewal', color: 'bg-teal-600 hover:bg-teal-700' },
+      { title: 'Repurchase', icon: Wallet, href: '/sale-repurchase', color: 'bg-cyan-600 hover:bg-cyan-700' },
+    ] : []),
   ];
 
   // Auto-sync vouchers on dashboard load
@@ -130,7 +146,12 @@ export default function Dashboard() {
         {/* Quick Stats + Gold Custody Row */}
         <div className="grid gap-4 lg:grid-cols-5">
           <div className="lg:col-span-4">
-            <QuickStatsGrid stats={dashboardData.stats} isLoading={dashboardData.isLoading} />
+            <QuickStatsGrid 
+              stats={dashboardData.stats} 
+              isLoading={dashboardData.isLoading}
+              showLoans={supportsLoans}
+              showSaleAgreements={supportsSaleAgreements}
+            />
           </div>
           <div className="lg:col-span-1">
             <GoldCustodyWidget data={dashboardData.goldCustody} isLoading={dashboardData.isLoading} />

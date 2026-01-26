@@ -1144,6 +1144,8 @@ export type Database = {
           phone: string | null
           plan_name: string | null
           state_code: string | null
+          supports_loans: boolean
+          supports_sale_agreements: boolean
           updated_at: string | null
         }
         Insert: {
@@ -1161,6 +1163,8 @@ export type Database = {
           phone?: string | null
           plan_name?: string | null
           state_code?: string | null
+          supports_loans?: boolean
+          supports_sale_agreements?: boolean
           updated_at?: string | null
         }
         Update: {
@@ -1178,6 +1182,8 @@ export type Database = {
           phone?: string | null
           plan_name?: string | null
           state_code?: string | null
+          supports_loans?: boolean
+          supports_sale_agreements?: boolean
           updated_at?: string | null
         }
         Relationships: []

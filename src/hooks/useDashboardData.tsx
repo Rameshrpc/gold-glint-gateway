@@ -6,9 +6,16 @@ import { format, subDays, startOfMonth } from 'date-fns';
 export interface DashboardStats {
   totalCustomers: number;
   activeLoans: number;
+  activeSaleAgreements: number;
   totalAUM: number;
   monthlyCollection: number;
   overdueLoans: number;
+  overdueSaleAgreements: number;
+}
+
+export interface DashboardFilters {
+  includeLoans?: boolean;
+  includeSaleAgreements?: boolean;
 }
 
 export interface GoldCustody {
@@ -53,15 +60,22 @@ export interface DashboardData {
   refetch: () => void;
 }
 
-export function useDashboardData(): DashboardData {
+export function useDashboardData(filters?: DashboardFilters): DashboardData {
   const { profile, hasRole, branches } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Default to including loans only if no filters provided
+  const includeLoans = filters?.includeLoans ?? true;
+  const includeSaleAgreements = filters?.includeSaleAgreements ?? false;
+  
   const [stats, setStats] = useState<DashboardStats>({
     totalCustomers: 0,
     activeLoans: 0,
+    activeSaleAgreements: 0,
     totalAUM: 0,
     monthlyCollection: 0,
     overdueLoans: 0,
+    overdueSaleAgreements: 0,
   });
   const [goldCustody, setGoldCustody] = useState<GoldCustody>({
     totalWeightGrams: 0,
@@ -83,6 +97,13 @@ export function useDashboardData(): DashboardData {
     const todayStr = format(today, 'yyyy-MM-dd');
     const startOfMonthStr = format(startOfMonth(today), 'yyyy-MM-dd');
     const fourteenDaysAgo = format(subDays(today, 14), 'yyyy-MM-dd');
+    
+    // Build transaction type filter
+    const transactionTypes: string[] = [];
+    if (includeLoans) transactionTypes.push('loan');
+    if (includeSaleAgreements) transactionTypes.push('sale_agreement');
+    // Default to loan if no filters
+    if (transactionTypes.length === 0) transactionTypes.push('loan');
 
     try {
       // Fetch all data in parallel
@@ -100,11 +121,12 @@ export function useDashboardData(): DashboardData {
           .eq('client_id', profile.client_id)
           .eq('is_active', true),
         
-        // All loans with details
+        // All loans/agreements with details (filtered by transaction type)
         supabase
           .from('loans')
-          .select('id, branch_id, principal_amount, status, maturity_date, loan_date, net_disbursed')
-          .eq('client_id', profile.client_id),
+          .select('id, branch_id, principal_amount, status, maturity_date, loan_date, net_disbursed, transaction_type')
+          .eq('client_id', profile.client_id)
+          .in('transaction_type', transactionTypes),
         
         // Gold items for custody
         supabase
@@ -133,6 +155,10 @@ export function useDashboardData(): DashboardData {
       const interestPayments = interestPaymentsRes.data || [];
       const branchesList = branchesData.data || [];
 
+      // Separate loans and sale agreements
+      const activeRegularLoans = activeLoans.filter(l => l.transaction_type === 'loan' || !l.transaction_type);
+      const activeSaleAgreements = activeLoans.filter(l => l.transaction_type === 'sale_agreement');
+
       // Calculate basic stats
       const totalAUM = activeLoans.reduce((sum, l) => sum + (l.principal_amount || 0), 0);
       const monthlyCollection = interestPayments
@@ -140,8 +166,10 @@ export function useDashboardData(): DashboardData {
         .reduce((sum, p) => sum + (p.amount_paid || 0), 0);
 
       // Calculate overdue buckets
-      const overdueLoans = activeLoans.filter(l => l.maturity_date < todayStr);
-      const buckets = calculateOverdueBuckets(overdueLoans, todayStr);
+      const overdueAll = activeLoans.filter(l => l.maturity_date < todayStr);
+      const overdueRegularLoans = overdueAll.filter(l => l.transaction_type === 'loan' || !l.transaction_type);
+      const overdueSaleAgreements = overdueAll.filter(l => l.transaction_type === 'sale_agreement');
+      const buckets = calculateOverdueBuckets(overdueAll, todayStr);
 
       // Calculate gold custody
       const activeLoanIds = new Set(activeLoans.map(l => l.id));
@@ -200,10 +228,12 @@ export function useDashboardData(): DashboardData {
 
       setStats({
         totalCustomers: customersRes.count || 0,
-        activeLoans: activeLoans.length,
+        activeLoans: activeRegularLoans.length,
+        activeSaleAgreements: activeSaleAgreements.length,
         totalAUM,
         monthlyCollection,
-        overdueLoans: overdueLoans.length,
+        overdueLoans: overdueRegularLoans.length,
+        overdueSaleAgreements: overdueSaleAgreements.length,
       });
 
       setGoldCustody({
@@ -221,7 +251,7 @@ export function useDashboardData(): DashboardData {
     } finally {
       setIsLoading(false);
     }
-  }, [profile?.client_id]);
+  }, [profile?.client_id, includeLoans, includeSaleAgreements]);
 
   useEffect(() => {
     fetchData();
