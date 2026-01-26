@@ -17,7 +17,7 @@ interface ClientModule {
 
 export function usePermissions() {
   const auth = useAuth();
-  const { user, client, hasRole, isPlatformAdmin } = auth;
+  const { user, client, hasRole, isPlatformAdmin, refreshClient } = auth;
   const [userPermissions, setUserPermissions] = useState<UserPermission[]>([]);
   const [clientModules, setClientModules] = useState<ClientModule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,6 +90,8 @@ export function usePermissions() {
   useEffect(() => {
     const loadPermissions = async () => {
       setLoading(true);
+      // Refresh client data to get latest feature flags
+      await refreshClient();
       await Promise.all([
         fetchUserPermissions(),
         fetchClientModules(),
@@ -98,7 +100,7 @@ export function usePermissions() {
     };
 
     loadPermissions();
-  }, [fetchUserPermissions, fetchClientModules]);
+  }, [fetchUserPermissions, fetchClientModules, refreshClient]);
 
   const hasModuleAccess = useCallback((moduleKey: string): boolean => {
     const clientModule = clientModules.find(m => m.module_key === moduleKey);

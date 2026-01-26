@@ -48,6 +48,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
   isPlatformAdmin: () => boolean;
+  refreshClient: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -368,6 +369,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isPlatformAdmin = () => hasRole('super_admin') || hasRole('moderator');
 
+  const refreshClient = async () => {
+    if (!profile?.client_id) return;
+    
+    const { data: clientData } = await supabase
+      .from('clients')
+      .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
+      .eq('id', profile.client_id)
+      .maybeSingle();
+
+    if (clientData) {
+      setClient({
+        ...clientData,
+        supports_loans: clientData.supports_loans ?? true,
+        supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+      });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -385,6 +404,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signOut,
         hasRole,
         isPlatformAdmin,
+        refreshClient,
       }}
     >
       {children}
