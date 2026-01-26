@@ -114,13 +114,19 @@ export function ClientRightsSheet({ open, onOpenChange, client, onSave }: Client
     setSaving(true);
 
     try {
-      // Update client limits
+      // Determine feature flag states from module toggles
+      const supportsLoans = modules['loans'] ?? true;
+      const supportsSaleAgreements = modules['sale_agreements'] ?? false;
+
+      // Update client limits AND feature flags
       const { error: clientError } = await supabase
         .from('clients')
         .update({
           max_branches: maxBranches,
           max_users: maxUsers,
           plan_name: planName,
+          supports_loans: supportsLoans,
+          supports_sale_agreements: supportsSaleAgreements,
         })
         .eq('id', client.id);
 
