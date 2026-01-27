@@ -23,6 +23,8 @@ interface Client {
   company_name: string;
   supports_loans: boolean;
   supports_sale_agreements: boolean;
+  show_reloan_module: boolean;
+  show_differential_details: boolean;
 }
 
 interface Branch {
@@ -93,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch client with feature flags
         const { data: clientData } = await supabase
           .from('clients')
-          .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
+          .select('id, client_code, company_name, supports_loans, supports_sale_agreements, show_reloan_module, show_differential_details')
           .eq('id', profileData.client_id)
           .maybeSingle();
 
@@ -102,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...clientData,
             supports_loans: clientData.supports_loans ?? true,
             supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+            show_reloan_module: clientData.show_reloan_module ?? false,
+            show_differential_details: clientData.show_differential_details ?? false,
           } as Client);
         }
 
@@ -375,7 +379,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: clientData, error } = await supabase
       .from('clients')
-      .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
+      .select('id, client_code, company_name, supports_loans, supports_sale_agreements, show_reloan_module, show_differential_details')
       .eq('id', clientId)
       .maybeSingle();
 
@@ -390,6 +394,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...clientData,
       supports_loans: clientData.supports_loans ?? true,
       supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+      show_reloan_module: clientData.show_reloan_module ?? false,
+      show_differential_details: clientData.show_differential_details ?? false,
     } as Client;
 
     // Prevent redundant re-renders: if nothing changed, keep the previous reference.
@@ -401,7 +407,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         prev.client_code === nextClient.client_code &&
         prev.company_name === nextClient.company_name &&
         prev.supports_loans === nextClient.supports_loans &&
-        prev.supports_sale_agreements === nextClient.supports_sale_agreements;
+        prev.supports_sale_agreements === nextClient.supports_sale_agreements &&
+        prev.show_reloan_module === nextClient.show_reloan_module &&
+        prev.show_differential_details === nextClient.show_differential_details;
 
       return unchanged ? prev : nextClient;
     });

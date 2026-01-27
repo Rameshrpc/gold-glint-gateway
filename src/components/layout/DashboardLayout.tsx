@@ -174,6 +174,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     if (loanOnlyItems.includes(item.href) && client && !client.supports_loans) {
       return false;
     }
+    // Hide Reloan if show_reloan_module is false
+    if (item.href === '/reloan' && client && !client.show_reloan_module) {
+      return false;
+    }
     if (!item.roles) return true;
     if (isPlatformAdmin()) return true;
     return item.roles.some(role => hasRole(role));

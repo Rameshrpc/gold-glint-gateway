@@ -67,12 +67,7 @@ export function OutstandingSummaryCard({ loan }: OutstandingSummaryCardProps) {
               <span className="font-medium">{formatIndianCurrency(currentInterest.shownInterest)}</span>
             </div>
             
-            {currentInterest.differential > 0 && (
-              <div className="flex justify-between py-1 border-b border-amber-200/50">
-                <span className="text-muted-foreground">Differential Interest</span>
-                <span className="font-medium">{formatIndianCurrency(currentInterest.differential)}</span>
-              </div>
-            )}
+            {/* Differential Interest hidden from customers - internal accounting only */}
             
             {currentInterest.penalty > 0 && (
               <div className="flex justify-between py-1 border-b border-amber-200/50 text-red-600 dark:text-red-400">

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,7 @@ const PURITY_MAP: Record<string, number> = {
 };
 
 export default function Reloan() {
+  const navigate = useNavigate();
   const { client, profile, currentBranch, isPlatformAdmin, hasRole } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<LoanWithDetails[]>([]);
@@ -184,6 +186,14 @@ export default function Reloan() {
   const [appraiserSheetUrl, setAppraiserSheetUrl] = useState<string | null>(null);
 
   const canProcessReloan = isPlatformAdmin() || hasRole('tenant_admin') || hasRole('branch_manager') || hasRole('loan_officer');
+
+  // Redirect if Reloan module is disabled
+  useEffect(() => {
+    if (client && !client.show_reloan_module) {
+      navigate('/dashboard');
+      toast.error('Reloan module is not enabled');
+    }
+  }, [client, navigate]);
 
   useEffect(() => {
     if (client) {
