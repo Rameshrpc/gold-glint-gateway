@@ -1,173 +1,61 @@
 
+Goal: Stop the repeating “Failed to fetch loans” toast and make the Loans/Loan Creation screen load normally.
 
-## Plan: Hide Repledge/Reloan and Differential Interest UI
+What’s happening (root cause)
+- The toast repeats because the app is stuck in a re-render loop that keeps re-triggering data fetches.
+- After the recent “feature flags refresh” work, `usePermissions()` calls `refreshClient()` inside a `useEffect` that depends on `refreshClient`.
+- In `useAuth.tsx`, `refreshClient` is currently created as a new function on every render (not memoized). That means:
+  1) render → `refreshClient` reference changes
+  2) `usePermissions` effect runs again → calls `refreshClient` → updates `client` state
+  3) client update → render again → new `refreshClient` function → effect runs again…
+- On the Loans page, every time `client` updates, `fetchLoans()` runs again. Since `fetchLoans()` is failing (for whatever backend reason), you see “Failed to fetch loans” repeatedly.
 
-### Overview
+Key fix
+1) Make `refreshClient` stable (memoized) so `usePermissions` does NOT re-run endlessly.
 
-Add feature flags to conditionally hide advanced features like "Reloan" and "Differential Interest" from the UI. Even if someone tries to manipulate the app, these features will be completely hidden from view while keeping the underlying calculation logic intact for accounting purposes.
+Secondary improvements (so we can see the real backend error)
+2) Improve error reporting for the Loans fetch:
+   - Log the actual error to console
+   - Show `error.message` in the toast description
+   - Deduplicate the toast using a fixed toast `id` so even if it happens again, it won’t spam the UI
 
----
+Files involved
+A) src/hooks/useAuth.tsx (main loop fix)
+- Change `refreshClient` to be wrapped in `useCallback`, with dependencies like `profile?.client_id`.
+- Add a “no-op if unchanged” guard before calling `setClient`:
+  - If the fetched client id + supports flags are identical to current `client`, don’t call `setClient`.
+  - This prevents unnecessary rerenders even in normal cases.
 
-### Approach: Add Hidden Feature Flags
+B) src/hooks/usePermissions.tsx (effect stability)
+- Keep calling `refreshClient()` on mount, but ensure the effect does not thrash:
+  - With `refreshClient` now stable, the effect will run once on mount (and again only when user/client truly changes).
+- Add basic guards:
+  - If no authenticated `user?.id`, skip loading permissions.
+  - If profile/client not ready, skip refreshClient.
 
-We'll add two new boolean flags to the `clients` table that control visibility:
-- `show_reloan_module` - Controls whether Reloan menu item appears
-- `show_differential_details` - Controls whether differential interest breakdown is shown in UI
+C) src/pages/Loans.tsx (stop toast spam + reveal real error)
+- Update `fetchLoans()` catch block to:
+  - `console.error('Failed to fetch loans', error)`
+  - `toast.error('Failed to fetch loans', { id: 'fetch-loans', description: error?.message ?? 'Unknown error' })`
+- Also set `setLoading(true)` at the start of `fetchLoans()` for cleaner loading behavior.
 
-These flags will default to `false` (hidden) so new clients won't see these advanced features.
+D) src/pages/Interest.tsx (same error treatment)
+- Apply the same toast `id` + `description` + console logging so Interest screen is also clean.
 
----
+How we’ll test (quick checklist)
+1) Login as the tenant user who sees the issue.
+2) Open Loans page (and open Loan Creation form).
+3) Confirm:
+   - The “Failed to fetch loans” toast does not keep repeating.
+   - Network activity stops thrashing (no constant refetch loop).
+4) If “Failed to fetch loans” still appears once:
+   - Read the toast description + console error to see the real backend reason (401/403/RLS, invalid select, etc.).
+   - Then we fix the underlying backend permission/query issue in the next step.
 
-### Files to Modify
+Expected outcome
+- The infinite re-render loop stops.
+- The loan fetch is called once per normal page load (or when it should refresh).
+- If there’s still a genuine backend error, it becomes visible and actionable (instead of a vague repeating toast).
 
-#### 1. Database Migration - Add Feature Flags
-
-Add two new columns to the `clients` table:
-
-```sql
-ALTER TABLE clients 
-ADD COLUMN show_reloan_module boolean NOT NULL DEFAULT false,
-ADD COLUMN show_differential_details boolean NOT NULL DEFAULT false;
-```
-
----
-
-#### 2. `src/components/layout/DashboardLayout.tsx` - Hide Reloan Menu
-
-**Current State:**
-- Reloan appears in the Operations menu unconditionally
-
-**Changes:**
-- Add `/reloan` to the list of items filtered by a client flag
-- Update `filterMenuItem` to check `client?.show_reloan_module`
-
-```typescript
-const filterMenuItem = (item: MenuItem) => {
-  // ... existing checks ...
-  
-  // Hide Reloan if show_reloan_module is false
-  if (item.href === '/reloan' && client && !client.show_reloan_module) {
-    return false;
-  }
-  
-  // ... rest of logic
-};
-```
-
----
-
-#### 3. `src/pages/Loans.tsx` - Hide Differential Details
-
-**Hide in Loan Creation Form (lines ~1834-1840):**
-```typescript
-{client?.show_differential_details && loanCalculation.advanceCalc.differential > 0 && (
-  <div className="flex justify-between text-amber-600">
-    <span>Interest Adjustment</span>
-    <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
-  </div>
-)}
-```
-
-**Hide in Loan Detail View (lines ~2570-2577):**
-```typescript
-{client?.show_differential_details && (viewingLoan.differential_capitalized || 0) > 0 && (
-  <div className="flex justify-between text-amber-600">
-    <span>Differential Added to Principal</span>
-    <span>+{formatIndianCurrency(viewingLoan.differential_capitalized || 0)}</span>
-  </div>
-)}
-```
-
-Also hide the "Advance Interest (Actual)" line in the detail view since it reveals the dual-rate mechanism.
-
----
-
-#### 4. `src/pages/Interest.tsx` - Hide Differential Details
-
-Hide any differential interest breakdown in the interest payment details dialog.
-
----
-
-#### 5. `src/components/customer-portal/OutstandingSummaryCard.tsx` - Hide Differential
-
-**Current (lines 70-75):**
-```typescript
-{currentInterest.differential > 0 && (
-  <div className="flex justify-between py-1 border-b border-amber-200/50">
-    <span className="text-muted-foreground">Differential Interest</span>
-    <span className="font-medium">{formatIndianCurrency(currentInterest.differential)}</span>
-  </div>
-)}
-```
-
-**Change to always hidden:**
-Remove this entire block since customers should never see differential interest details.
-
----
-
-#### 6. `src/integrations/supabase/types.ts` - Type Updates
-
-The types file will auto-update after migration. Ensure the `client` type includes:
-```typescript
-show_reloan_module: boolean;
-show_differential_details: boolean;
-```
-
----
-
-#### 7. `src/pages/Reloan.tsx` - Add Route Guard
-
-Add a redirect check at the top of the component:
-```typescript
-useEffect(() => {
-  if (client && !client.show_reloan_module) {
-    navigate('/dashboard');
-    toast.error('Reloan module is not enabled');
-  }
-}, [client]);
-```
-
----
-
-### Summary of Changes
-
-| Location | What's Hidden | Condition |
-|----------|---------------|-----------|
-| Sidebar menu | Reloan menu item | `!client.show_reloan_module` |
-| /reloan route | Entire page (redirects) | `!client.show_reloan_module` |
-| Loan form | "Interest Adjustment" line | `!client.show_differential_details` |
-| Loan details | "Differential Added to Principal" | `!client.show_differential_details` |
-| Loan details | "Advance Interest (Actual)" | `!client.show_differential_details` |
-| Customer Portal | "Differential Interest" row | Always hidden (customers never see) |
-
----
-
-### What Stays the Same
-
-- **Calculation logic** - Differential interest is still calculated and stored for accounting
-- **Database records** - `differential_capitalized` is still saved to loans
-- **Accounting vouchers** - Full dual-rate logic is preserved in books
-- **Reports** - Internal reports can still show these if needed
-
----
-
-### Implementation Sequence
-
-1. Run database migration to add the two new columns
-2. Update `DashboardLayout.tsx` to filter Reloan menu item
-3. Update `Reloan.tsx` to redirect if module disabled
-4. Update `Loans.tsx` to conditionally show differential details
-5. Update `Interest.tsx` to hide differential breakdown
-6. Update `OutstandingSummaryCard.tsx` to remove differential display entirely
-7. (Optional) Add admin UI in Settings to toggle these flags per-client
-
----
-
-### Default Behavior
-
-All existing clients will have these flags set to `false`, meaning:
-- Reloan will be **hidden** by default
-- Differential interest details will be **hidden** by default
-
-Platform admins can enable these for specific clients if needed.
-
+Notes / likely follow-up
+- If the new detailed error shows a permission/authorization problem, we’ll adjust the backend RLS policy or the query accordingly. Right now, the DB policies for `loans` look correct, so the most probable cause is the frontend loop + lack of error details hiding the actual message.

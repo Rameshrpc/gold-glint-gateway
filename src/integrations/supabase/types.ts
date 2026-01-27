@@ -1143,8 +1143,6 @@ export type Database = {
           max_users: number | null
           phone: string | null
           plan_name: string | null
-          show_differential_details: boolean
-          show_reloan_module: boolean
           state_code: string | null
           supports_loans: boolean
           supports_sale_agreements: boolean
@@ -1164,8 +1162,6 @@ export type Database = {
           max_users?: number | null
           phone?: string | null
           plan_name?: string | null
-          show_differential_details?: boolean
-          show_reloan_module?: boolean
           state_code?: string | null
           supports_loans?: boolean
           supports_sale_agreements?: boolean
@@ -1185,8 +1181,6 @@ export type Database = {
           max_users?: number | null
           phone?: string | null
           plan_name?: string | null
-          show_differential_details?: boolean
-          show_reloan_module?: boolean
           state_code?: string | null
           supports_loans?: boolean
           supports_sale_agreements?: boolean
