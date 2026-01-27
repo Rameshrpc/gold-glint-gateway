@@ -163,8 +163,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   };
 
+  // Loan-specific menu items that should be hidden when loans not supported
+  const loanOnlyItems = ['/loans', '/interest', '/redemption', '/reloan', '/auction'];
+
   const filterMenuItem = (item: MenuItem) => {
     if (item.moduleKey && !hasModuleAccess(item.moduleKey)) {
+      return false;
+    }
+    // Hide loan-specific items if loans not supported
+    if (loanOnlyItems.includes(item.href) && client && !client.supports_loans) {
       return false;
     }
     if (!item.roles) return true;
@@ -174,8 +181,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const filterMenuGroup = (group: MenuGroup) => {
     // Feature flag checks for entire menu groups
-    if (group.title === 'Operations' && client && !client.supports_loans) {
-      return false;
+    // Show Operations if either loans OR sale agreements is enabled (for Gold Vault access)
+    if (group.title === 'Operations') {
+      if (client && !client.supports_loans && !client.supports_sale_agreements) {
+        return false;
+      }
     }
     if (group.title === 'Sale Agreements' && client && !client.supports_sale_agreements) {
       return false;

@@ -24,8 +24,11 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Building2, Plus, Loader2, Search, Edit, Users } from 'lucide-react';
 import { toast } from 'sonner';
+
+type BusinessType = 'loans' | 'sale_agreements' | 'both';
 
 interface Client {
   id: string;
@@ -37,6 +40,24 @@ interface Client {
   is_active: boolean;
   created_at: string;
 }
+
+const getDefaultModulesForBusinessType = (type: BusinessType): string[] => {
+  const commonModules = [
+    'dashboard', 'quick_view', 'customers', 'agents', 
+    'notifications', 'reports', 'accounting', 'settings'
+  ];
+  const loanModules = ['loans', 'interest', 'redemption', 'repledge', 'takeover'];
+  const saleModules = ['sale_agreements', 'sale_margin', 'sale_repurchase', 'sale_schemes'];
+
+  switch (type) {
+    case 'loans':
+      return [...commonModules, ...loanModules];
+    case 'sale_agreements':
+      return [...commonModules, ...saleModules];
+    case 'both':
+      return [...commonModules, ...loanModules, ...saleModules];
+  }
+};
 
 export default function Clients() {
   const { isPlatformAdmin } = useAuth();
@@ -54,6 +75,7 @@ export default function Clients() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [isActive, setIsActive] = useState(true);
+  const [businessType, setBusinessType] = useState<BusinessType>('loans');
 
   useEffect(() => {
     fetchClients();
@@ -83,6 +105,7 @@ export default function Clients() {
     setAddress('');
     setIsActive(true);
     setEditingClient(null);
+    setBusinessType('loans');
   };
 
   const openEditDialog = (client: Client) => {
@@ -118,7 +141,11 @@ export default function Clients() {
         if (error) throw error;
         toast.success('Client updated successfully');
       } else {
-        // Create new client
+        // Determine feature flags based on business type
+        const supportsLoans = businessType === 'loans' || businessType === 'both';
+        const supportsSaleAgreements = businessType === 'sale_agreements' || businessType === 'both';
+
+        // Create new client with feature flags
         const { data: newClient, error } = await supabase
           .from('clients')
           .insert({
@@ -128,6 +155,8 @@ export default function Clients() {
             phone: phone || null,
             address: address || null,
             is_active: isActive,
+            supports_loans: supportsLoans,
+            supports_sale_agreements: supportsSaleAgreements,
           })
           .select()
           .single();
@@ -142,6 +171,16 @@ export default function Clients() {
           branch_type: 'main_branch',
           is_active: true,
         });
+
+        // Create default client modules based on business type
+        const defaultModules = getDefaultModulesForBusinessType(businessType);
+        await supabase.from('client_modules').insert(
+          defaultModules.map(moduleKey => ({
+            client_id: newClient.id,
+            module_key: moduleKey,
+            is_enabled: true,
+          }))
+        );
 
         toast.success('Client created successfully');
       }
@@ -244,6 +283,50 @@ export default function Clients() {
                     required
                   />
                 </div>
+                {!editingClient && (
+                  <div className="space-y-3">
+                    <Label>Business Type *</Label>
+                    <RadioGroup 
+                      value={businessType} 
+                      onValueChange={(value) => setBusinessType(value as BusinessType)}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-start space-x-3 p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="loans" id="type-loans" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="type-loans" className="font-normal cursor-pointer">
+                            Loans Only
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Traditional gold loan operations
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3 p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="sale_agreements" id="type-sale" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="type-sale" className="font-normal cursor-pointer">
+                            Sale Agreements Only
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Trading format (purchase/repurchase)
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-start space-x-3 p-2 rounded-md border hover:bg-muted/50 cursor-pointer">
+                        <RadioGroupItem value="both" id="type-both" className="mt-1" />
+                        <div className="flex-1">
+                          <Label htmlFor="type-both" className="font-normal cursor-pointer">
+                            Both Loans & Sale Agreements
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Full access to all modules
+                          </p>
+                        </div>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
