@@ -88,19 +88,35 @@ export function usePermissions() {
   }, [client?.id]);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadPermissions = async () => {
-      setLoading(true);
-      // Refresh client data to get latest feature flags
-      await refreshClient();
-      await Promise.all([
-        fetchUserPermissions(),
-        fetchClientModules(),
-      ]);
-      setLoading(false);
+      // Avoid thrashing when auth state isn't ready yet
+      if (!user?.id) {
+        if (!cancelled) setLoading(false);
+        return;
+      }
+
+      if (!cancelled) setLoading(true);
+      try {
+        // Refresh client data to get latest feature flags
+        await refreshClient();
+        await Promise.all([
+          fetchUserPermissions(),
+          fetchClientModules(),
+        ]);
+      } catch (error) {
+        console.error('Error loading permissions:', error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     };
 
     loadPermissions();
-  }, [fetchUserPermissions, fetchClientModules, refreshClient]);
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, fetchUserPermissions, fetchClientModules, refreshClient]);
 
   const hasModuleAccess = useCallback((moduleKey: string): boolean => {
     const clientModule = clientModules.find(m => m.module_key === moduleKey);

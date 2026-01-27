@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { logActivity } from '@/lib/activity-logger';
@@ -369,23 +369,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isPlatformAdmin = () => hasRole('super_admin') || hasRole('moderator');
 
-  const refreshClient = async () => {
-    if (!profile?.client_id) return;
-    
-    const { data: clientData } = await supabase
+  const refreshClient = useCallback(async () => {
+    const clientId = profile?.client_id;
+    if (!clientId) return;
+
+    const { data: clientData, error } = await supabase
       .from('clients')
       .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
-      .eq('id', profile.client_id)
+      .eq('id', clientId)
       .maybeSingle();
 
-    if (clientData) {
-      setClient({
-        ...clientData,
-        supports_loans: clientData.supports_loans ?? true,
-        supports_sale_agreements: clientData.supports_sale_agreements ?? false,
-      });
+    if (error) {
+      console.error('Error refreshing client:', error);
+      return;
     }
-  };
+
+    if (!clientData) return;
+
+    const nextClient = {
+      ...clientData,
+      supports_loans: clientData.supports_loans ?? true,
+      supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+    } as Client;
+
+    // Prevent redundant re-renders: if nothing changed, keep the previous reference.
+    setClient((prev) => {
+      if (!prev) return nextClient;
+
+      const unchanged =
+        prev.id === nextClient.id &&
+        prev.client_code === nextClient.client_code &&
+        prev.company_name === nextClient.company_name &&
+        prev.supports_loans === nextClient.supports_loans &&
+        prev.supports_sale_agreements === nextClient.supports_sale_agreements;
+
+      return unchanged ? prev : nextClient;
+    });
+  }, [profile?.client_id]);
 
   return (
     <AuthContext.Provider
