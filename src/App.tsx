@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { IdleTimeoutProvider } from "@/components/IdleTimeoutProvider";
 
 // Pages
 import Auth from "./pages/Auth";
@@ -72,6 +73,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <AuthProvider>
+          <IdleTimeoutProvider>
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/auth" element={<Auth />} />
@@ -142,6 +144,7 @@ const App = () => (
             <Route path="/customer-portal/loan/:loanId" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerLoanDetails /></CustomerProtectedRoute></CustomerAuthProvider>} />
             <Route path="/customer-portal/loan/:loanId/statement" element={<CustomerAuthProvider><CustomerProtectedRoute><CustomerLoanStatement /></CustomerProtectedRoute></CustomerAuthProvider>} />
           </Routes>
+          </IdleTimeoutProvider>
         </AuthProvider>
       </BrowserRouter>
       </TooltipProvider>
