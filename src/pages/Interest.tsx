@@ -146,6 +146,7 @@ export default function Interest() {
 
   const fetchLoans = async () => {
     if (!client) return;
+    setLoading(true);
     
     try {
       const { data, error } = await supabase
@@ -185,7 +186,13 @@ export default function Interest() {
       
       setLoans(processedLoans || []);
     } catch (error: any) {
-      toast.error('Failed to fetch loans');
+      console.error('Failed to fetch loans', error);
+      const message =
+        error?.message ??
+        error?.details ??
+        error?.hint ??
+        'Unknown error';
+      toast.error('Failed to fetch loans', { id: 'fetch-loans', description: message });
     } finally {
       setLoading(false);
     }
