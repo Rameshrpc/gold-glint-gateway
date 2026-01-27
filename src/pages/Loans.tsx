@@ -1831,10 +1831,12 @@ export default function Loans() {
                             <span>Loan Amount</span>
                             <span>{formatIndianCurrency(loanCalculation.loanAmount)}</span>
                           </div>
-                          <div className="flex justify-between text-amber-600">
-                            <span>Interest Adjustment</span>
-                            <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
-                          </div>
+                          {client?.show_differential_details && loanCalculation.advanceCalc.differential > 0 && (
+                            <div className="flex justify-between text-amber-600">
+                              <span>Interest Adjustment</span>
+                              <span>+{formatIndianCurrency(loanCalculation.advanceCalc.differential)}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between font-semibold text-amber-700">
                             <span>Principal on Record</span>
                             <span>{formatIndianCurrency(loanCalculation.principalOnRecord)}</span>
@@ -2567,14 +2569,20 @@ export default function Loans() {
                         <span>Advance Interest (Shown @18%)</span>
                         <span>{formatIndianCurrency(viewingLoan.advance_interest_shown || 0)}</span>
                       </div>
-                      <div className="flex justify-between">
-                        <span>Advance Interest (Actual)</span>
-                        <span>{formatIndianCurrency(viewingLoan.advance_interest_actual || 0)}</span>
-                      </div>
-                      <div className="flex justify-between text-amber-600">
-                        <span>Differential Added to Principal</span>
-                        <span>+{formatIndianCurrency(viewingLoan.differential_capitalized || 0)}</span>
-                      </div>
+                      {client?.show_differential_details && (
+                        <>
+                          <div className="flex justify-between">
+                            <span>Advance Interest (Actual)</span>
+                            <span>{formatIndianCurrency(viewingLoan.advance_interest_actual || 0)}</span>
+                          </div>
+                          {(viewingLoan.differential_capitalized || 0) > 0 && (
+                            <div className="flex justify-between text-amber-600">
+                              <span>Differential Added to Principal</span>
+                              <span>+{formatIndianCurrency(viewingLoan.differential_capitalized || 0)}</span>
+                            </div>
+                          )}
+                        </>
+                      )}
                       <Separator />
                       <div className="flex justify-between font-bold text-lg">
                         <span>Actual Principal (Books)</span>
