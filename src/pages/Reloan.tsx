@@ -197,9 +197,11 @@ export default function Reloan() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt, current_version_id')
       .eq('client_id', client.id)
       .eq('is_active', true)
+      .not('current_version_id', 'is', null)  // Only schemes with valid versions
+      .or('scheme_type.is.null,scheme_type.eq.loan')  // Exclude sale agreement schemes
       .order('scheme_name');
     setSchemes(data || []);
   };
@@ -631,12 +633,29 @@ export default function Reloan() {
 
       if (oldLoanError) throw oldLoanError;
 
-      // 3. Create new loan (is_reloan = true, previous_loan_id = old loan id)
+      // 3. Get scheme's current version id
+      const { data: schemeWithVersion } = await supabase
+        .from('schemes')
+        .select('current_version_id')
+        .eq('id', selectedSchemeId)
+        .single();
+
+      // Block reloan if scheme has no version
+      if (!schemeWithVersion?.current_version_id) {
+        toast.error('Selected scheme is not properly configured. Please contact admin.', {
+          description: 'Scheme is missing version data required for loan creation.'
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // 4. Create new loan (is_reloan = true, previous_loan_id = old loan id)
       const newLoanData = {
         client_id: client.id,
         branch_id: currentBranch?.id || selectedLoan.branch_id,
         customer_id: selectedLoan.customer.id,
         scheme_id: selectedSchemeId,
+        scheme_version_id: schemeWithVersion.current_version_id,
         agent_id: selectedAgentId || null,
         loan_number: newLoanNumber,
         loan_date: today,
