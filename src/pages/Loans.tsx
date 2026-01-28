@@ -350,9 +350,11 @@ export default function Loans() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt, current_version_id')
       .eq('client_id', client.id)
       .eq('is_active', true)
+      .not('current_version_id', 'is', null)  // Only schemes with valid versions
+      .or('scheme_type.is.null,scheme_type.eq.loan')  // Exclude sale agreement schemes
       .order('scheme_name');
     setSchemes(data || []);
   };
@@ -736,12 +738,21 @@ export default function Loans() {
         .eq('id', selectedSchemeId)
         .single();
 
+      // Block loan creation if scheme has no version
+      if (!schemeWithVersion?.current_version_id) {
+        toast.error('Selected scheme is not properly configured. Please contact admin.', {
+          description: 'Scheme is missing version data required for loan creation.'
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const loanData = {
         client_id: client.id,
         branch_id: selectedBranchId,
         customer_id: selectedCustomerId,
         scheme_id: selectedSchemeId,
-        scheme_version_id: schemeWithVersion?.current_version_id || null,
+        scheme_version_id: schemeWithVersion.current_version_id,
         agent_id: selectedAgentId || null,
         loan_number: generateLoanNumber(),
         loan_date: format(loanDate, 'yyyy-MM-dd'),

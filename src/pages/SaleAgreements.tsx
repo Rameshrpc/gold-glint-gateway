@@ -329,10 +329,11 @@ export default function SaleAgreements() {
     if (!client) return;
     const { data } = await supabase
       .from('schemes')
-      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt, strike_periods')
+      .select('id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, advance_interest_months, ltv_percentage, min_amount, max_amount, min_tenure_days, max_tenure_days, processing_fee_percentage, document_charges, rate_18kt, rate_22kt, strike_periods, current_version_id')
       .eq('client_id', client.id)
       .eq('scheme_type', 'sale_agreement')
       .eq('is_active', true)
+      .not('current_version_id', 'is', null)  // Only schemes with valid versions
       .order('scheme_name');
     setSchemes((data || []) as Scheme[]);
   };
@@ -659,11 +660,28 @@ export default function SaleAgreements() {
       const expiryDate = addDays(agreementDate, parseInt(tenureDays));
       const nextDueDate = addMonths(agreementDate, agreementCalculation.scheme.advance_interest_months || 3);
 
+      // Get scheme's current version id
+      const { data: schemeWithVersion } = await supabase
+        .from('schemes')
+        .select('current_version_id')
+        .eq('id', selectedSchemeId)
+        .single();
+
+      // Block creation if scheme has no version
+      if (!schemeWithVersion?.current_version_id) {
+        toast.error('Selected scheme is not properly configured. Please contact admin.', {
+          description: 'Scheme is missing version data required for agreement creation.'
+        });
+        setSubmitting(false);
+        return;
+      }
+
       const agreementData = {
         client_id: client.id,
         branch_id: selectedBranchId,
         customer_id: selectedCustomerId,
         scheme_id: selectedSchemeId,
+        scheme_version_id: schemeWithVersion.current_version_id,
         agent_id: selectedAgentId || null,
         loan_number: generateAgreementNumber(),
         loan_date: format(agreementDate, 'yyyy-MM-dd'),

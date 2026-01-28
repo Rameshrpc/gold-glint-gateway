@@ -199,10 +199,50 @@ export default function SaleSchemes() {
         if (error) throw error;
         toast.success('Scheme updated successfully');
       } else {
-        const { error } = await supabase
+        // Create new scheme
+        const { data: newScheme, error: schemeError } = await supabase
           .from('schemes')
-          .insert(schemeData);
-        if (error) throw error;
+          .insert(schemeData)
+          .select()
+          .single();
+
+        if (schemeError) throw schemeError;
+
+        // Create initial version for the scheme
+        const { data: newVersion, error: versionError } = await supabase
+          .from('scheme_versions')
+          .insert({
+            scheme_id: newScheme.id,
+            client_id: client.id,
+            version_number: 1,
+            effective_from: new Date().toISOString().split('T')[0],
+            change_reason: 'Initial version',
+            interest_rate: schemeData.interest_rate,
+            shown_rate: schemeData.shown_rate,
+            effective_rate: schemeData.effective_rate,
+            minimum_days: schemeData.minimum_days,
+            advance_interest_months: schemeData.advance_interest_months,
+            rate_18kt: schemeData.rate_18kt,
+            rate_22kt: schemeData.rate_22kt,
+            min_amount: schemeData.min_amount,
+            max_amount: schemeData.max_amount,
+            min_tenure_days: schemeData.min_tenure_days,
+            max_tenure_days: schemeData.max_tenure_days,
+            ltv_percentage: schemeData.ltv_percentage,
+            processing_fee_percentage: schemeData.processing_fee_percentage,
+            document_charges: schemeData.document_charges,
+          })
+          .select()
+          .single();
+
+        if (versionError) throw versionError;
+
+        // Update scheme with current version id
+        await supabase
+          .from('schemes')
+          .update({ current_version_id: newVersion.id })
+          .eq('id', newScheme.id);
+
         toast.success('Scheme created successfully');
       }
 
