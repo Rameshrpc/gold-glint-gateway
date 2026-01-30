@@ -23,6 +23,7 @@ import { JewelImagePDF } from './documents/JewelImagePDF';
 import { GoldDeclarationPDF } from './documents/GoldDeclarationPDF';
 import { TermsConditionsPDF } from './documents/TermsConditionsPDF';
 import { BillOfSalePDF } from './documents/BillOfSalePDF';
+import { SaleAgreementPDF } from './documents/SaleAgreementPDF';
 
 interface GoldItem {
   id?: string;
@@ -71,6 +72,7 @@ interface Loan {
   rebate_days?: number | null;
   rebate_amount?: number | null;
   differential_capitalized?: number | null;
+  transaction_type?: string | null;
 }
 
 interface LoanPrintDialogProps {
@@ -261,60 +263,60 @@ export function LoanPrintDialog({
         }
       }
 
-      // Generate Bill of Sale Agreement
+      // Generate Bill of Sale / Sale Agreement
       if (selection.billOfSale) {
-        // Transform content from hook to PDF format
-        const billOfSaleContentForPDF = billOfSaleContent.hasContent ? {
-          title: billOfSaleContent.title,
-          legalRef: billOfSaleContent.legalRef,
-          sellerTitle: billOfSaleContent.sellerTitle,
-          buyerTitle: billOfSaleContent.buyerTitle,
-          goodsTitle: billOfSaleContent.goodsTitle,
-          goodsIntro: billOfSaleContent.goodsIntro,
-          considerationTitle: billOfSaleContent.considerationTitle,
-          considerationIntro: billOfSaleContent.considerationIntro,
-          spotPriceLabel: billOfSaleContent.spotPriceLabel,
-          repurchaseTitle: billOfSaleContent.repurchaseTitle,
-          repurchaseIntro: billOfSaleContent.repurchaseIntro,
-          expiryNote: billOfSaleContent.expiryNote,
-          declarationsTitle: billOfSaleContent.declarationsTitle,
-          declarations: billOfSaleContent.declarations,
-          sellerSignature: billOfSaleContent.sellerSignature,
-          sellerSignatureNote: billOfSaleContent.sellerSignatureNote,
-          buyerSignature: billOfSaleContent.buyerSignature,
-          buyerSignatureNote: billOfSaleContent.buyerSignatureNote,
-          strikePeriodHeader: billOfSaleContent.strikePeriodHeader,
-          strikePriceHeader: billOfSaleContent.strikePriceHeader,
-          strikeStatusHeader: billOfSaleContent.strikeStatusHeader,
-          strikePeriods: billOfSaleContent.strikePeriods,
-        } : undefined;
-
-        // Customer copy
-        const customerDoc = (
-          <BillOfSalePDF
-            loan={loan}
-            customer={customer}
-            goldItems={goldItems}
-            companyName={companyName}
-            companyAddress={(client as any)?.address || ''}
-            gstin={(client as any)?.gstin}
-            stateCode={(client as any)?.state_code || '33'}
-            branchName={branchName}
-            language={language}
-            paperSize={paperSize}
-            sloganEnglish={effectiveSettings.company_slogan_english}
-            sloganTamil={effectiveSettings.company_slogan_tamil}
-            logoUrl={effectiveSettings.logo_url}
-            copyType="customer"
-            content={billOfSaleContentForPDF}
-          />
-        );
-        const customerBlob = await pdf(customerDoc).toBlob();
-        blobs.push(customerBlob);
+        const isSaleAgreement = loan.transaction_type === 'sale_agreement';
         
-        // Office copy if copies > 1
-        if (copies.billOfSale > 1) {
-          const officeDoc = (
+        if (isSaleAgreement) {
+          // Use new 3-page Sale Agreement PDF for sale_agreement transactions
+          const saleAgreementDoc = (
+            <SaleAgreementPDF
+              loan={loan}
+              customer={customer}
+              goldItems={goldItems}
+              companyName={companyName}
+              companyAddress={(client as any)?.address || ''}
+              gstin={(client as any)?.gstin}
+              branchName={branchName}
+              language={language}
+              paperSize={paperSize}
+            />
+          );
+          const blob = await pdf(saleAgreementDoc).toBlob();
+          blobs.push(blob);
+          
+          // For stamp paper format, typically only 1 copy is needed
+          // (office retains photocopy, customer gets original on stamp paper)
+        } else {
+          // Use existing BillOfSalePDF for regular trading format
+          // Transform content from hook to PDF format
+          const billOfSaleContentForPDF = billOfSaleContent.hasContent ? {
+            title: billOfSaleContent.title,
+            legalRef: billOfSaleContent.legalRef,
+            sellerTitle: billOfSaleContent.sellerTitle,
+            buyerTitle: billOfSaleContent.buyerTitle,
+            goodsTitle: billOfSaleContent.goodsTitle,
+            goodsIntro: billOfSaleContent.goodsIntro,
+            considerationTitle: billOfSaleContent.considerationTitle,
+            considerationIntro: billOfSaleContent.considerationIntro,
+            spotPriceLabel: billOfSaleContent.spotPriceLabel,
+            repurchaseTitle: billOfSaleContent.repurchaseTitle,
+            repurchaseIntro: billOfSaleContent.repurchaseIntro,
+            expiryNote: billOfSaleContent.expiryNote,
+            declarationsTitle: billOfSaleContent.declarationsTitle,
+            declarations: billOfSaleContent.declarations,
+            sellerSignature: billOfSaleContent.sellerSignature,
+            sellerSignatureNote: billOfSaleContent.sellerSignatureNote,
+            buyerSignature: billOfSaleContent.buyerSignature,
+            buyerSignatureNote: billOfSaleContent.buyerSignatureNote,
+            strikePeriodHeader: billOfSaleContent.strikePeriodHeader,
+            strikePriceHeader: billOfSaleContent.strikePriceHeader,
+            strikeStatusHeader: billOfSaleContent.strikeStatusHeader,
+            strikePeriods: billOfSaleContent.strikePeriods,
+          } : undefined;
+
+          // Customer copy
+          const customerDoc = (
             <BillOfSalePDF
               loan={loan}
               customer={customer}
@@ -329,12 +331,37 @@ export function LoanPrintDialog({
               sloganEnglish={effectiveSettings.company_slogan_english}
               sloganTamil={effectiveSettings.company_slogan_tamil}
               logoUrl={effectiveSettings.logo_url}
-              copyType="office"
+              copyType="customer"
               content={billOfSaleContentForPDF}
             />
           );
-          const officeBlob = await pdf(officeDoc).toBlob();
-          blobs.push(officeBlob);
+          const customerBlob = await pdf(customerDoc).toBlob();
+          blobs.push(customerBlob);
+          
+          // Office copy if copies > 1
+          if (copies.billOfSale > 1) {
+            const officeDoc = (
+              <BillOfSalePDF
+                loan={loan}
+                customer={customer}
+                goldItems={goldItems}
+                companyName={companyName}
+                companyAddress={(client as any)?.address || ''}
+                gstin={(client as any)?.gstin}
+                stateCode={(client as any)?.state_code || '33'}
+                branchName={branchName}
+                language={language}
+                paperSize={paperSize}
+                sloganEnglish={effectiveSettings.company_slogan_english}
+                sloganTamil={effectiveSettings.company_slogan_tamil}
+                logoUrl={effectiveSettings.logo_url}
+                copyType="office"
+                content={billOfSaleContentForPDF}
+              />
+            );
+            const officeBlob = await pdf(officeDoc).toBlob();
+            blobs.push(officeBlob);
+          }
         }
       }
 
