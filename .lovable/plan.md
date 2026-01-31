@@ -1,172 +1,74 @@
 
 
-## Plan: Add Address Field & Replace Tamil Text in Sale Agreement PDF
+## Plan: Show Address Instead of Branch in Sale Agreement PDF
 
-### Overview
-Two changes are needed:
-1. **Add Address field** for Sale Agreement company (e.g., ZAMIN GOLD's address) in the Settings
-2. **Replace Tamil text** - Change all instances of "ஜெனித் கோல்ட்" (Zenith Gold) to "ஜமின் கோல்ட்" (Zamin Gold) in the Sale Agreement PDF clauses and declaration
+### Problem
+Currently, the Sale Agreement PDF shows "Branch: Main Branch" in THE BUYER section. The user wants it to display "Address: 1175/1 TRICH ROAD, AUGUSTIN PET, COIMBATORE, TAMIL NADU-641045" instead.
 
 ---
 
-### Current State Analysis
-
-**Issue 1 - Address**: The Sale Agreement PDF currently passes `companyAddress={(client as any)?.address || ''}` which uses the main client's address. For ZAMIN GOLD (a separate entity), a dedicated address field is needed.
-
-**Issue 2 - Tamil Text**: In `useSaleAgreementContent.tsx`, the Tamil text contains hardcoded "ஜெனித் கோல்ட்" (Zenith Gold in Tamil) in:
-- 13 agreement clauses (lines 28-93)
-- Declaration text (line 96)
-- Warning text (line 98)
-- Company signature label (line 109-110)
+### Solution
+The PDF already has logic to show the company address (lines 465-470 in SaleAgreementPDF.tsx). The issue is that:
+1. The branch name is also being passed and displayed
+2. When a dedicated `sale_agreement_company_address` is configured, we should NOT show the branch name
 
 ---
 
 ### Technical Changes
 
-#### 1. Database: Add Address Column
-Add a new column `sale_agreement_company_address` to `print_settings` table.
+#### File: `src/components/print/LoanPrintDialog.tsx`
 
-```sql
-ALTER TABLE public.print_settings 
-ADD COLUMN IF NOT EXISTS sale_agreement_company_address TEXT;
-```
-
----
-
-#### 2. Update Print Settings Hook
-**File: `src/hooks/usePrintSettings.tsx`**
-
-Add the new field to the interface and default settings:
-
-```typescript
-export interface PrintSettings {
-  // ... existing fields ...
-  sale_agreement_company_name: string | null;
-  sale_agreement_company_address: string | null;  // ADD
-}
-
-const DEFAULT_SETTINGS = {
-  // ... existing fields ...
-  sale_agreement_company_name: null,
-  sale_agreement_company_address: null,  // ADD
-};
-```
-
----
-
-#### 3. Update Effective Print Settings Hook
-**File: `src/hooks/useEffectivePrintSettings.tsx`**
-
-Add the field to the effective settings interface.
-
----
-
-#### 4. Update Sale Agreement Settings UI
-**File: `src/components/print/SaleAgreementSettings.tsx`**
-
-Add an address input field below the company name:
-
-```tsx
-<div className="space-y-2">
-  <Label>Company Address for Sale Agreements</Label>
-  <Input
-    value={settings.sale_agreement_company_address || ''}
-    onChange={(e) => updateSettings({ 
-      sale_agreement_company_address: e.target.value || null 
-    })}
-    placeholder="Enter the full address for ZAMIN GOLD"
-  />
-  <p className="text-sm text-muted-foreground">
-    This address will appear on Sale Agreement documents.
-  </p>
-</div>
-```
-
----
-
-#### 5. Update Loan Print Dialog
-**File: `src/components/print/LoanPrintDialog.tsx`**
-
-Pass the dedicated address to SaleAgreementPDF:
+**Lines 279-291**: When calling SaleAgreementPDF, don't pass `branchName` when a dedicated sale agreement address is configured:
 
 ```typescript
 const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
 const saleAgreementCompanyAddress = effectiveSettings.sale_agreement_company_address || (client as any)?.address || '';
 
-<SaleAgreementPDF
-  companyName={saleAgreementCompanyName}
-  companyAddress={saleAgreementCompanyAddress}  // Use dedicated address
-  // ... other props
-/>
+// Don't show branch name when dedicated address is configured
+const showBranchInSaleAgreement = !effectiveSettings.sale_agreement_company_address;
+
+const saleAgreementDoc = (
+  <SaleAgreementPDF
+    loan={loan}
+    customer={customer}
+    goldItems={goldItems}
+    companyName={saleAgreementCompanyName}
+    companyAddress={saleAgreementCompanyAddress}
+    gstin={(client as any)?.gstin}
+    branchName={showBranchInSaleAgreement ? branchName : undefined}  // Hide branch when address configured
+    language={language}
+    paperSize={paperSize}
+  />
+);
 ```
 
 ---
 
-#### 6. Replace Tamil Text in Sale Agreement Content
-**File: `src/hooks/useSaleAgreementContent.tsx`**
+### Result After Fix
 
-Replace all instances of:
-- "ஜெனித் கோல்ட்" → "ஜமின் கோல்ட்" (Zenith Gold → Zamin Gold in Tamil)
-- "Zenith Gold" → "Zamin Gold" (in English comments/labels)
+**THE BUYER section will display:**
 
-**Locations to update:**
-| Line | Content |
-|------|---------|
-| 30 | Clause 1 Tamil text |
-| 35 | Clause 2 Tamil text |
-| 40 | Clause 3 Tamil text |
-| 45 | Clause 4 Tamil text |
-| 50 | Clause 5 Tamil text |
-| 55 | Clause 6 Tamil text |
-| 60 | Clause 7 Tamil text |
-| 65 | Clause 8 Tamil text |
-| 70 | Clause 9 Tamil text |
-| 75 | Clause 10 Tamil text |
-| 80 | Clause 11 Tamil text |
-| 85 | Clause 12 Tamil text |
-| 90 | Clause 13 Tamil text |
-| 96 | Declaration text |
-| 98 | Warning text |
-| 109-110 | Company signature labels |
+| Label | Value |
+|-------|-------|
+| Name: | M/s. ZAMIN GOLD |
+| Address: | 1175/1 TRICH ROAD, AUGUSTIN PET, COIMBATORE, TAMIL NADU-641045 |
+
+Instead of showing "Branch: Main Branch", it will show the configured address from Settings → Print Setup → Sale Agreement.
 
 ---
 
-### Files to Modify/Create
+### Files to Modify
 
-| File | Action | Description |
-|------|--------|-------------|
-| Database migration | Create | Add `sale_agreement_company_address` column |
-| `src/hooks/usePrintSettings.tsx` | Modify | Add address field to interface and defaults |
-| `src/hooks/useEffectivePrintSettings.tsx` | Modify | Add address to effective settings |
-| `src/components/print/SaleAgreementSettings.tsx` | Modify | Add address input field |
-| `src/components/print/LoanPrintDialog.tsx` | Modify | Pass dedicated address to PDF |
-| `src/hooks/useSaleAgreementContent.tsx` | Modify | Replace all Tamil text from ஜெனித் to ஜமின் |
+| File | Change |
+|------|--------|
+| `src/components/print/LoanPrintDialog.tsx` | Conditionally hide branchName when dedicated address is configured |
 
 ---
 
-### Expected Outcome
+### User Action Required
 
-After implementation:
-1. **Settings Page** (Settings → Print Setup → Sale Agreement) will have:
-   - Company Name input (ZAMIN GOLD)
-   - Company Address input (new field)
+After this change, ensure the address is configured in:
+**Settings → Print Setup → Sale Agreement → Company Address for Sale Agreements**
 
-2. **Sale Agreement PDF** will display:
-   - "M/s. ZAMIN GOLD" as company name
-   - Configured address below the name
-   - All Tamil clauses using "ஜமின் கோல்ட்" instead of "ஜெனித் கோல்ட்"
-
----
-
-### Tamil Text Changes Preview
-
-**Before:**
-```
-ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை...
-```
-
-**After:**
-```
-ஜமின் கோல்ட்ல் என்னுடைய தங்க நகைகளை...
-```
+Enter: `1175/1 TRICH ROAD, AUGUSTIN PET, COIMBATORE, TAMIL NADU-641045`
 
