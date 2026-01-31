@@ -48,6 +48,7 @@ interface Customer {
   nominee_relation: NomineeRelation | null;
   occupation: string | null;
   monthly_income: number | null;
+  father_name: string | null;
   is_active: boolean;
   branch_id: string;
   client_id: string;
@@ -120,6 +121,7 @@ export default function Customers() {
   const [selectedBranchId, setSelectedBranchId] = useState('');
   const [nomineeName, setNomineeName] = useState('');
   const [nomineeRelation, setNomineeRelation] = useState<string>('');
+  const [fatherName, setFatherName] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<string | null>(null);
 
@@ -245,6 +247,7 @@ export default function Customers() {
     setSelectedBranchId(currentBranch?.id || '');
     setNomineeName('');
     setNomineeRelation('');
+    setFatherName('');
     setEditingCustomer(null);
     setUploadProgress(null);
     // Reset file states
@@ -280,6 +283,7 @@ export default function Customers() {
     setSelectedBranchId(customer.branch_id);
     setNomineeName(customer.nominee_name || '');
     setNomineeRelation(customer.nominee_relation || '');
+    setFatherName(customer.father_name || '');
     
     // Clear file selections
     setProfilePhotoFile(null);
@@ -460,6 +464,10 @@ export default function Customers() {
       toast.error('Nominee relation is required');
       return;
     }
+    if (!fatherName.trim()) {
+      toast.error('Father name is required');
+      return;
+    }
 
     // Validate mandatory documents for new customers
     if (!editingCustomer) {
@@ -508,6 +516,7 @@ export default function Customers() {
         monthly_income: monthlyIncome ? parseFloat(monthlyIncome) : null,
         nominee_name: nomineeName.trim() || null,
         nominee_relation: nomineeRelation as NomineeRelation || null,
+        father_name: fatherName.trim() || null,
       };
 
       let customerId: string;
@@ -1169,6 +1178,16 @@ export default function Customers() {
                             required
                           />
                         </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fatherName">Father Name *</Label>
+                        <Input
+                          id="fatherName"
+                          value={fatherName}
+                          onChange={(e) => setFatherName(e.target.value)}
+                          placeholder="Enter father name"
+                          required
+                        />
                       </div>
                     </div>
 

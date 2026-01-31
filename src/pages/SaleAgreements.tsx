@@ -48,6 +48,10 @@ interface Customer {
   aadhaar_front_url?: string;
   aadhaar_back_url?: string;
   pan_card_url?: string;
+  date_of_birth?: string;
+  gender?: string;
+  nominee_name?: string;
+  father_name?: string;
 }
 
 interface Scheme {
@@ -298,7 +302,7 @@ export default function SaleAgreements() {
         .from('loans')
         .select(`
           *,
-          customer:customers(id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url),
+          customer:customers(id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, date_of_birth, gender, nominee_name, father_name),
           scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, ltv_percentage, strike_periods)
         `)
         .eq('client_id', client.id)
@@ -318,7 +322,7 @@ export default function SaleAgreements() {
     if (!client) return;
     const { data } = await supabase
       .from('customers')
-      .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url')
+      .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, date_of_birth, gender, nominee_name, father_name')
       .eq('client_id', client.id)
       .eq('is_active', true)
       .order('full_name');

@@ -1297,6 +1297,7 @@ export type Database = {
           customer_code: string
           date_of_birth: string | null
           email: string | null
+          father_name: string | null
           full_name: string
           gender: Database["public"]["Enums"]["gender_type"] | null
           id: string
@@ -1327,6 +1328,7 @@ export type Database = {
           customer_code: string
           date_of_birth?: string | null
           email?: string | null
+          father_name?: string | null
           full_name: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
@@ -1357,6 +1359,7 @@ export type Database = {
           customer_code?: string
           date_of_birth?: string | null
           email?: string | null
+          father_name?: string | null
           full_name?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
           id?: string
