@@ -1,163 +1,131 @@
 
 
-## Plan: Fix Word Alignment and Spacing in Sale Agreement PDF
+## Plan: Remove Stamp Text and Fix Tamil Word-Breaking in Sale Agreement PDF
 
-### Problem Analysis
+### Issues Identified
 
-Looking at the screenshot, the Tamil text in the Terms & Conditions section has these issues:
-1. **Words broken mid-character** - Tamil words are being split incorrectly across lines (incomplete words carrying to next line)
-2. **Uneven spacing** - `textAlign: 'justify'` causes stretched gaps between words
-3. **Poor readability** - Text appears messy and unprofessional
+1. **Stamp Area Has Text**: The stamp area shows "Affix ₹100 Stamp Paper Here" text, but since this document will be printed on actual stamp paper, the area should be completely blank with just reserved margin space.
 
-### Root Cause
+2. **Tamil Words Breaking Mid-Character**: Looking at the uploaded screenshots (clauses 3 and 7), Tamil words are splitting in the middle and continuing on the next line (e.g., `உரிமை உண` splitting to next line with `:டு`). This is unreadable and unprofessional.
 
-In `@react-pdf/renderer`, the `textAlign: 'justify'` property combined with Tamil Unicode text causes problems because:
-- The library doesn't understand Tamil word boundaries
-- It breaks words at arbitrary character positions
-- Justification stretches remaining characters unnaturally
+### Root Cause Analysis
+
+**For Word Breaking:**
+- In `@react-pdf/renderer`, the `flex: 1` property on `clauseText` combined with the fixed `width: 18` on the clause number creates layout issues
+- The library doesn't properly handle Tamil Unicode word boundaries
+- Long Tamil sentences without explicit line breaks cause the renderer to cut words at arbitrary positions
 
 ### Solution
 
-1. **Remove `textAlign: 'justify'`** - Use `textAlign: 'left'` instead for cleaner Tamil rendering
-2. **Increase `lineHeight`** - From 1.4 to 1.6 for better spacing between lines
-3. **Add proper text wrapping** - Add `flexWrap: 'wrap'` and `flexShrink: 1` to allow natural word wrapping
-4. **Format long clauses** - Break long Tamil sentences into shorter wrapped segments using proper spacing
+---
+
+#### 1. Remove Stamp Text - Make Stamp Area Completely Blank
+
+**Current (lines 434-437):**
+```tsx
+<View style={styles.stampArea}>
+  <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
+  <Text style={styles.stampTextTamil}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
+</View>
+```
+
+**Fixed:**
+```tsx
+<View style={styles.stampAreaBlank} />
+```
+
+**New style:**
+```typescript
+stampAreaBlank: {
+  height: 320,
+  marginBottom: 15,
+  // No border, no text - just blank space for physical stamp paper
+},
+```
 
 ---
 
-### Changes Required
+#### 2. Fix Tamil Word Breaking
 
-#### File: `src/components/print/documents/SaleAgreementPDF.tsx`
+The key issue is that `@react-pdf/renderer` does not understand Tamil word boundaries. The solution is to:
 
-**1. Update `clauseText` style (line ~282-287):**
+**A. Remove flex layout from clause text and use block layout instead:**
 
-```typescript
-// Current
-clauseText: {
-  fontSize: 8,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.4,
-  textAlign: 'justify',  // PROBLEM
-},
-
-// Fixed
-clauseText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.6,
-  textAlign: 'left',
-  wordBreak: 'keep-all',
-},
-```
-
-**2. Update `clauseItem` style for proper wrapping (line ~274-276):**
-
-```typescript
-// Current
-clauseItem: {
-  marginBottom: 6,
-},
-
-// Fixed
-clauseItem: {
-  marginBottom: 8,
-  paddingRight: 5,
-  flexWrap: 'wrap',
-},
-```
-
-**3. Update `declarationText` style (line ~326-335):**
-
-```typescript
-// Current
-declarationText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.5,
-  textAlign: 'justify',  // PROBLEM
-  marginBottom: 15,
-  padding: 8,
-  backgroundColor: '#fafafa',
-  borderWidth: 1,
-  borderColor: '#ddd',
-},
-
-// Fixed
-declarationText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.7,
-  textAlign: 'left',
-  marginBottom: 15,
-  padding: 10,
-  backgroundColor: '#fafafa',
-  borderWidth: 1,
-  borderColor: '#ddd',
-},
-```
-
-**4. Update `warningText` style (line ~361-364):**
-
-```typescript
-// Current
-warningText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#856404',
-},
-
-// Fixed
-warningText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#856404',
-  lineHeight: 1.5,
-  textAlign: 'left',
-},
-```
-
-**5. Restructure clause rendering for better control (lines ~591-598):**
-
-```typescript
-// Current - simple rendering
-{content.clauses.map((clause) => (
-  <View key={clause.number} style={styles.clauseItem}>
-    <Text style={styles.clauseText}>
-      <Text style={styles.clauseNumber}>{clause.number}. </Text>
-      {clause.tamil}
-    </Text>
-  </View>
-))}
-
-// Fixed - separate number from text for cleaner layout
-{content.clauses.map((clause) => (
-  <View key={clause.number} style={styles.clauseItem}>
-    <View style={styles.clauseRow}>
-      <Text style={styles.clauseNumber}>{clause.number}.</Text>
-      <Text style={styles.clauseText}>{clause.tamil}</Text>
-    </View>
-  </View>
-))}
-```
-
-**6. Add new style for clause row layout:**
-
+**Current clauseRow style:**
 ```typescript
 clauseRow: {
   flexDirection: 'row',
-  flexWrap: 'wrap',
+  alignItems: 'flex-start',
 },
 clauseNumber: {
   fontSize: 9,
   fontWeight: 'bold',
   fontFamily: 'Noto Sans Tamil',
   marginRight: 4,
-  width: 15,
+  width: 18,
 },
 clauseText: {
   fontSize: 9,
   fontFamily: 'Noto Sans Tamil',
   lineHeight: 1.6,
+  textAlign: 'left',
+  flex: 1,  // This causes issues
+},
+```
+
+**Fixed styles:**
+```typescript
+clauseRow: {
+  flexDirection: 'row',
+  alignItems: 'flex-start',
+  flexWrap: 'nowrap',
+},
+clauseNumber: {
+  fontSize: 9,
+  fontWeight: 'bold',
+  fontFamily: 'Noto Sans Tamil',
+  marginRight: 6,
+  minWidth: 18,
+},
+clauseText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.8,  // Increased for better spacing
+  textAlign: 'left',
+  flex: 1,
+  flexShrink: 1,
+  flexWrap: 'wrap',
+},
+```
+
+**B. Add Zero-Width Space characters after each Tamil word to help the renderer understand word boundaries:**
+
+Create a utility function to insert invisible word-break hints:
+
+```typescript
+// Helper to add word-break hints for Tamil text
+const addWordBreakHints = (text: string): string => {
+  // Add Zero-Width Space (U+200B) after each space to hint word boundaries
+  return text.replace(/ /g, ' \u200B');
+};
+```
+
+Then use it in the rendering:
+```tsx
+<Text style={styles.clauseText}>{addWordBreakHints(clause.tamil)}</Text>
+```
+
+**C. Increase line height and add padding for better legibility:**
+
+```typescript
+clauseItem: {
+  marginBottom: 10,
+  paddingRight: 8,
+},
+clauseText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.8,  // Increased from 1.6
   textAlign: 'left',
   flex: 1,
 },
@@ -165,50 +133,65 @@ clauseText: {
 
 ---
 
-### Visual Before/After
-
-**Before (Broken Words):**
-```
-1. ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை அடமான
-ம் செய்யவில்லை அவைகளை நிறுவனத்தின் மூலமாக விற்று மொ
-த்த தொகைகளை பெற்றுக் கொள்ள சம்மதிக்கி றேன்.
-```
-
-**After (Clean Spacing):**
-```
-1. ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை அடமானம் 
-செய்யவில்லை அவைகளை நிறுவனத்தின் மூலமாக விற்று 
-மொத்த தொகைகளை பெற்றுக் கொள்ள சம்மதிக்கிறேன்.
-```
-
----
-
-### Summary of Style Changes
-
-| Style | Property | Before | After |
-|-------|----------|--------|-------|
-| `clauseText` | textAlign | `justify` | `left` |
-| `clauseText` | lineHeight | 1.4 | 1.6 |
-| `clauseText` | fontSize | 8 | 9 |
-| `clauseItem` | marginBottom | 6 | 8 |
-| `declarationText` | textAlign | `justify` | `left` |
-| `declarationText` | lineHeight | 1.5 | 1.7 |
-| `warningText` | lineHeight | (none) | 1.5 |
-
----
-
 ### Files to Modify
 
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | Update text styles to use left alignment and improved line heights |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Remove stamp text, add word-break helper, fix clause styles |
+
+---
+
+### Technical Changes Summary
+
+1. **Stamp Area**: Remove all text content, make it a blank `View` with just height margin
+2. **Word Breaking Fix**: 
+   - Add `addWordBreakHints()` helper function to insert Zero-Width Space (U+200B) after each word
+   - Apply this to all Tamil clause text and declaration text
+   - Increase lineHeight to 1.8 for better spacing
+   - Add `flexWrap: 'wrap'` and `flexShrink: 1` to prevent forced line breaks
+
+---
+
+### Visual Before/After
+
+**Stamp Area Before:**
+```
+┌─────────────────────────────────┐
+│                                 │
+│   Affix ₹100 Stamp Paper Here   │
+│   ₹100 முத்திரைத்தாள் இங்கே ஒட்டவும் │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**Stamp Area After:**
+```
+┌─────────────────────────────────┐
+│                                 │
+│         (blank space)           │
+│                                 │
+│                                 │
+└─────────────────────────────────┘
+```
+
+**Clause Text Before (broken words):**
+```
+7.  ஜெனித் கோல்ட் நிறுவனத்திற்கு நான் கொடுத்த தங்கநகையின் மூலம் நஷ்டம் ஏற்படும் ப
+    ட்சத்தில் நிறுவனம் எந்த நேரத்திலும்...
+```
+
+**Clause Text After (clean wrapping):**
+```
+7.  ஜெனித் கோல்ட் நிறுவனத்திற்கு நான் கொடுத்த தங்கநகையின் 
+    மூலம் நஷ்டம் ஏற்படும் பட்சத்தில் நிறுவனம் எந்த 
+    நேரத்திலும்...
+```
 
 ---
 
 ### Expected Outcome
 
-- Tamil words will no longer be broken mid-character
-- Even spacing between words without stretching
-- Clean, professional appearance matching the uploaded document format
-- Consistent line heights for better readability
+- Stamp area will be completely blank (ready for physical ₹100 stamp paper printing)
+- Tamil words will wrap correctly at word boundaries, not mid-character
+- Professional, readable layout for all 13 clauses and declaration text
 
