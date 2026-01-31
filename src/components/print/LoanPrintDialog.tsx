@@ -276,6 +276,9 @@ export function LoanPrintDialog({
           const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
           const saleAgreementCompanyAddress = effectiveSettings.sale_agreement_company_address || (client as any)?.address || '';
           
+          // Don't show branch name when dedicated address is configured
+          const showBranchInSaleAgreement = !effectiveSettings.sale_agreement_company_address;
+          
           const saleAgreementDoc = (
             <SaleAgreementPDF
               loan={loan}
@@ -284,7 +287,7 @@ export function LoanPrintDialog({
               companyName={saleAgreementCompanyName}
               companyAddress={saleAgreementCompanyAddress}
               gstin={(client as any)?.gstin}
-              branchName={branchName}
+              branchName={showBranchInSaleAgreement ? branchName : undefined}
               language={language}
               paperSize={paperSize}
             />
