@@ -259,6 +259,29 @@ export function PrintSettingsTab() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Sale Agreement Settings */}
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Sale Agreement Settings</CardTitle>
+              <CardDescription>
+                Configure settings specific to Sale Agreement (Trading Format) documents
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Company Name for Sale Agreements</Label>
+                <Input
+                  value={settings.sale_agreement_company_name || ''}
+                  onChange={(e) => updateSettings({ sale_agreement_company_name: e.target.value || null })}
+                  placeholder="e.g., ZAMIN GOLD (leave empty to use main company name)"
+                />
+                <p className="text-sm text-muted-foreground">
+                  This name will appear on Sale Agreement documents as the buyer. If left empty, the main company name will be used.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
         
         {/* Document Defaults */}
