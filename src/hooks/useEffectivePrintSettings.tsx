@@ -34,6 +34,9 @@ export interface EffectivePrintSettings {
   header_english: string | null;
   header_tamil: string | null;
   
+  // Sale Agreement specific
+  sale_agreement_company_name: string | null;
+  
   // Source info
   source: 'branch' | 'template' | 'client' | 'default';
   template_name?: string;
@@ -60,6 +63,7 @@ const DEFAULT_SETTINGS: EffectivePrintSettings = {
   footer_tamil: 'உங்கள் வணிகத்திற்கு நன்றி',
   header_english: null,
   header_tamil: null,
+  sale_agreement_company_name: null,
   source: 'default',
 };
 
@@ -151,6 +155,9 @@ export function useEffectivePrintSettings(branchId?: string) {
         // Header from template or client
         header_english: template?.header_english || clientSettings?.header_english || null,
         header_tamil: template?.header_tamil || clientSettings?.header_tamil || null,
+
+        // Sale Agreement specific
+        sale_agreement_company_name: clientSettings?.sale_agreement_company_name || null,
 
         // Source info
         source: branchSettings ? 'branch' : template ? 'template' : clientSettings ? 'client' : 'default',
