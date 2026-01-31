@@ -1186,11 +1186,19 @@ export default function SaleAgreements() {
                         <SelectValue placeholder="Select a sale scheme" />
                       </SelectTrigger>
                       <SelectContent className="bg-background z-50">
-                        {schemes.map((scheme) => (
-                          <SelectItem key={scheme.id} value={scheme.id}>
-                            {scheme.scheme_name} ({scheme.scheme_code}) - {scheme.shown_rate}% | LTV {scheme.ltv_percentage}% | 22KT: ₹{scheme.rate_22kt}/g
-                          </SelectItem>
-                        ))}
+                        {schemes.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground text-center">
+                            No sale schemes configured.
+                            <br />
+                            Go to Settings → Sale Schemes to create one.
+                          </div>
+                        ) : (
+                          schemes.map((scheme) => (
+                            <SelectItem key={scheme.id} value={scheme.id}>
+                              {scheme.scheme_name} ({scheme.scheme_code}) - {scheme.shown_rate}% | LTV {scheme.ltv_percentage}% | 22KT: ₹{scheme.rate_22kt}/g
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                     
