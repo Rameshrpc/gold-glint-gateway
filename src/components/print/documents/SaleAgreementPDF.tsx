@@ -63,27 +63,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Roboto',
     fontSize: 9,
   },
-  // Page 1 - Stamp Paper Area
-  stampArea: {
+  // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
+  stampAreaBlank: {
     height: 320,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#999',
-    justifyContent: 'center',
-    alignItems: 'center',
     marginBottom: 15,
-    backgroundColor: '#fafafa',
-  },
-  stampText: {
-    fontSize: 12,
-    color: '#666',
-    fontStyle: 'italic',
-  },
-  stampTextTamil: {
-    fontSize: 10,
-    fontFamily: 'Noto Sans Tamil',
-    color: '#888',
-    marginTop: 5,
+    // No border, no text - just blank space for physical stamp paper
   },
   // Title
   mainTitle: {
@@ -272,26 +256,28 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   clauseItem: {
-    marginBottom: 8,
-    paddingRight: 5,
+    marginBottom: 10,
+    paddingRight: 8,
   },
   clauseRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    flexWrap: 'nowrap',
   },
   clauseNumber: {
     fontSize: 9,
     fontWeight: 'bold',
     fontFamily: 'Noto Sans Tamil',
-    marginRight: 4,
-    width: 18,
+    marginRight: 6,
+    minWidth: 18,
   },
   clauseText: {
     fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
-    lineHeight: 1.6,
+    lineHeight: 1.8,
     textAlign: 'left',
     flex: 1,
+    flexShrink: 1,
   },
   // Page 3 - Declaration
   declarationTitle: {
@@ -334,7 +320,7 @@ const styles = StyleSheet.create({
   declarationText: {
     fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
-    lineHeight: 1.7,
+    lineHeight: 1.8,
     textAlign: 'left',
     marginBottom: 15,
     padding: 10,
@@ -370,7 +356,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
     color: '#856404',
-    lineHeight: 1.5,
+    lineHeight: 1.8,
     textAlign: 'left',
   },
   // Footer
@@ -392,6 +378,12 @@ const formatDate = (dateStr: string): string => {
   } catch {
     return dateStr;
   }
+};
+
+// Helper to add word-break hints for Tamil text
+// Adds Zero-Width Space (U+200B) after each space to hint word boundaries
+const addWordBreakHints = (text: string): string => {
+  return text.replace(/ /g, ' \u200B');
 };
 
 // Calculate totals from gold items
@@ -430,11 +422,8 @@ export function SaleAgreementPDF({
     <Document>
       {/* Page 1: Cover / Stamp Paper Page */}
       <Page size={paperSize as any} style={styles.page}>
-        {/* Blank area for stamp paper */}
-        <View style={styles.stampArea}>
-          <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
-          <Text style={styles.stampTextTamil}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
-        </View>
+        {/* Blank area for stamp paper - no text, just reserved space */}
+        <View style={styles.stampAreaBlank} />
 
         {/* Title */}
         <Text style={styles.mainTitle}>GOLD BUY BACK AGREEMENT</Text>
@@ -602,7 +591,7 @@ export function SaleAgreementPDF({
             <View key={clause.number} style={styles.clauseItem}>
               <View style={styles.clauseRow}>
                 <Text style={styles.clauseNumber}>{clause.number}.</Text>
-                <Text style={styles.clauseText}>{clause.tamil}</Text>
+                <Text style={styles.clauseText}>{addWordBreakHints(clause.tamil)}</Text>
               </View>
             </View>
           ))}
@@ -671,7 +660,7 @@ export function SaleAgreementPDF({
         </View>
 
         {/* Declaration Text */}
-        <Text style={styles.declarationText}>{content.declarationText}</Text>
+        <Text style={styles.declarationText}>{addWordBreakHints(content.declarationText)}</Text>
 
         {/* Warning Box */}
         <View style={styles.warningBox}>
@@ -679,7 +668,7 @@ export function SaleAgreementPDF({
             <Text style={styles.warningTitle}>⚠️ WARNING</Text>
             <Text style={styles.warningTitleTamil}>எச்சரிக்கை:</Text>
           </View>
-          <Text style={styles.warningText}>{content.warningText}</Text>
+          <Text style={styles.warningText}>{addWordBreakHints(content.warningText)}</Text>
         </View>
 
         {/* Signatures */}
