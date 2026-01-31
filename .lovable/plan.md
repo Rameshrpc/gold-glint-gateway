@@ -1,91 +1,153 @@
 
 
-## Plan: Move Customer Selling Declaration to a New Page (Page 3)
+## Plan: Add Sale Agreement Company Name Setting
 
-### Issue Identified
-
-Currently, the Sale Agreement PDF has 2 pages:
-- **Page 1**: Stamp area + Parties + Summary + Signatures
-- **Page 2**: Ornaments table + 13 Clauses + Customer Selling Declaration + Warning + Signatures
-
-The user wants the "Customer Selling Declaration" section to be on its own fresh page.
-
-### Solution
-
-Restructure the PDF to 3 pages:
-- **Page 1**: Stamp area + Parties + Summary + Signatures (unchanged)
-- **Page 2**: Ornaments table + 13 Clauses + Signatures
-- **Page 3**: Customer Selling Declaration + Declaration text + Warning box + Signatures (NEW)
+### Overview
+Add a configurable "Sale Agreement Company Name" field in print settings so Sale Agreement documents display "ZAMIN GOLD" (or any configured name) instead of the client's main company name.
 
 ---
 
 ### Technical Changes
 
-#### File: `src/components/print/documents/SaleAgreementPDF.tsx`
+#### 1. Database: Add New Column to `print_settings` Table
 
-**1. Update Page 2 (lines 543-673)**
+Add a new nullable column to store the alternate company name for Sale Agreements:
 
-Split the current Page 2:
-- Keep ornaments table and clauses on Page 2
-- Add signatures at end of Page 2
-- Update footer to "Page 2 of 3"
-
-**2. Create New Page 3**
-
-Add a new `<Page>` component containing:
-- Title: "CUSTOMER SELLING DECLARATION" with Tamil translation
-- Customer details table (Name, Father Name, DOB, Gender, Scrap Jewels, etc.)
-- Declaration text
-- Warning box
-- Signatures
-- Footer: "Page 3 of 3"
-
-**3. Fix Tamil Title**
-
-The screenshot shows the Tamil text is garbled. Update the declaration title to use proper rendering with the Tamil font family.
+```sql
+ALTER TABLE public.print_settings 
+ADD COLUMN IF NOT EXISTS sale_agreement_company_name VARCHAR(255);
+```
 
 ---
 
-### Page Structure After Changes
+#### 2. File: `src/hooks/usePrintSettings.tsx`
 
-| Page | Content |
-|------|---------|
-| **Page 1** | Blank stamp area (320pt) + Title + Parties (Seller/Buyer) + Summary table + Signatures |
-| **Page 2** | Title + Ornaments table + 13 Tamil Clauses + Signatures |
-| **Page 3** | Customer Selling Declaration title + Customer details table + Declaration text + Warning box + Signatures |
+**Update PrintSettings Interface (lines 6-29):**
+
+Add the new field to the interface:
+
+```typescript
+export interface PrintSettings {
+  // ... existing fields ...
+  sale_agreement_company_name: string | null;  // ADD
+}
+```
+
+**Update DEFAULT_SETTINGS (lines 41-62):**
+
+Add default value:
+
+```typescript
+const DEFAULT_SETTINGS = {
+  // ... existing fields ...
+  sale_agreement_company_name: null,
+};
+```
 
 ---
 
-### Code Changes Summary
+#### 3. File: `src/components/print/PrintSettingsTab.tsx`
+
+**Add Sale Agreement Settings Section:**
+
+Create a new Card component in the settings UI for "Sale Agreement Settings" containing:
+- Company Name input field for Sale Agreements
+- Description explaining this is the company name shown on Sale Agreement documents
 
 ```tsx
-// Page 2: Terms page - ends with clauses and signatures
-<Page size={paperSize} style={styles.page}>
-  <Text style={styles.pageTitle}>GOLD BUY BACK AGREEMENT</Text>
-  {/* Ornaments table */}
-  {/* 13 Clauses */}
-  {/* Signatures */}
-  <Text style={styles.pageFooter}>Page 2 of 3</Text>
-</Page>
-
-// Page 3: Declaration page (NEW)
-<Page size={paperSize} style={styles.page}>
-  <Text style={styles.declarationTitle}>CUSTOMER SELLING DECLARATION</Text>
-  <Text style={styles.declarationTitleTamil}>வாடிக்கையாளர் விற்பனை அறிவிப்பு</Text>
-  {/* Customer details table */}
-  {/* Declaration text */}
-  {/* Warning box */}
-  {/* Signatures */}
-  <Text style={styles.pageFooter}>Page 3 of 3</Text>
-</Page>
+<Card>
+  <CardHeader>
+    <CardTitle>Sale Agreement Settings</CardTitle>
+    <CardDescription>
+      Configure settings specific to Sale Agreement (Trading Format) documents
+    </CardDescription>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="space-y-2">
+      <Label>Company Name for Sale Agreements</Label>
+      <Input
+        value={settings.sale_agreement_company_name || ''}
+        onChange={(e) => updateSettings({ sale_agreement_company_name: e.target.value || null })}
+        placeholder="e.g., ZAMIN GOLD (leave empty to use main company name)"
+      />
+      <p className="text-sm text-muted-foreground">
+        This name will appear on Sale Agreement documents. If left empty, the main company name will be used.
+      </p>
+    </div>
+  </CardContent>
+</Card>
 ```
+
+---
+
+#### 4. File: `src/hooks/useEffectivePrintSettings.tsx`
+
+**Update EffectivePrintSettings Interface:**
+
+Add the new field to ensure it flows through to the print dialog:
+
+```typescript
+export interface EffectivePrintSettings {
+  // ... existing fields ...
+  sale_agreement_company_name: string | null;
+}
+```
+
+---
+
+#### 5. File: `src/components/print/LoanPrintDialog.tsx`
+
+**Update SaleAgreementPDF Call (lines 274-287):**
+
+Use the sale agreement company name when available:
+
+```typescript
+// When generating Sale Agreement PDF
+const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+
+const saleAgreementDoc = (
+  <SaleAgreementPDF
+    loan={loan}
+    customer={customer}
+    goldItems={goldItems}
+    companyName={saleAgreementCompanyName}  // Use sale agreement specific name
+    companyAddress={(client as any)?.address || ''}
+    gstin={(client as any)?.gstin}
+    branchName={branchName}
+    language={language}
+    paperSize={paperSize}
+  />
+);
+```
+
+---
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| Database migration | Add `sale_agreement_company_name` column to `print_settings` |
+| `src/hooks/usePrintSettings.tsx` | Add field to interface and default settings |
+| `src/hooks/useEffectivePrintSettings.tsx` | Add field to effective settings interface |
+| `src/components/print/PrintSettingsTab.tsx` | Add Sale Agreement Settings section with company name input |
+| `src/components/print/LoanPrintDialog.tsx` | Use sale agreement company name when printing Sale Agreements |
+
+---
+
+### User Flow
+
+1. Navigate to **Settings → Print → General** (or dedicated Sale Agreement tab)
+2. Find "Sale Agreement Settings" section
+3. Enter "ZAMIN GOLD" in the "Company Name for Sale Agreements" field
+4. Save settings
+5. When printing a Sale Agreement, it will display "M/s. ZAMIN GOLD" instead of the main company name
 
 ---
 
 ### Expected Outcome
 
-- The document will be 3 pages total
-- Page 3 will contain only the Customer Selling Declaration section
-- The Tamil title will render correctly as "வாடிக்கையாளர் விற்பனை அறிவிப்பு"
-- Clean, professional layout with dedicated declaration page for stamp paper
+- New "Sale Agreement Company Name" field in print settings
+- Sale Agreement PDFs show "ZAMIN GOLD" (or configured name) as the buyer
+- If field is empty, falls back to main company name
+- Other documents (Loan Receipt, etc.) continue using the main company name
 
