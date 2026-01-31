@@ -31,7 +31,8 @@ export type SettingsSection =
   | 'print-header-footer' 
   | 'print-templates' 
   | 'print-branches'
-  | 'print-bill-of-sale';
+  | 'print-bill-of-sale'
+  | 'print-sale-agreement';
 
 interface SettingsSidebarProps {
   activeSection: SettingsSection;
@@ -67,6 +68,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
     { id: 'print-general', label: 'General', icon: Settings2 },
     { id: 'print-documents', label: 'Documents', icon: FileText },
     { id: 'print-bill-of-sale', label: 'Bill of Sale', icon: Scale },
+    { id: 'print-sale-agreement', label: 'Sale Agreement', icon: FileEdit },
     { id: 'print-terms', label: 'Terms & Conditions', icon: FileEdit },
     { id: 'print-content', label: 'Editable Content', icon: Type },
     { id: 'print-header-footer', label: 'Header & Footer', icon: Image },
