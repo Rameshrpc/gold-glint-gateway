@@ -52,6 +52,9 @@ interface Customer {
   pan_card_url?: string | null;
   nominee_name?: string | null;
   nominee_relation?: string | null;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  father_name?: string | null;
 }
 
 interface Loan {
