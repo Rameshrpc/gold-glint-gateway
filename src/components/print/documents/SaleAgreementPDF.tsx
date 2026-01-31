@@ -272,18 +272,26 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   clauseItem: {
-    marginBottom: 6,
+    marginBottom: 8,
+    paddingRight: 5,
+  },
+  clauseRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
   },
   clauseNumber: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: 'bold',
-    marginRight: 5,
+    fontFamily: 'Noto Sans Tamil',
+    marginRight: 4,
+    width: 18,
   },
   clauseText: {
-    fontSize: 8,
+    fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
-    lineHeight: 1.4,
-    textAlign: 'justify',
+    lineHeight: 1.6,
+    textAlign: 'left',
+    flex: 1,
   },
   // Page 3 - Declaration
   declarationTitle: {
@@ -326,10 +334,10 @@ const styles = StyleSheet.create({
   declarationText: {
     fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
-    lineHeight: 1.5,
-    textAlign: 'justify',
+    lineHeight: 1.7,
+    textAlign: 'left',
     marginBottom: 15,
-    padding: 8,
+    padding: 10,
     backgroundColor: '#fafafa',
     borderWidth: 1,
     borderColor: '#ddd',
@@ -362,6 +370,8 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: 'Noto Sans Tamil',
     color: '#856404',
+    lineHeight: 1.5,
+    textAlign: 'left',
   },
   // Footer
   pageFooter: {
@@ -590,10 +600,10 @@ export function SaleAgreementPDF({
           </View>
           {content.clauses.map((clause) => (
             <View key={clause.number} style={styles.clauseItem}>
-              <Text style={styles.clauseText}>
-                <Text style={styles.clauseNumber}>{clause.number}. </Text>
-                {clause.tamil}
-              </Text>
+              <View style={styles.clauseRow}>
+                <Text style={styles.clauseNumber}>{clause.number}.</Text>
+                <Text style={styles.clauseText}>{clause.tamil}</Text>
+              </View>
             </View>
           ))}
         </View>
