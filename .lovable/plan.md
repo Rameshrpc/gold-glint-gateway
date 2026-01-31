@@ -1,67 +1,91 @@
 
 
-## Plan: Fix Scheme Selection Dropdown for Sale Agreements
+## Plan: Move Customer Selling Declaration to a New Page (Page 3)
 
-### Problem Analysis
+### Issue Identified
 
-The scheme dropdown is empty because:
+Currently, the Sale Agreement PDF has 2 pages:
+- **Page 1**: Stamp area + Parties + Summary + Signatures
+- **Page 2**: Ornaments table + 13 Clauses + Customer Selling Declaration + Warning + Signatures
 
-1. **Wrong scheme type**: The user's client has 2 schemes (`SALE13000`, `SALE15000`), but they were created with `scheme_type: 'loan'` instead of `scheme_type: 'sale_agreement'`
-2. **Query filter**: The SaleAgreements page correctly filters for `scheme_type = 'sale_agreement'`, but no schemes match
-
-The schemes were likely created from the **Loan Schemes** page (`/schemes`) instead of the **Sale Agreement Schemes** page (`/sale-schemes`).
+The user wants the "Customer Selling Declaration" section to be on its own fresh page.
 
 ### Solution
 
-#### 1. Database Fix - Update Existing Schemes
-Update the wrongly-typed schemes for this client to have the correct `scheme_type`:
-
-```sql
-UPDATE schemes 
-SET scheme_type = 'sale_agreement' 
-WHERE client_id = 'ec647f3c-96df-4424-99b0-64db54b575df' 
-AND scheme_code IN ('SALE13000', 'SALE15000');
-```
-
-#### 2. UI Improvement - Empty State Message
-Add a helpful empty state message in the scheme dropdown to guide users when no sale schemes exist.
-
-**File: `src/pages/SaleAgreements.tsx`**
-
-Update the SelectContent to show a helpful message when no schemes are available:
-
-```tsx
-<SelectContent className="bg-background z-50">
-  {schemes.length === 0 ? (
-    <div className="px-3 py-2 text-sm text-muted-foreground text-center">
-      No sale schemes configured. 
-      <br />
-      Go to Settings → Sale Schemes to create one.
-    </div>
-  ) : (
-    schemes.map((scheme) => (
-      <SelectItem key={scheme.id} value={scheme.id}>
-        {scheme.scheme_name} ({scheme.scheme_code}) - {scheme.shown_rate}% | LTV {scheme.ltv_percentage}% | 22KT: ₹{scheme.rate_22kt}/g
-      </SelectItem>
-    ))
-  )}
-</SelectContent>
-```
+Restructure the PDF to 3 pages:
+- **Page 1**: Stamp area + Parties + Summary + Signatures (unchanged)
+- **Page 2**: Ornaments table + 13 Clauses + Signatures
+- **Page 3**: Customer Selling Declaration + Declaration text + Warning box + Signatures (NEW)
 
 ---
 
-### Files to Modify
+### Technical Changes
 
-| File | Changes |
+#### File: `src/components/print/documents/SaleAgreementPDF.tsx`
+
+**1. Update Page 2 (lines 543-673)**
+
+Split the current Page 2:
+- Keep ornaments table and clauses on Page 2
+- Add signatures at end of Page 2
+- Update footer to "Page 2 of 3"
+
+**2. Create New Page 3**
+
+Add a new `<Page>` component containing:
+- Title: "CUSTOMER SELLING DECLARATION" with Tamil translation
+- Customer details table (Name, Father Name, DOB, Gender, Scrap Jewels, etc.)
+- Declaration text
+- Warning box
+- Signatures
+- Footer: "Page 3 of 3"
+
+**3. Fix Tamil Title**
+
+The screenshot shows the Tamil text is garbled. Update the declaration title to use proper rendering with the Tamil font family.
+
+---
+
+### Page Structure After Changes
+
+| Page | Content |
 |------|---------|
-| Database migration | Update existing wrongly-typed schemes to `sale_agreement` type |
-| `src/pages/SaleAgreements.tsx` | Add empty state message in scheme dropdown |
+| **Page 1** | Blank stamp area (320pt) + Title + Parties (Seller/Buyer) + Summary table + Signatures |
+| **Page 2** | Title + Ornaments table + 13 Tamil Clauses + Signatures |
+| **Page 3** | Customer Selling Declaration title + Customer details table + Declaration text + Warning box + Signatures |
+
+---
+
+### Code Changes Summary
+
+```tsx
+// Page 2: Terms page - ends with clauses and signatures
+<Page size={paperSize} style={styles.page}>
+  <Text style={styles.pageTitle}>GOLD BUY BACK AGREEMENT</Text>
+  {/* Ornaments table */}
+  {/* 13 Clauses */}
+  {/* Signatures */}
+  <Text style={styles.pageFooter}>Page 2 of 3</Text>
+</Page>
+
+// Page 3: Declaration page (NEW)
+<Page size={paperSize} style={styles.page}>
+  <Text style={styles.declarationTitle}>CUSTOMER SELLING DECLARATION</Text>
+  <Text style={styles.declarationTitleTamil}>வாடிக்கையாளர் விற்பனை அறிவிப்பு</Text>
+  {/* Customer details table */}
+  {/* Declaration text */}
+  {/* Warning box */}
+  {/* Signatures */}
+  <Text style={styles.pageFooter}>Page 3 of 3</Text>
+</Page>
+```
 
 ---
 
 ### Expected Outcome
 
-- The existing `SALE13000` and `SALE15000` schemes will appear in the Sale Agreement scheme dropdown
-- Users will see a helpful message if no sale schemes are configured, directing them to the correct page
-- The dropdown will work properly for admin users
+- The document will be 3 pages total
+- Page 3 will contain only the Customer Selling Declaration section
+- The Tamil title will render correctly as "வாடிக்கையாளர் விற்பனை அறிவிப்பு"
+- Clean, professional layout with dedicated declaration page for stamp paper
 
