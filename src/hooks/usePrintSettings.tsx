@@ -27,6 +27,7 @@ export interface PrintSettings {
   company_slogan_tamil: string | null;
   logo_url: string | null;
   sale_agreement_company_name: string | null;
+  sale_agreement_company_address: string | null;
 }
 
 export interface PrintContentBlock {
@@ -61,6 +62,7 @@ const DEFAULT_SETTINGS: Omit<PrintSettings, 'id' | 'client_id'> = {
   company_slogan_tamil: null,
   logo_url: null,
   sale_agreement_company_name: null,
+  sale_agreement_company_address: null,
 };
 
 export function usePrintSettings() {

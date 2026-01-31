@@ -2556,6 +2556,7 @@ export type Database = {
           loan_receipt_copies: number
           logo_url: string | null
           paper_size: string
+          sale_agreement_company_address: string | null
           sale_agreement_company_name: string | null
           terms_conditions_copies: number
           updated_at: string | null
@@ -2588,6 +2589,7 @@ export type Database = {
           loan_receipt_copies?: number
           logo_url?: string | null
           paper_size?: string
+          sale_agreement_company_address?: string | null
           sale_agreement_company_name?: string | null
           terms_conditions_copies?: number
           updated_at?: string | null
@@ -2620,6 +2622,7 @@ export type Database = {
           loan_receipt_copies?: number
           logo_url?: string | null
           paper_size?: string
+          sale_agreement_company_address?: string | null
           sale_agreement_company_name?: string | null
           terms_conditions_copies?: number
           updated_at?: string | null

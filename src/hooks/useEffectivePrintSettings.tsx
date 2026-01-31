@@ -36,6 +36,7 @@ export interface EffectivePrintSettings {
   
   // Sale Agreement specific
   sale_agreement_company_name: string | null;
+  sale_agreement_company_address: string | null;
   
   // Source info
   source: 'branch' | 'template' | 'client' | 'default';
@@ -64,6 +65,7 @@ const DEFAULT_SETTINGS: EffectivePrintSettings = {
   header_english: null,
   header_tamil: null,
   sale_agreement_company_name: null,
+  sale_agreement_company_address: null,
   source: 'default',
 };
 
@@ -158,6 +160,7 @@ export function useEffectivePrintSettings(branchId?: string) {
 
         // Sale Agreement specific
         sale_agreement_company_name: clientSettings?.sale_agreement_company_name || null,
+        sale_agreement_company_address: clientSettings?.sale_agreement_company_address || null,
 
         // Source info
         source: branchSettings ? 'branch' : template ? 'template' : clientSettings ? 'client' : 'default',

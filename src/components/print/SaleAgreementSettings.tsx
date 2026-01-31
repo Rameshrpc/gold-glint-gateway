@@ -38,6 +38,21 @@ export function SaleAgreementSettings() {
             If left empty, the main company name will be used.
           </p>
         </div>
+
+        <div className="space-y-2">
+          <Label>Company Address for Sale Agreements</Label>
+          <Input
+            value={settings.sale_agreement_company_address || ''}
+            onChange={(e) => updateSettings({ 
+              sale_agreement_company_address: e.target.value || null 
+            })}
+            placeholder="Enter the full address for ZAMIN GOLD"
+          />
+          <p className="text-sm text-muted-foreground">
+            This address will appear on Sale Agreement documents. 
+            If left empty, the main company address will be used.
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

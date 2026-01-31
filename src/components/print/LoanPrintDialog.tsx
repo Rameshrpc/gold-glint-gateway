@@ -272,8 +272,9 @@ export function LoanPrintDialog({
         
         if (isSaleAgreement) {
           // Use new 3-page Sale Agreement PDF for sale_agreement transactions
-          // Use sale agreement specific company name if configured
+          // Use sale agreement specific company name and address if configured
           const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+          const saleAgreementCompanyAddress = effectiveSettings.sale_agreement_company_address || (client as any)?.address || '';
           
           const saleAgreementDoc = (
             <SaleAgreementPDF
@@ -281,7 +282,7 @@ export function LoanPrintDialog({
               customer={customer}
               goldItems={goldItems}
               companyName={saleAgreementCompanyName}
-              companyAddress={(client as any)?.address || ''}
+              companyAddress={saleAgreementCompanyAddress}
               gstin={(client as any)?.gstin}
               branchName={branchName}
               language={language}
