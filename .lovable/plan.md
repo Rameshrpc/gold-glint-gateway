@@ -1,106 +1,133 @@
 
 
-## Plan: Add Sale Agreement Settings Section
+## Plan: Add Address Field & Replace Tamil Text in Sale Agreement PDF
 
-### Problem Identified
+### Overview
+Two changes are needed:
+1. **Add Address field** for Sale Agreement company (e.g., ZAMIN GOLD's address) in the Settings
+2. **Replace Tamil text** - Change all instances of "ஜெனித் கோல்ட்" (Zenith Gold) to "ஜமின் கோல்ட்" (Zamin Gold) in the Sale Agreement PDF clauses and declaration
 
-The Sale Agreement Company Name setting was added to `PrintSettingsTab.tsx`, but the Settings page now uses a different component structure with `GeneralPrintSettings.tsx`. The setting field is not accessible in the current Settings page.
+---
 
-### Solution
+### Current State Analysis
 
-Add a dedicated "Sale Agreement" section in the Print Setup sidebar with the company name setting, making it easy to find and configure.
+**Issue 1 - Address**: The Sale Agreement PDF currently passes `companyAddress={(client as any)?.address || ''}` which uses the main client's address. For ZAMIN GOLD (a separate entity), a dedicated address field is needed.
+
+**Issue 2 - Tamil Text**: In `useSaleAgreementContent.tsx`, the Tamil text contains hardcoded "ஜெனித் கோல்ட்" (Zenith Gold in Tamil) in:
+- 13 agreement clauses (lines 28-93)
+- Declaration text (line 96)
+- Warning text (line 98)
+- Company signature label (line 109-110)
 
 ---
 
 ### Technical Changes
 
-#### 1. Add New Settings Section Type
-**File: `src/components/settings/SettingsSidebar.tsx`**
+#### 1. Database: Add Address Column
+Add a new column `sale_agreement_company_address` to `print_settings` table.
 
-- Add `'print-sale-agreement'` to the `SettingsSection` type
-- Add a new sidebar item for "Sale Agreement" in the Print Setup section
-
-```typescript
-export type SettingsSection = 
-  | 'user-rights' 
-  // ... existing sections ...
-  | 'print-sale-agreement';  // ADD
-
-const printItems: MenuItem[] = [
-  // ... existing items ...
-  { id: 'print-sale-agreement', label: 'Sale Agreement', icon: Scale },  // ADD
-];
+```sql
+ALTER TABLE public.print_settings 
+ADD COLUMN IF NOT EXISTS sale_agreement_company_address TEXT;
 ```
 
 ---
 
-#### 2. Create Sale Agreement Settings Component
-**File: `src/components/print/SaleAgreementSettings.tsx`** (NEW)
+#### 2. Update Print Settings Hook
+**File: `src/hooks/usePrintSettings.tsx`**
 
-Create a dedicated settings component for Sale Agreement configuration:
+Add the new field to the interface and default settings:
+
+```typescript
+export interface PrintSettings {
+  // ... existing fields ...
+  sale_agreement_company_name: string | null;
+  sale_agreement_company_address: string | null;  // ADD
+}
+
+const DEFAULT_SETTINGS = {
+  // ... existing fields ...
+  sale_agreement_company_name: null,
+  sale_agreement_company_address: null,  // ADD
+};
+```
+
+---
+
+#### 3. Update Effective Print Settings Hook
+**File: `src/hooks/useEffectivePrintSettings.tsx`**
+
+Add the field to the effective settings interface.
+
+---
+
+#### 4. Update Sale Agreement Settings UI
+**File: `src/components/print/SaleAgreementSettings.tsx`**
+
+Add an address input field below the company name:
 
 ```tsx
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { usePrintSettings } from '@/hooks/usePrintSettings';
-import { Loader2 } from 'lucide-react';
-
-export function SaleAgreementSettings() {
-  const { settings, loading, updateSettings } = usePrintSettings();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sale Agreement Settings</CardTitle>
-        <CardDescription>
-          Configure settings specific to Sale Agreement (Trading Format) documents
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="space-y-2">
-          <Label>Company Name for Sale Agreements</Label>
-          <Input
-            value={settings.sale_agreement_company_name || ''}
-            onChange={(e) => updateSettings({ 
-              sale_agreement_company_name: e.target.value || null 
-            })}
-            placeholder="e.g., ZAMIN GOLD (leave empty to use main company name)"
-          />
-          <p className="text-sm text-muted-foreground">
-            This name will appear on Sale Agreement documents as the buyer (e.g., "M/s. ZAMIN GOLD"). 
-            If left empty, the main company name will be used.
-          </p>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+<div className="space-y-2">
+  <Label>Company Address for Sale Agreements</Label>
+  <Input
+    value={settings.sale_agreement_company_address || ''}
+    onChange={(e) => updateSettings({ 
+      sale_agreement_company_address: e.target.value || null 
+    })}
+    placeholder="Enter the full address for ZAMIN GOLD"
+  />
+  <p className="text-sm text-muted-foreground">
+    This address will appear on Sale Agreement documents.
+  </p>
+</div>
 ```
 
 ---
 
-#### 3. Add Section to Settings Page
-**File: `src/pages/Settings.tsx`**
+#### 5. Update Loan Print Dialog
+**File: `src/components/print/LoanPrintDialog.tsx`**
 
-- Import the new `SaleAgreementSettings` component
-- Add case for `'print-sale-agreement'` in `renderContent()`
+Pass the dedicated address to SaleAgreementPDF:
 
 ```typescript
-import { SaleAgreementSettings } from '@/components/print/SaleAgreementSettings';
+const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+const saleAgreementCompanyAddress = effectiveSettings.sale_agreement_company_address || (client as any)?.address || '';
 
-// In renderContent():
-case 'print-sale-agreement':
-  return <SaleAgreementSettings />;
+<SaleAgreementPDF
+  companyName={saleAgreementCompanyName}
+  companyAddress={saleAgreementCompanyAddress}  // Use dedicated address
+  // ... other props
+/>
 ```
+
+---
+
+#### 6. Replace Tamil Text in Sale Agreement Content
+**File: `src/hooks/useSaleAgreementContent.tsx`**
+
+Replace all instances of:
+- "ஜெனித் கோல்ட்" → "ஜமின் கோல்ட்" (Zenith Gold → Zamin Gold in Tamil)
+- "Zenith Gold" → "Zamin Gold" (in English comments/labels)
+
+**Locations to update:**
+| Line | Content |
+|------|---------|
+| 30 | Clause 1 Tamil text |
+| 35 | Clause 2 Tamil text |
+| 40 | Clause 3 Tamil text |
+| 45 | Clause 4 Tamil text |
+| 50 | Clause 5 Tamil text |
+| 55 | Clause 6 Tamil text |
+| 60 | Clause 7 Tamil text |
+| 65 | Clause 8 Tamil text |
+| 70 | Clause 9 Tamil text |
+| 75 | Clause 10 Tamil text |
+| 80 | Clause 11 Tamil text |
+| 85 | Clause 12 Tamil text |
+| 90 | Clause 13 Tamil text |
+| 96 | Declaration text |
+| 98 | Warning text |
+| 109-110 | Company signature labels |
 
 ---
 
@@ -108,25 +135,38 @@ case 'print-sale-agreement':
 
 | File | Action | Description |
 |------|--------|-------------|
-| `src/components/settings/SettingsSidebar.tsx` | Modify | Add `print-sale-agreement` section type and menu item |
-| `src/components/print/SaleAgreementSettings.tsx` | Create | New component with Sale Agreement company name input |
-| `src/pages/Settings.tsx` | Modify | Import and render `SaleAgreementSettings` |
-
----
-
-### Navigation Path After Implementation
-
-**Settings → Print Setup → Sale Agreement**
-
-The user will find the "Sale Agreement" option in the sidebar under "Print Setup" section, making it easy to locate and configure the company name.
+| Database migration | Create | Add `sale_agreement_company_address` column |
+| `src/hooks/usePrintSettings.tsx` | Modify | Add address field to interface and defaults |
+| `src/hooks/useEffectivePrintSettings.tsx` | Modify | Add address to effective settings |
+| `src/components/print/SaleAgreementSettings.tsx` | Modify | Add address input field |
+| `src/components/print/LoanPrintDialog.tsx` | Modify | Pass dedicated address to PDF |
+| `src/hooks/useSaleAgreementContent.tsx` | Modify | Replace all Tamil text from ஜெனித் to ஜமின் |
 
 ---
 
 ### Expected Outcome
 
-- New "Sale Agreement" menu item appears in Settings → Print Setup sidebar
-- Clicking it shows a dedicated settings card with the "Company Name for Sale Agreements" input
-- When user types "ZAMIN GOLD" and navigates away, the setting is saved
-- Sale Agreement PDFs will display "M/s. ZAMIN GOLD" as the buyer
-- Works even if no print_settings record exists yet (creates on first save)
+After implementation:
+1. **Settings Page** (Settings → Print Setup → Sale Agreement) will have:
+   - Company Name input (ZAMIN GOLD)
+   - Company Address input (new field)
+
+2. **Sale Agreement PDF** will display:
+   - "M/s. ZAMIN GOLD" as company name
+   - Configured address below the name
+   - All Tamil clauses using "ஜமின் கோல்ட்" instead of "ஜெனித் கோல்ட்"
+
+---
+
+### Tamil Text Changes Preview
+
+**Before:**
+```
+ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை...
+```
+
+**After:**
+```
+ஜமின் கோல்ட்ல் என்னுடைய தங்க நகைகளை...
+```
 
