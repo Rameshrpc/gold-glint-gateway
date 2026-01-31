@@ -537,10 +537,10 @@ export function SaleAgreementPDF({
           </View>
         </View>
 
-        <Text style={styles.pageFooter}>Page 1 of 2</Text>
+        <Text style={styles.pageFooter}>Page 1 of 3</Text>
       </Page>
 
-      {/* Page 2: Agreement Terms + Declaration */}
+      {/* Page 2: Agreement Terms */}
       <Page size={paperSize as any} style={styles.page}>
         <Text style={styles.pageTitle}>GOLD BUY BACK AGREEMENT</Text>
         <Text style={styles.pageTitleTamil}>தங்க திரும்ப கொள்முதல் ஒப்பந்தம்</Text>
@@ -598,61 +598,78 @@ export function SaleAgreementPDF({
           ))}
         </View>
 
-        {/* Customer Selling Declaration Section */}
-        <View style={{ marginTop: 15 }}>
-          <Text style={[styles.clausesTitle, { marginBottom: 8 }]}>CUSTOMER SELLING DECLARATION / வாடிக்கையாளர் விற்பனை அறிவிப்பு</Text>
-
-          {/* Customer Details Table */}
-          <View style={styles.customerDetailsTable}>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>NAME OF THE CUSTOMER</Text>
-              <Text style={styles.customerValue}>{customer.full_name}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>FATHER NAME</Text>
-              <Text style={styles.customerValue}>{customer.father_name || '-'}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>DATE OF BIRTH</Text>
-              <Text style={styles.customerValue}>{customer.date_of_birth ? formatDate(customer.date_of_birth) : '-'}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>SEX</Text>
-              <Text style={styles.customerValue}>{customer.gender || '-'}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>SCRAP JEWELS DETAILS</Text>
-              <Text style={styles.customerValue}>{goldItems.map(i => i.item_type).join(', ')}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>SCRAP GOLD WEIGHT</Text>
-              <Text style={styles.customerValue}>{formatWeightPrint(totals.netWeight)}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>STONE/DUST WEIGHT</Text>
-              <Text style={styles.customerValue}>{formatWeightPrint(totals.grossWeight - totals.netWeight)}</Text>
-            </View>
-            <View style={styles.customerRow}>
-              <Text style={styles.customerLabel}>ID PROOF</Text>
-              <Text style={styles.customerValue}>Aadhaar / PAN</Text>
-            </View>
-            <View style={[styles.customerRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.customerLabel}>ADDRESS PROOF</Text>
-              <Text style={styles.customerValue}>Aadhaar</Text>
-            </View>
+        {/* Signatures for Page 2 */}
+        <View style={styles.signatureSection}>
+          <View style={styles.signatureBlock}>
+            <Text style={styles.signatureLabel}>For {companyName}</Text>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureSublabel}>Authorised Signatory</Text>
           </View>
-
-          {/* Declaration Text */}
-          <Text style={styles.declarationText}>{addWordBreakHints(content.declarationText)}</Text>
-
-          {/* Warning Box */}
-          <View style={styles.warningBox}>
-            <View style={styles.warningTitleContainer}>
-              <Text style={styles.warningTitle}>⚠️ WARNING</Text>
-              <Text style={styles.warningTitleTamil}>எச்சரிக்கை:</Text>
-            </View>
-            <Text style={styles.warningText}>{addWordBreakHints(content.warningText)}</Text>
+          <View style={styles.signatureBlock}>
+            <Text style={styles.signatureLabel}>Customer Signature:</Text>
+            <View style={styles.signatureLine} />
+            <Text style={styles.signatureSublabel}>Name: {customer.full_name}</Text>
           </View>
+        </View>
+
+        <Text style={styles.pageFooter}>Page 2 of 3</Text>
+      </Page>
+
+      {/* Page 3: Customer Selling Declaration */}
+      <Page size={paperSize as any} style={styles.page}>
+        <Text style={styles.declarationTitle}>CUSTOMER SELLING DECLARATION</Text>
+        <Text style={styles.declarationTitleTamil}>வாடிக்கையாளர் விற்பனை அறிவிப்பு</Text>
+
+        {/* Customer Details Table */}
+        <View style={styles.customerDetailsTable}>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>NAME OF THE CUSTOMER</Text>
+            <Text style={styles.customerValue}>{customer.full_name}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>FATHER NAME</Text>
+            <Text style={styles.customerValue}>{customer.father_name || '-'}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>DATE OF BIRTH</Text>
+            <Text style={styles.customerValue}>{customer.date_of_birth ? formatDate(customer.date_of_birth) : '-'}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>SEX</Text>
+            <Text style={styles.customerValue}>{customer.gender || '-'}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>SCRAP JEWELS DETAILS</Text>
+            <Text style={styles.customerValue}>{goldItems.map(i => i.item_type).join(', ')}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>SCRAP GOLD WEIGHT</Text>
+            <Text style={styles.customerValue}>{formatWeightPrint(totals.netWeight)}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>STONE/DUST WEIGHT</Text>
+            <Text style={styles.customerValue}>{formatWeightPrint(totals.grossWeight - totals.netWeight)}</Text>
+          </View>
+          <View style={styles.customerRow}>
+            <Text style={styles.customerLabel}>ID PROOF</Text>
+            <Text style={styles.customerValue}>Aadhaar / PAN</Text>
+          </View>
+          <View style={[styles.customerRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.customerLabel}>ADDRESS PROOF</Text>
+            <Text style={styles.customerValue}>Aadhaar</Text>
+          </View>
+        </View>
+
+        {/* Declaration Text */}
+        <Text style={styles.declarationText}>{addWordBreakHints(content.declarationText)}</Text>
+
+        {/* Warning Box */}
+        <View style={styles.warningBox}>
+          <View style={styles.warningTitleContainer}>
+            <Text style={styles.warningTitle}>⚠️ WARNING</Text>
+            <Text style={styles.warningTitleTamil}>எச்சரிக்கை:</Text>
+          </View>
+          <Text style={styles.warningText}>{addWordBreakHints(content.warningText)}</Text>
         </View>
 
         {/* Signatures */}
@@ -669,7 +686,7 @@ export function SaleAgreementPDF({
           </View>
         </View>
 
-        <Text style={styles.pageFooter}>Page 2 of 2</Text>
+        <Text style={styles.pageFooter}>Page 3 of 3</Text>
       </Page>
     </Document>
   );
