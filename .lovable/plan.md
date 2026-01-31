@@ -1,32 +1,27 @@
 
 
-## Plan: Fix Font Corruption in Sale Agreement PDF
+## Plan: Fix Word Alignment and Spacing in Sale Agreement PDF
 
 ### Problem Analysis
 
-The Tamil fonts in the Sale Agreement PDF are appearing as corrupted/garbled text (e.g., `µ¿±ïµºï` instead of `விற்பவர்`). This happens because:
-
-1. **Mixed text in single elements**: Lines like `1. THE SELLER (விற்பவர்)` combine English and Tamil in one `<Text>` element
-2. **Wrong font applied**: The page uses `fontFamily: 'Roboto'` as default, but Roboto doesn't support Tamil characters
-3. **No font switching**: Unlike other PDF components (LoanReceiptPDF, GoldDeclarationPDF) that use `BilingualLabel` components, this PDF renders mixed text directly
+Looking at the screenshot, the Tamil text in the Terms & Conditions section has these issues:
+1. **Words broken mid-character** - Tamil words are being split incorrectly across lines (incomplete words carrying to next line)
+2. **Uneven spacing** - `textAlign: 'justify'` causes stretched gaps between words
+3. **Poor readability** - Text appears messy and unprofessional
 
 ### Root Cause
 
-In `@react-pdf/renderer`, a single `<Text>` element can only use one font family. When Tamil Unicode characters are rendered with Roboto font (which has no Tamil glyphs), they display as corrupted symbols.
-
-### Corrupted Text Locations
-
-| Line | Current Code | Issue |
-|------|-------------|-------|
-| 396 | `₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்` | Stamp area Tamil text |
-| 406 | `1. THE SELLER (விற்பவர்)` | Party header mixed text |
-| 423 | `2. THE BUYER (வாங்குபவர்)` | Party header mixed text |
-| 551 | `TERMS & CONDITIONS / விதிமுறைகள்:` | Section header mixed text |
-| 629 | `⚠️ WARNING / எச்சரிக்கை:` | Warning title mixed text |
+In `@react-pdf/renderer`, the `textAlign: 'justify'` property combined with Tamil Unicode text causes problems because:
+- The library doesn't understand Tamil word boundaries
+- It breaks words at arbitrary character positions
+- Justification stretches remaining characters unnaturally
 
 ### Solution
 
-Split all mixed English/Tamil text into separate `<Text>` elements with appropriate font families, following the pattern used in other working PDF components.
+1. **Remove `textAlign: 'justify'`** - Use `textAlign: 'left'` instead for cleaner Tamil rendering
+2. **Increase `lineHeight`** - From 1.4 to 1.6 for better spacing between lines
+3. **Add proper text wrapping** - Add `flexWrap: 'wrap'` and `flexShrink: 1` to allow natural word wrapping
+4. **Format long clauses** - Break long Tamil sentences into shorter wrapped segments using proper spacing
 
 ---
 
@@ -34,167 +29,171 @@ Split all mixed English/Tamil text into separate `<Text>` elements with appropri
 
 #### File: `src/components/print/documents/SaleAgreementPDF.tsx`
 
-**1. Add new style for Tamil text elements:**
+**1. Update `clauseText` style (line ~282-287):**
 
 ```typescript
-stampTextTamil: {
-  fontSize: 10,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#888',
-  marginTop: 3,
-},
-partyTitleTamil: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#333',
-},
-clausesTitleTamil: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  marginBottom: 6,
-  color: '#333',
-},
-warningTitleTamil: {
+// Current
+clauseText: {
   fontSize: 8,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.4,
+  textAlign: 'justify',  // PROBLEM
+},
+
+// Fixed
+clauseText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.6,
+  textAlign: 'left',
+  wordBreak: 'keep-all',
+},
+```
+
+**2. Update `clauseItem` style for proper wrapping (line ~274-276):**
+
+```typescript
+// Current
+clauseItem: {
+  marginBottom: 6,
+},
+
+// Fixed
+clauseItem: {
+  marginBottom: 8,
+  paddingRight: 5,
+  flexWrap: 'wrap',
+},
+```
+
+**3. Update `declarationText` style (line ~326-335):**
+
+```typescript
+// Current
+declarationText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.5,
+  textAlign: 'justify',  // PROBLEM
+  marginBottom: 15,
+  padding: 8,
+  backgroundColor: '#fafafa',
+  borderWidth: 1,
+  borderColor: '#ddd',
+},
+
+// Fixed
+declarationText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.7,
+  textAlign: 'left',
+  marginBottom: 15,
+  padding: 10,
+  backgroundColor: '#fafafa',
+  borderWidth: 1,
+  borderColor: '#ddd',
+},
+```
+
+**4. Update `warningText` style (line ~361-364):**
+
+```typescript
+// Current
+warningText: {
+  fontSize: 9,
   fontFamily: 'Noto Sans Tamil',
   color: '#856404',
 },
+
+// Fixed
+warningText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  color: '#856404',
+  lineHeight: 1.5,
+  textAlign: 'left',
+},
 ```
 
-**2. Fix stamp area (line 394-397):**
+**5. Restructure clause rendering for better control (lines ~591-598):**
 
-Current:
-```tsx
-<View style={styles.stampArea}>
-  <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
-  <Text style={styles.stampSubText}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
-</View>
+```typescript
+// Current - simple rendering
+{content.clauses.map((clause) => (
+  <View key={clause.number} style={styles.clauseItem}>
+    <Text style={styles.clauseText}>
+      <Text style={styles.clauseNumber}>{clause.number}. </Text>
+      {clause.tamil}
+    </Text>
+  </View>
+))}
+
+// Fixed - separate number from text for cleaner layout
+{content.clauses.map((clause) => (
+  <View key={clause.number} style={styles.clauseItem}>
+    <View style={styles.clauseRow}>
+      <Text style={styles.clauseNumber}>{clause.number}.</Text>
+      <Text style={styles.clauseText}>{clause.tamil}</Text>
+    </View>
+  </View>
+))}
 ```
 
-Fixed:
-```tsx
-<View style={styles.stampArea}>
-  <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
-  <Text style={styles.stampTextTamil}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
-</View>
-```
+**6. Add new style for clause row layout:**
 
-**3. Fix party headers (lines 406 and 423):**
-
-Current:
-```tsx
-<Text style={styles.partyTitle}>1. THE SELLER (விற்பவர்)</Text>
-```
-
-Fixed:
-```tsx
-<View style={styles.partyTitleContainer}>
-  <Text style={styles.partyTitle}>1. THE SELLER </Text>
-  <Text style={styles.partyTitleTamil}>(விற்பவர்)</Text>
-</View>
-```
-
-**4. Fix Terms & Conditions header (line 551):**
-
-Current:
-```tsx
-<Text style={styles.clausesTitle}>TERMS & CONDITIONS / விதிமுறைகள்:</Text>
-```
-
-Fixed:
-```tsx
-<View style={styles.clausesTitleContainer}>
-  <Text style={styles.clausesTitle}>TERMS & CONDITIONS</Text>
-  <Text style={styles.clausesTitleTamil}>விதிமுறைகள்:</Text>
-</View>
-```
-
-**5. Fix Warning title (line 629):**
-
-Current:
-```tsx
-<Text style={styles.warningTitle}>⚠️ WARNING / எச்சரிக்கை:</Text>
-```
-
-Fixed:
-```tsx
-<View style={styles.warningTitleContainer}>
-  <Text style={styles.warningTitle}>WARNING</Text>
-  <Text style={styles.warningTitleTamil}>எச்சரிக்கை:</Text>
-</View>
+```typescript
+clauseRow: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+},
+clauseNumber: {
+  fontSize: 9,
+  fontWeight: 'bold',
+  fontFamily: 'Noto Sans Tamil',
+  marginRight: 4,
+  width: 15,
+},
+clauseText: {
+  fontSize: 9,
+  fontFamily: 'Noto Sans Tamil',
+  lineHeight: 1.6,
+  textAlign: 'left',
+  flex: 1,
+},
 ```
 
 ---
 
 ### Visual Before/After
 
-**Before (Corrupted):**
+**Before (Broken Words):**
 ```
-1. THE SELLER ()µ¿±ïµºï
-TERMS & CONDITIONS / µ¿:µ®Á±Ë·ï
+1. ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை அடமான
+ம் செய்யவில்லை அவைகளை நிறுவனத்தின் மூலமாக விற்று மொ
+த்த தொகைகளை பெற்றுக் கொள்ள சம்மதிக்கி றேன்.
 ```
 
-**After (Fixed):**
+**After (Clean Spacing):**
 ```
-1. THE SELLER 
-(விற்பவர்)
-
-TERMS & CONDITIONS
-விதிமுறைகள்:
+1. ஜெனித் கோல்ட்ல் என்னுடைய தங்க நகைகளை அடமானம் 
+செய்யவில்லை அவைகளை நிறுவனத்தின் மூலமாக விற்று 
+மொத்த தொகைகளை பெற்றுக் கொள்ள சம்மதிக்கிறேன்.
 ```
 
 ---
 
-### Technical Details
+### Summary of Style Changes
 
-**New styles to add:**
-```typescript
-stampTextTamil: {
-  fontSize: 10,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#888',
-  marginTop: 3,
-},
-partyTitleContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#f0f0f0',
-  padding: 4,
-  marginBottom: 3,
-},
-partyTitle: {
-  fontSize: 10,
-  fontWeight: 'bold',
-},
-partyTitleTamil: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#333',
-},
-clausesTitleContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 6,
-  gap: 8,
-},
-clausesTitleTamil: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  textDecoration: 'underline',
-  color: '#333',
-},
-warningTitleContainer: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 5,
-  gap: 6,
-},
-warningTitleTamil: {
-  fontSize: 8,
-  fontFamily: 'Noto Sans Tamil',
-  color: '#856404',
-},
-```
+| Style | Property | Before | After |
+|-------|----------|--------|-------|
+| `clauseText` | textAlign | `justify` | `left` |
+| `clauseText` | lineHeight | 1.4 | 1.6 |
+| `clauseText` | fontSize | 8 | 9 |
+| `clauseItem` | marginBottom | 6 | 8 |
+| `declarationText` | textAlign | `justify` | `left` |
+| `declarationText` | lineHeight | 1.5 | 1.7 |
+| `warningText` | lineHeight | (none) | 1.5 |
 
 ---
 
@@ -202,14 +201,14 @@ warningTitleTamil: {
 
 | File | Action |
 |------|--------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | Fix all mixed English/Tamil text by splitting into separate font-specific elements |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Update text styles to use left alignment and improved line heights |
 
 ---
 
 ### Expected Outcome
 
-- All Tamil text will render correctly with proper Tamil characters
-- English text will continue to use Roboto font
-- Bilingual headers will display cleanly with proper font rendering
-- Professional appearance matching other PDF documents in the system
+- Tamil words will no longer be broken mid-character
+- Even spacing between words without stretching
+- Clean, professional appearance matching the uploaded document format
+- Consistent line heights for better readability
 
