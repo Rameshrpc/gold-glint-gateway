@@ -79,8 +79,9 @@ const styles = StyleSheet.create({
     color: '#666',
     fontStyle: 'italic',
   },
-  stampSubText: {
+  stampTextTamil: {
     fontSize: 10,
+    fontFamily: 'Noto Sans Tamil',
     color: '#888',
     marginTop: 5,
   },
@@ -103,12 +104,21 @@ const styles = StyleSheet.create({
   partiesSection: {
     marginBottom: 12,
   },
+  partyTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    padding: 4,
+    marginBottom: 3,
+  },
   partyTitle: {
     fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 3,
-    backgroundColor: '#f0f0f0',
-    padding: 4,
+  },
+  partyTitleTamil: {
+    fontSize: 9,
+    fontFamily: 'Noto Sans Tamil',
+    color: '#333',
   },
   partyDetails: {
     paddingLeft: 10,
@@ -245,11 +255,21 @@ const styles = StyleSheet.create({
   clausesSection: {
     marginTop: 8,
   },
+  clausesTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
   clausesTitle: {
     fontSize: 10,
     fontWeight: 'bold',
-    marginBottom: 6,
     textDecoration: 'underline',
+  },
+  clausesTitleTamil: {
+    fontSize: 9,
+    fontFamily: 'Noto Sans Tamil',
+    marginLeft: 8,
+    color: '#333',
   },
   clauseItem: {
     marginBottom: 6,
@@ -322,11 +342,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffc107',
   },
+  warningTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
   warningTitle: {
     fontSize: 9,
     fontWeight: 'bold',
-    marginBottom: 5,
     color: '#856404',
+  },
+  warningTitleTamil: {
+    fontSize: 8,
+    fontFamily: 'Noto Sans Tamil',
+    color: '#856404',
+    marginLeft: 6,
   },
   warningText: {
     fontSize: 9,
@@ -393,7 +423,7 @@ export function SaleAgreementPDF({
         {/* Blank area for stamp paper */}
         <View style={styles.stampArea}>
           <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
-          <Text style={styles.stampSubText}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
+          <Text style={styles.stampTextTamil}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
         </View>
 
         {/* Title */}
@@ -403,7 +433,10 @@ export function SaleAgreementPDF({
         {/* Parties Section */}
         <View style={styles.partiesSection}>
           {/* Seller (Customer) */}
-          <Text style={styles.partyTitle}>1. THE SELLER (விற்பவர்)</Text>
+          <View style={styles.partyTitleContainer}>
+            <Text style={styles.partyTitle}>1. THE SELLER </Text>
+            <Text style={styles.partyTitleTamil}>(விற்பவர்)</Text>
+          </View>
           <View style={styles.partyDetails}>
             <View style={styles.partyRow}>
               <Text style={styles.partyLabel}>Name:</Text>
@@ -420,7 +453,10 @@ export function SaleAgreementPDF({
           </View>
 
           {/* Buyer (Company) */}
-          <Text style={styles.partyTitle}>2. THE BUYER (வாங்குபவர்)</Text>
+          <View style={styles.partyTitleContainer}>
+            <Text style={styles.partyTitle}>2. THE BUYER </Text>
+            <Text style={styles.partyTitleTamil}>(வாங்குபவர்)</Text>
+          </View>
           <View style={styles.partyDetails}>
             <View style={styles.partyRow}>
               <Text style={styles.partyLabel}>Name:</Text>
@@ -548,7 +584,10 @@ export function SaleAgreementPDF({
 
         {/* Terms & Conditions - 13 Clauses */}
         <View style={styles.clausesSection}>
-          <Text style={styles.clausesTitle}>TERMS & CONDITIONS / விதிமுறைகள்:</Text>
+          <View style={styles.clausesTitleContainer}>
+            <Text style={styles.clausesTitle}>TERMS & CONDITIONS</Text>
+            <Text style={styles.clausesTitleTamil}>விதிமுறைகள்:</Text>
+          </View>
           {content.clauses.map((clause) => (
             <View key={clause.number} style={styles.clauseItem}>
               <Text style={styles.clauseText}>
@@ -626,7 +665,10 @@ export function SaleAgreementPDF({
 
         {/* Warning Box */}
         <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>⚠️ WARNING / எச்சரிக்கை:</Text>
+          <View style={styles.warningTitleContainer}>
+            <Text style={styles.warningTitle}>⚠️ WARNING</Text>
+            <Text style={styles.warningTitleTamil}>எச்சரிக்கை:</Text>
+          </View>
           <Text style={styles.warningText}>{content.warningText}</Text>
         </View>
 
