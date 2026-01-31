@@ -22,6 +22,7 @@ import { TemplatesTab } from '@/components/print/TemplatesTab';
 import { BranchPrintSettingsTab } from '@/components/print/BranchPrintSettingsTab';
 import { LoanDocumentsOverview } from '@/components/print/LoanDocumentsOverview';
 import { BillOfSaleSettings } from '@/components/print/BillOfSaleSettings';
+import { SaleAgreementSettings } from '@/components/print/SaleAgreementSettings';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -382,6 +383,8 @@ export default function Settings() {
         return <DocumentsSettings />;
       case 'print-bill-of-sale':
         return <BillOfSaleSettings />;
+      case 'print-sale-agreement':
+        return <SaleAgreementSettings />;
       case 'print-terms':
         return <TermsConditionsSettings />;
       case 'print-content':
