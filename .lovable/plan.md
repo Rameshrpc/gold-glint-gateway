@@ -1,153 +1,132 @@
 
 
-## Plan: Add Sale Agreement Company Name Setting
+## Plan: Add Sale Agreement Settings Section
 
-### Overview
-Add a configurable "Sale Agreement Company Name" field in print settings so Sale Agreement documents display "ZAMIN GOLD" (or any configured name) instead of the client's main company name.
+### Problem Identified
+
+The Sale Agreement Company Name setting was added to `PrintSettingsTab.tsx`, but the Settings page now uses a different component structure with `GeneralPrintSettings.tsx`. The setting field is not accessible in the current Settings page.
+
+### Solution
+
+Add a dedicated "Sale Agreement" section in the Print Setup sidebar with the company name setting, making it easy to find and configure.
 
 ---
 
 ### Technical Changes
 
-#### 1. Database: Add New Column to `print_settings` Table
+#### 1. Add New Settings Section Type
+**File: `src/components/settings/SettingsSidebar.tsx`**
 
-Add a new nullable column to store the alternate company name for Sale Agreements:
+- Add `'print-sale-agreement'` to the `SettingsSection` type
+- Add a new sidebar item for "Sale Agreement" in the Print Setup section
 
-```sql
-ALTER TABLE public.print_settings 
-ADD COLUMN IF NOT EXISTS sale_agreement_company_name VARCHAR(255);
+```typescript
+export type SettingsSection = 
+  | 'user-rights' 
+  // ... existing sections ...
+  | 'print-sale-agreement';  // ADD
+
+const printItems: MenuItem[] = [
+  // ... existing items ...
+  { id: 'print-sale-agreement', label: 'Sale Agreement', icon: Scale },  // ADD
+];
 ```
 
 ---
 
-#### 2. File: `src/hooks/usePrintSettings.tsx`
+#### 2. Create Sale Agreement Settings Component
+**File: `src/components/print/SaleAgreementSettings.tsx`** (NEW)
 
-**Update PrintSettings Interface (lines 6-29):**
-
-Add the new field to the interface:
-
-```typescript
-export interface PrintSettings {
-  // ... existing fields ...
-  sale_agreement_company_name: string | null;  // ADD
-}
-```
-
-**Update DEFAULT_SETTINGS (lines 41-62):**
-
-Add default value:
-
-```typescript
-const DEFAULT_SETTINGS = {
-  // ... existing fields ...
-  sale_agreement_company_name: null,
-};
-```
-
----
-
-#### 3. File: `src/components/print/PrintSettingsTab.tsx`
-
-**Add Sale Agreement Settings Section:**
-
-Create a new Card component in the settings UI for "Sale Agreement Settings" containing:
-- Company Name input field for Sale Agreements
-- Description explaining this is the company name shown on Sale Agreement documents
+Create a dedicated settings component for Sale Agreement configuration:
 
 ```tsx
-<Card>
-  <CardHeader>
-    <CardTitle>Sale Agreement Settings</CardTitle>
-    <CardDescription>
-      Configure settings specific to Sale Agreement (Trading Format) documents
-    </CardDescription>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="space-y-2">
-      <Label>Company Name for Sale Agreements</Label>
-      <Input
-        value={settings.sale_agreement_company_name || ''}
-        onChange={(e) => updateSettings({ sale_agreement_company_name: e.target.value || null })}
-        placeholder="e.g., ZAMIN GOLD (leave empty to use main company name)"
-      />
-      <p className="text-sm text-muted-foreground">
-        This name will appear on Sale Agreement documents. If left empty, the main company name will be used.
-      </p>
-    </div>
-  </CardContent>
-</Card>
-```
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { usePrintSettings } from '@/hooks/usePrintSettings';
+import { Loader2 } from 'lucide-react';
 
----
+export function SaleAgreementSettings() {
+  const { settings, loading, updateSettings } = usePrintSettings();
 
-#### 4. File: `src/hooks/useEffectivePrintSettings.tsx`
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-**Update EffectivePrintSettings Interface:**
-
-Add the new field to ensure it flows through to the print dialog:
-
-```typescript
-export interface EffectivePrintSettings {
-  // ... existing fields ...
-  sale_agreement_company_name: string | null;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Sale Agreement Settings</CardTitle>
+        <CardDescription>
+          Configure settings specific to Sale Agreement (Trading Format) documents
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label>Company Name for Sale Agreements</Label>
+          <Input
+            value={settings.sale_agreement_company_name || ''}
+            onChange={(e) => updateSettings({ 
+              sale_agreement_company_name: e.target.value || null 
+            })}
+            placeholder="e.g., ZAMIN GOLD (leave empty to use main company name)"
+          />
+          <p className="text-sm text-muted-foreground">
+            This name will appear on Sale Agreement documents as the buyer (e.g., "M/s. ZAMIN GOLD"). 
+            If left empty, the main company name will be used.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 ```
 
 ---
 
-#### 5. File: `src/components/print/LoanPrintDialog.tsx`
+#### 3. Add Section to Settings Page
+**File: `src/pages/Settings.tsx`**
 
-**Update SaleAgreementPDF Call (lines 274-287):**
-
-Use the sale agreement company name when available:
+- Import the new `SaleAgreementSettings` component
+- Add case for `'print-sale-agreement'` in `renderContent()`
 
 ```typescript
-// When generating Sale Agreement PDF
-const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+import { SaleAgreementSettings } from '@/components/print/SaleAgreementSettings';
 
-const saleAgreementDoc = (
-  <SaleAgreementPDF
-    loan={loan}
-    customer={customer}
-    goldItems={goldItems}
-    companyName={saleAgreementCompanyName}  // Use sale agreement specific name
-    companyAddress={(client as any)?.address || ''}
-    gstin={(client as any)?.gstin}
-    branchName={branchName}
-    language={language}
-    paperSize={paperSize}
-  />
-);
+// In renderContent():
+case 'print-sale-agreement':
+  return <SaleAgreementSettings />;
 ```
 
 ---
 
-### Files to Modify
+### Files to Modify/Create
 
-| File | Changes |
-|------|---------|
-| Database migration | Add `sale_agreement_company_name` column to `print_settings` |
-| `src/hooks/usePrintSettings.tsx` | Add field to interface and default settings |
-| `src/hooks/useEffectivePrintSettings.tsx` | Add field to effective settings interface |
-| `src/components/print/PrintSettingsTab.tsx` | Add Sale Agreement Settings section with company name input |
-| `src/components/print/LoanPrintDialog.tsx` | Use sale agreement company name when printing Sale Agreements |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/components/settings/SettingsSidebar.tsx` | Modify | Add `print-sale-agreement` section type and menu item |
+| `src/components/print/SaleAgreementSettings.tsx` | Create | New component with Sale Agreement company name input |
+| `src/pages/Settings.tsx` | Modify | Import and render `SaleAgreementSettings` |
 
 ---
 
-### User Flow
+### Navigation Path After Implementation
 
-1. Navigate to **Settings → Print → General** (or dedicated Sale Agreement tab)
-2. Find "Sale Agreement Settings" section
-3. Enter "ZAMIN GOLD" in the "Company Name for Sale Agreements" field
-4. Save settings
-5. When printing a Sale Agreement, it will display "M/s. ZAMIN GOLD" instead of the main company name
+**Settings → Print Setup → Sale Agreement**
+
+The user will find the "Sale Agreement" option in the sidebar under "Print Setup" section, making it easy to locate and configure the company name.
 
 ---
 
 ### Expected Outcome
 
-- New "Sale Agreement Company Name" field in print settings
-- Sale Agreement PDFs show "ZAMIN GOLD" (or configured name) as the buyer
-- If field is empty, falls back to main company name
-- Other documents (Loan Receipt, etc.) continue using the main company name
+- New "Sale Agreement" menu item appears in Settings → Print Setup sidebar
+- Clicking it shows a dedicated settings card with the "Company Name for Sale Agreements" input
+- When user types "ZAMIN GOLD" and navigates away, the setting is saved
+- Sale Agreement PDFs will display "M/s. ZAMIN GOLD" as the buyer
+- Works even if no print_settings record exists yet (creates on first save)
 
