@@ -1,197 +1,203 @@
 
 
-## Plan: Remove Stamp Text and Fix Tamil Word-Breaking in Sale Agreement PDF
+## Plan: Fix Sale Agreement PDF Issues
 
-### Issues Identified
+### Issues to Fix
 
-1. **Stamp Area Has Text**: The stamp area shows "Affix ₹100 Stamp Paper Here" text, but since this document will be printed on actual stamp paper, the area should be completely blank with just reserved margin space.
-
-2. **Tamil Words Breaking Mid-Character**: Looking at the uploaded screenshots (clauses 3 and 7), Tamil words are splitting in the middle and continuing on the next line (e.g., `உரிமை உண` splitting to next line with `:டு`). This is unreadable and unprofessional.
-
-### Root Cause Analysis
-
-**For Word Breaking:**
-- In `@react-pdf/renderer`, the `flex: 1` property on `clauseText` combined with the fixed `width: 18` on the clause number creates layout issues
-- The library doesn't properly handle Tamil Unicode word boundaries
-- Long Tamil sentences without explicit line breaks cause the renderer to cut words at arbitrary positions
-
-### Solution
+1. **Remove blank Page 2** - Merge ornaments table and clauses with Page 1 content
+2. **Fetch all customer details** - Update query in `SaleAgreements.tsx` to include `date_of_birth`, `gender`, `nominee_name`
+3. **Add Father Name field** - Add `father_name` column to customers table and make it mandatory in the customer form
 
 ---
 
-#### 1. Remove Stamp Text - Make Stamp Area Completely Blank
+### Technical Changes
 
-**Current (lines 434-437):**
-```tsx
-<View style={styles.stampArea}>
-  <Text style={styles.stampText}>Affix ₹100 Stamp Paper Here</Text>
-  <Text style={styles.stampTextTamil}>₹100 முத்திரைத்தாள் இங்கே ஒட்டவும்</Text>
+#### 1. Database: Add `father_name` Column to Customers Table
+
+Add a new nullable column (for existing records) but make it mandatory in the form:
+
+```sql
+ALTER TABLE public.customers 
+ADD COLUMN IF NOT EXISTS father_name VARCHAR(255);
+```
+
+---
+
+#### 2. File: `src/pages/SaleAgreements.tsx`
+
+**Update Customer Interface (lines 38-51):**
+
+Add missing fields for proper PDF data:
+
+```typescript
+interface Customer {
+  id: string;
+  customer_code: string;
+  full_name: string;
+  phone: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  photo_url?: string;
+  aadhaar_front_url?: string;
+  aadhaar_back_url?: string;
+  pan_card_url?: string;
+  date_of_birth?: string;        // ADD
+  gender?: string;               // ADD
+  nominee_name?: string;         // ADD
+  father_name?: string;          // ADD
+}
+```
+
+**Update fetchCustomers Query (line 321):**
+
+```typescript
+const { data } = await supabase
+  .from('customers')
+  .select('id, customer_code, full_name, phone, address, city, state, pincode, photo_url, aadhaar_front_url, aadhaar_back_url, pan_card_url, date_of_birth, gender, nominee_name, father_name')
+  .eq('client_id', client.id)
+  .eq('is_active', true)
+  .order('full_name');
+```
+
+---
+
+#### 3. File: `src/components/print/LoanPrintDialog.tsx`
+
+**Update Customer Interface (lines 41-55):**
+
+```typescript
+interface Customer {
+  id: string;
+  customer_code: string;
+  full_name: string;
+  phone: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  photo_url?: string | null;
+  aadhaar_front_url?: string | null;
+  aadhaar_back_url?: string | null;
+  pan_card_url?: string | null;
+  nominee_name?: string | null;
+  nominee_relation?: string | null;
+  date_of_birth?: string | null;  // ADD
+  gender?: string | null;         // ADD
+  father_name?: string | null;    // ADD
+}
+```
+
+---
+
+#### 4. File: `src/components/print/documents/SaleAgreementPDF.tsx`
+
+**Update Customer Interface (lines 23-34):**
+
+```typescript
+interface Customer {
+  id: string;
+  customer_code: string;
+  full_name: string;
+  phone: string;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  date_of_birth?: string | null;
+  gender?: string | null;
+  nominee_name?: string | null;
+  father_name?: string | null;    // ADD
+}
+```
+
+**Fix Father Name Display (line 629-631):**
+
+```typescript
+<View style={styles.customerRow}>
+  <Text style={styles.customerLabel}>FATHER NAME</Text>
+  <Text style={styles.customerValue}>{customer.father_name || '-'}</Text>
 </View>
 ```
 
-**Fixed:**
-```tsx
-<View style={styles.stampAreaBlank} />
+**Restructure to Remove Blank Page 2:**
+
+Currently:
+- Page 1: Stamp area + Title + Parties + Summary + Signatures
+- Page 2: Title + Customer name + Ornaments table + Clauses + Signatures
+- Page 3: Declaration page
+
+Change to (2 pages total):
+- Page 1: Stamp area + Title + Parties + Summary + Ornaments table + Signatures
+- Page 2: Title + Clauses (13 clauses) + Declaration section + Warning + Signatures
+
+This merges Page 1 content with ornaments table and moves clauses + declaration to Page 2.
+
+---
+
+#### 5. File: `src/pages/Customers.tsx`
+
+**Add Father Name Form Field:**
+
+Add a new state variable and form field after the nominee section:
+
+```typescript
+// Add state (around line 121)
+const [fatherName, setFatherName] = useState('');
+
+// Add validation (around line 455-462)
+if (!fatherName.trim()) {
+  toast.error('Father name is required');
+  return;
+}
+
+// Add to customerData object (around line 493-500)
+father_name: fatherName.trim(),
+
+// Add form field in the UI
 ```
 
-**New style:**
-```typescript
-stampAreaBlank: {
-  height: 320,
-  marginBottom: 15,
-  // No border, no text - just blank space for physical stamp paper
-},
+**Add Form Field in Personal Details Section:**
+
+```tsx
+<div className="space-y-2">
+  <Label htmlFor="fatherName">Father Name *</Label>
+  <Input
+    id="fatherName"
+    value={fatherName}
+    onChange={(e) => setFatherName(e.target.value)}
+    placeholder="Enter father name"
+    required
+  />
+</div>
 ```
 
 ---
 
-#### 2. Fix Tamil Word Breaking
+### Page Structure After Changes
 
-The key issue is that `@react-pdf/renderer` does not understand Tamil word boundaries. The solution is to:
-
-**A. Remove flex layout from clause text and use block layout instead:**
-
-**Current clauseRow style:**
-```typescript
-clauseRow: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-},
-clauseNumber: {
-  fontSize: 9,
-  fontWeight: 'bold',
-  fontFamily: 'Noto Sans Tamil',
-  marginRight: 4,
-  width: 18,
-},
-clauseText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.6,
-  textAlign: 'left',
-  flex: 1,  // This causes issues
-},
-```
-
-**Fixed styles:**
-```typescript
-clauseRow: {
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  flexWrap: 'nowrap',
-},
-clauseNumber: {
-  fontSize: 9,
-  fontWeight: 'bold',
-  fontFamily: 'Noto Sans Tamil',
-  marginRight: 6,
-  minWidth: 18,
-},
-clauseText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.8,  // Increased for better spacing
-  textAlign: 'left',
-  flex: 1,
-  flexShrink: 1,
-  flexWrap: 'wrap',
-},
-```
-
-**B. Add Zero-Width Space characters after each Tamil word to help the renderer understand word boundaries:**
-
-Create a utility function to insert invisible word-break hints:
-
-```typescript
-// Helper to add word-break hints for Tamil text
-const addWordBreakHints = (text: string): string => {
-  // Add Zero-Width Space (U+200B) after each space to hint word boundaries
-  return text.replace(/ /g, ' \u200B');
-};
-```
-
-Then use it in the rendering:
-```tsx
-<Text style={styles.clauseText}>{addWordBreakHints(clause.tamil)}</Text>
-```
-
-**C. Increase line height and add padding for better legibility:**
-
-```typescript
-clauseItem: {
-  marginBottom: 10,
-  paddingRight: 8,
-},
-clauseText: {
-  fontSize: 9,
-  fontFamily: 'Noto Sans Tamil',
-  lineHeight: 1.8,  // Increased from 1.6
-  textAlign: 'left',
-  flex: 1,
-},
-```
+| Page | Content |
+|------|---------|
+| **Page 1** | Blank stamp area (320pt) + Title + Parties (Seller/Buyer) + Summary table + Ornaments table + Signatures |
+| **Page 2** | Title + 13 Tamil Clauses + Customer Declaration table + Declaration text + Warning box + Signatures |
 
 ---
 
 ### Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | Remove stamp text, add word-break helper, fix clause styles |
-
----
-
-### Technical Changes Summary
-
-1. **Stamp Area**: Remove all text content, make it a blank `View` with just height margin
-2. **Word Breaking Fix**: 
-   - Add `addWordBreakHints()` helper function to insert Zero-Width Space (U+200B) after each word
-   - Apply this to all Tamil clause text and declaration text
-   - Increase lineHeight to 1.8 for better spacing
-   - Add `flexWrap: 'wrap'` and `flexShrink: 1` to prevent forced line breaks
-
----
-
-### Visual Before/After
-
-**Stamp Area Before:**
-```
-┌─────────────────────────────────┐
-│                                 │
-│   Affix ₹100 Stamp Paper Here   │
-│   ₹100 முத்திரைத்தாள் இங்கே ஒட்டவும் │
-│                                 │
-└─────────────────────────────────┘
-```
-
-**Stamp Area After:**
-```
-┌─────────────────────────────────┐
-│                                 │
-│         (blank space)           │
-│                                 │
-│                                 │
-└─────────────────────────────────┘
-```
-
-**Clause Text Before (broken words):**
-```
-7.  ஜெனித் கோல்ட் நிறுவனத்திற்கு நான் கொடுத்த தங்கநகையின் மூலம் நஷ்டம் ஏற்படும் ப
-    ட்சத்தில் நிறுவனம் எந்த நேரத்திலும்...
-```
-
-**Clause Text After (clean wrapping):**
-```
-7.  ஜெனித் கோல்ட் நிறுவனத்திற்கு நான் கொடுத்த தங்கநகையின் 
-    மூலம் நஷ்டம் ஏற்படும் பட்சத்தில் நிறுவனம் எந்த 
-    நேரத்திலும்...
-```
+| File | Changes |
+|------|---------|
+| Database migration | Add `father_name` column to `customers` table |
+| `src/pages/Customers.tsx` | Add father_name field to form, make mandatory, update resetForm, openEditDialog |
+| `src/pages/SaleAgreements.tsx` | Update Customer interface and fetchCustomers query |
+| `src/components/print/LoanPrintDialog.tsx` | Update Customer interface |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Update interface, merge pages, use father_name |
 
 ---
 
 ### Expected Outcome
 
-- Stamp area will be completely blank (ready for physical ₹100 stamp paper printing)
-- Tamil words will wrap correctly at word boundaries, not mid-character
-- Professional, readable layout for all 13 clauses and declaration text
+- Sale Agreement PDF will be 2 pages instead of 3 (no blank page)
+- Customer details (Father Name, DOB, Gender) will display correctly
+- Father Name will be a mandatory field in customer creation form
+- All customer information properly fetched for print dialog
 
