@@ -1,75 +1,61 @@
 
-## Plan: Update Page 1 Signatures and Stamp Area Height
 
-### Changes Required
+## Plan: Fix Blank Page 2 in Sale Agreement PDF
 
-| Item | Current | Required |
-|------|---------|----------|
-| Stamp Area Height | 200pt | 320pt (revert) |
-| Left Signature Block | "For {companyName}" + "Authorised Signatory" | "For {companyName}" only (remove sublabel) |
-| Right Signature Block | "Customer Signature:" + "Name: {customer}" | Keep as is |
+### Problem
+
+The blank Page 2 you see is caused by **content overflow from Page 1**. When the PDF renders:
+
+1. Page 1 starts with 320pt stamp area + title + parties + summary table
+2. The signatures don't fit on Page 1, so they spill to a new page (the blank Page 2)
+3. The coded Page 2 (with ornaments + clauses) then appears as Page 3
+4. The coded Page 3 (declaration) appears as Page 4
+
+### Solution
+
+Add `break="avoid"` to the signature section on Page 1 to prevent page breaks within it, AND ensure the View wrapping Page 1 content doesn't allow its children to break across pages.
+
+However, since the stamp area is 320pt and must stay, the better solution is to **reduce vertical spacing** in Page 1 to fit all content including signatures.
 
 ### Technical Changes
 
 **File: `src/components/print/documents/SaleAgreementPDF.tsx`**
 
-#### Change 1: Revert stamp area height to 320pt (Line 69)
+| Change | Current | New |
+|--------|---------|-----|
+| Stamp area marginBottom | 15 | 8 |
+| Main title marginBottom | 3 | 2 |
+| Main title Tamil marginBottom | 12 | 6 |
+| Party title container padding | 4 | 3 |
+| Party details marginBottom | 8 | 4 |
+| Summary table marginTop | 10 | 6 |
+| Summary table marginBottom | 15 | 8 |
+| Signature section marginTop | 25 | 15 |
+| Signature line marginTop | 40 | 30 |
 
-```typescript
-stampAreaBlank: {
-  height: 320,  // Reverted from 200pt back to 320pt
-  marginBottom: 15,
-},
-```
+These small reductions (total ~40-50pt saved) will ensure Page 1 content (including signatures) fits within the page.
 
-#### Change 2: Remove "Authorised Signatory" sublabel (Lines 526-538)
+### Page Footer Updates
 
-**Current:**
-```typescript
-<View style={styles.signatureSection}>
-  <View style={styles.signatureBlock}>
-    <Text style={styles.signatureLabel}>For {companyName}</Text>
-    <View style={styles.signatureLine} />
-    <Text style={styles.signatureSublabel}>Authorised Signatory</Text>  // DELETE
-  </View>
-  <View style={styles.signatureBlock}>
-    <Text style={styles.signatureLabel}>Customer Signature:</Text>
-    <View style={styles.signatureLine} />
-    <Text style={styles.signatureSublabel}>Name: {customer.full_name}</Text>
-  </View>
-</View>
-```
+After fix, page numbering changes:
+- Page 1: Stamp Paper Page → "Page 1 of 3"
+- Page 2: Agreement Terms (ornaments + clauses) → "Page 2 of 3" 
+- Page 3: Customer Declaration → "Page 3 of 3"
 
-**After:**
-```typescript
-<View style={styles.signatureSection}>
-  <View style={styles.signatureBlock}>
-    <Text style={styles.signatureLabel}>For {companyName}</Text>
-    <View style={styles.signatureLine} />
-    {/* Authorised Signatory label removed */}
-  </View>
-  <View style={styles.signatureBlock}>
-    <Text style={styles.signatureLabel}>Customer Signature:</Text>
-    <View style={styles.signatureLine} />
-    <Text style={styles.signatureSublabel}>Name: {customer.full_name}</Text>
-  </View>
-</View>
-```
-
-### Expected Result
-
-Page 1 Signatures will look like:
-
-```
-For ZAMIN GOLD                         Customer Signature:
-______________________                 ______________________
-                                       Name: Lingasamy
-```
-
-The left side will only show "For ZAMIN GOLD" above the signature line, with no sublabel underneath.
+No actual page deletion needed - just fixing the overflow issue.
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | 1. Change stampAreaBlank height from 200 to 320 (line 69)<br>2. Remove "Authorised Signatory" Text element (line 531) |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Reduce vertical spacing in styles to fit Page 1 content on single page |
+
+### Expected Result
+
+After fix:
+- **Page 1**: Stamp area (320pt) + Title + Parties + Summary + Signatures (all on one page)
+- **Page 2**: Agreement Terms (ornaments table + 13 clauses + signatures)
+- **Page 3**: Customer Selling Declaration
+
+No blank page between Page 1 and the Agreement Terms page.
+
