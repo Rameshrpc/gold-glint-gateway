@@ -8,7 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Pencil, Calculator, Info } from 'lucide-react';
+import { Plus, Pencil, Calculator, Info, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -52,6 +55,7 @@ export default function SaleSchemes() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingScheme, setEditingScheme] = useState<SaleScheme | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [schemeToDelete, setSchemeToDelete] = useState<SaleScheme | null>(null);
   
   // Form state - simplified for sale agreements
   const [formData, setFormData] = useState({
@@ -110,6 +114,46 @@ export default function SaleSchemes() {
       rate_22kt: '',
     });
     setEditingScheme(null);
+  };
+
+  const handleToggleStatus = async (scheme: SaleScheme) => {
+    try {
+      const { error } = await supabase
+        .from('schemes')
+        .update({ is_active: !scheme.is_active })
+        .eq('id', scheme.id);
+      
+      if (error) throw error;
+      toast.success(`Scheme ${!scheme.is_active ? 'activated' : 'deactivated'}`);
+      fetchSchemes();
+    } catch (error: any) {
+      toast.error('Failed to update scheme status');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!schemeToDelete) return;
+    
+    try {
+      // First delete any versions
+      await supabase
+        .from('scheme_versions')
+        .delete()
+        .eq('scheme_id', schemeToDelete.id);
+      
+      // Then delete the scheme
+      const { error } = await supabase
+        .from('schemes')
+        .delete()
+        .eq('id', schemeToDelete.id);
+      
+      if (error) throw error;
+      toast.success('Scheme deleted successfully');
+      setSchemeToDelete(null);
+      fetchSchemes();
+    } catch (error: any) {
+      toast.error('Failed to delete scheme');
+    }
   };
 
   const handleEdit = (scheme: SaleScheme) => {
@@ -372,14 +416,33 @@ export default function SaleSchemes() {
                           <Badge variant="secondary">{scheme.min_tenure_days}-{scheme.max_tenure_days} days</Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
-                            {scheme.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
+                          <div className="flex items-center justify-center gap-2">
+                            <Switch
+                              checked={scheme.is_active}
+                              onCheckedChange={() => handleToggleStatus(scheme)}
+                            />
+                            <span className={cn(
+                              "text-xs font-medium",
+                              scheme.is_active ? "text-primary" : "text-muted-foreground"
+                            )}>
+                              {scheme.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" onClick={() => handleEdit(scheme)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => handleEdit(scheme)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => setSchemeToDelete(scheme)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -675,6 +738,25 @@ export default function SaleSchemes() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!schemeToDelete} onOpenChange={(open) => !open && setSchemeToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Scheme</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{schemeToDelete?.scheme_name}"? 
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }
