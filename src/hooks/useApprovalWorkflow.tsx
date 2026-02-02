@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Json } from '@/integrations/supabase/types';
 
-export type WorkflowType = 'loan' | 'redemption' | 'voucher' | 'auction' | 'commission';
+export type WorkflowType = 'loan' | 'redemption' | 'voucher' | 'auction' | 'commission' | 'sale_agreement' | 'repurchase' | 'margin_renewal';
 export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 
 export interface ApprovalWorkflow {
@@ -328,14 +328,17 @@ export function useApprovalWorkflow() {
     status: 'approved' | 'rejected'
   ) => {
     try {
-      if (entityType === 'loan') {
+      if (entityType === 'loan' || entityType === 'sale_agreement') {
         await supabase.from('loans').update({ approval_status: status }).eq('id', entityId);
-      } else if (entityType === 'redemption') {
+      } else if (entityType === 'redemption' || entityType === 'repurchase') {
         await supabase.from('redemptions').update({ approval_status: status }).eq('id', entityId);
       } else if (entityType === 'voucher') {
         await supabase.from('vouchers').update({ approval_status: status }).eq('id', entityId);
       } else if (entityType === 'auction') {
         await supabase.from('auctions').update({ approval_status: status }).eq('id', entityId);
+      } else if (entityType === 'margin_renewal') {
+        // Interest payments don't have approval_status, so we skip this
+        console.log('Margin renewal approved, no entity status update needed');
       }
     } catch (error) {
       console.error('Error updating entity approval status:', error);

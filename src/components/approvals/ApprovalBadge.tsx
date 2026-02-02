@@ -20,19 +20,19 @@ export function ApprovalBadge({
       label: 'Pending Approval',
       variant: 'outline' as const,
       icon: Clock,
-      className: 'border-amber-500/50 text-amber-600 bg-amber-50 dark:bg-amber-950/20'
+      className: 'border-amber-500/50 text-amber-600 bg-amber-500/10 dark:bg-amber-500/20'
     },
     pending_l1: {
       label: 'Awaiting L2',
       variant: 'outline' as const,
       icon: Clock,
-      className: 'border-blue-500/50 text-blue-600 bg-blue-50 dark:bg-blue-950/20'
+      className: 'border-blue-500/50 text-blue-600 bg-blue-500/10 dark:bg-blue-500/20'
     },
     approved: {
       label: 'Approved',
       variant: 'outline' as const,
       icon: CheckCircle2,
-      className: 'border-emerald-500/50 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20'
+      className: 'border-emerald-500/50 text-emerald-600 bg-emerald-500/10 dark:bg-emerald-500/20'
     },
     rejected: {
       label: 'Rejected',
