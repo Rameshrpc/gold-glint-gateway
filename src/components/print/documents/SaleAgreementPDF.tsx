@@ -66,8 +66,8 @@ const styles = StyleSheet.create({
   },
   // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
   stampAreaBlank: {
-    height: 320,
-    marginBottom: 8,
+    height: 200,
+    marginBottom: 5,
     // No border, no text - just blank space for physical stamp paper
   },
   // Title
@@ -75,14 +75,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
     textDecoration: 'underline',
   },
   mainTitleTamil: {
     fontSize: 12,
     fontFamily: 'Noto Sans Tamil',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 3,
     color: '#333',
   },
   // Parties Section
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
-    padding: 3,
-    marginBottom: 2,
+    padding: 2,
+    marginBottom: 1,
   },
   partyTitle: {
     fontSize: 10,
@@ -107,11 +107,11 @@ const styles = StyleSheet.create({
   },
   partyDetails: {
     paddingLeft: 10,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   partyRow: {
     flexDirection: 'row',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   partyLabel: {
     width: 80,
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
   },
   // Summary Table
   summaryTable: {
-    marginTop: 6,
-    marginBottom: 8,
+    marginTop: 4,
+    marginBottom: 4,
     borderWidth: 1,
     borderColor: '#333',
   },
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     width: '45%',
-    padding: 5,
+    padding: 3,
     fontSize: 8,
     backgroundColor: '#f5f5f5',
     borderRightWidth: 1,
@@ -148,7 +148,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     width: '55%',
-    padding: 5,
+    padding: 3,
     fontSize: 9,
     fontWeight: 'bold',
   },
@@ -156,8 +156,8 @@ const styles = StyleSheet.create({
   signatureSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 15,
-    paddingTop: 8,
+    marginTop: 8,
+    paddingTop: 4,
   },
   signatureBlock: {
     width: '40%',
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#333',
     width: '100%',
-    marginTop: 30,
+    marginTop: 20,
     marginBottom: 5,
   },
   signatureLabel: {
