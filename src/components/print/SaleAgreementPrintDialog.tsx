@@ -163,9 +163,6 @@ export function SaleAgreementPrintDialog({
         // Don't show branch name when dedicated address is configured
         const showBranchInSaleAgreement = !effectiveSettings.sale_agreement_company_address;
         
-        // Calculate margin per month from interest_rate (which stores the margin rate)
-        const marginPerMonth = loan.interest_rate;
-        
         const saleAgreementDoc = (
           <SaleAgreementPDF
             loan={loan}
@@ -177,7 +174,6 @@ export function SaleAgreementPrintDialog({
             branchName={showBranchInSaleAgreement ? branchName : undefined}
             language={language}
             paperSize={paperSize}
-            marginPerMonth={marginPerMonth}
           />
         );
         

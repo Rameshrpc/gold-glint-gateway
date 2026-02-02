@@ -6,7 +6,6 @@ import '@/lib/pdf-fonts';
 import { PDF_FONTS } from '@/lib/pdf-fonts';
 import { LanguageMode } from '@/lib/bilingual-utils';
 import { formatCurrencyPrint, formatWeightPrint, pdfStyles } from '../shared/PDFStyles';
-import { calculateSimpleStrikePrices } from '@/lib/saleAgreementCalculations';
 
 interface GoldItem {
   id?: string;
@@ -57,7 +56,6 @@ interface SaleAgreementPDFProps {
   branchName?: string;
   language?: LanguageMode;
   paperSize?: string;
-  marginPerMonth?: number;
 }
 
 const styles = StyleSheet.create({
@@ -372,82 +370,6 @@ const styles = StyleSheet.create({
     color: '#888',
     textAlign: 'center',
   },
-  // Strike Price Schedule Section
-  strikePriceSection: {
-    marginTop: 12,
-    marginBottom: 12,
-  },
-  strikePriceTitle: {
-    fontSize: 10,
-    fontWeight: 'bold',
-    marginBottom: 3,
-    textDecoration: 'underline',
-  },
-  strikePriceTitleTamil: {
-    fontSize: 9,
-    fontFamily: 'Noto Sans Tamil',
-    marginBottom: 6,
-    color: '#333',
-  },
-  strikePriceExplanation: {
-    fontSize: 8,
-    marginBottom: 8,
-    padding: 8,
-    backgroundColor: '#f0f8ff',
-    borderWidth: 1,
-    borderColor: '#b8d4f0',
-    borderRadius: 3,
-  },
-  strikePriceExplanationTamil: {
-    fontSize: 8,
-    fontFamily: 'Noto Sans Tamil',
-    marginTop: 4,
-    color: '#444',
-    lineHeight: 1.6,
-  },
-  strikePriceTable: {
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  strikePriceHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#e8e8e8',
-    borderBottomWidth: 1,
-    borderBottomColor: '#333',
-  },
-  strikePriceRow: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
-  },
-  strikePriceRowLast: {
-    flexDirection: 'row',
-  },
-  strikePriceCell: {
-    padding: 4,
-    fontSize: 8,
-    borderRightWidth: 1,
-    borderRightColor: '#ddd',
-  },
-  strikePriceCellLast: {
-    padding: 4,
-    fontSize: 8,
-  },
-  strikePriceCellHeader: {
-    fontWeight: 'bold',
-    fontSize: 7,
-    backgroundColor: '#e8e8e8',
-  },
-  expiryNote: {
-    fontSize: 8,
-    fontWeight: 'bold',
-    marginTop: 5,
-    padding: 5,
-    backgroundColor: '#fff3cd',
-    borderWidth: 1,
-    borderColor: '#ffc107',
-  },
 });
 
 // Helper to format date
@@ -488,7 +410,6 @@ export function SaleAgreementPDF({
   branchName,
   language = 'bilingual',
   paperSize = 'A4',
-  marginPerMonth = 0,
 }: SaleAgreementPDFProps) {
   const content = useSaleAgreementContent();
   const totals = calculateTotals(goldItems);
@@ -497,11 +418,6 @@ export function SaleAgreementPDF({
   const customerAddress = [customer.address, customer.city, customer.state]
     .filter(Boolean)
     .join(', ');
-
-  // Calculate strike prices for the schedule
-  const strikePrices = marginPerMonth > 0 
-    ? calculateSimpleStrikePrices(displayPrincipal, marginPerMonth, loan.loan_date, loan.tenure_days, 15)
-    : [];
 
   return (
     <Document>
@@ -667,43 +583,6 @@ export function SaleAgreementPDF({
             <Text style={[styles.ornamentCellLast, { width: '18%', fontWeight: 'bold' }]}>{formatCurrencyPrint(totals.value)}</Text>
           </View>
         </View>
-
-        {/* Strike Price Schedule - Simple Explanation */}
-        {strikePrices.length > 0 && (
-          <View style={styles.strikePriceSection}>
-            <Text style={styles.strikePriceTitle}>REPURCHASE PRICE SCHEDULE</Text>
-            <Text style={styles.strikePriceTitleTamil}>திரும்ப வாங்கும் விலை அட்டவணை</Text>
-            
-            {/* Child-friendly explanation */}
-            <View style={styles.strikePriceExplanation}>
-              <Text>When you want to buy back your gold, the price depends on how many days have passed. Each month, a small fee is added. Pay early to save money!</Text>
-              <Text style={styles.strikePriceExplanationTamil}>
-                {addWordBreakHints('உங்கள் தங்கத்தை திரும்ப வாங்க விரும்பும்போது, எத்தனை நாட்கள் கடந்தன என்பதை பொறுத்து விலை இருக்கும். ஒவ்வொரு மாதமும் ஒரு சிறிய கட்டணம் சேர்க்கப்படும். பணத்தை சேமிக்க சீக்கிரம் செலுத்துங்கள்!')}
-              </Text>
-            </View>
-            
-            {/* Strike Price Table */}
-            <View style={styles.strikePriceTable}>
-              <View style={styles.strikePriceHeader}>
-                <Text style={[styles.strikePriceCell, styles.strikePriceCellHeader, { width: '35%' }]}>Days / நாட்கள்</Text>
-                <Text style={[styles.strikePriceCell, styles.strikePriceCellHeader, { width: '25%' }]}>Months / மாதங்கள்</Text>
-                <Text style={[styles.strikePriceCellLast, styles.strikePriceCellHeader, { width: '40%' }]}>Repurchase Price / திரும்ப வாங்கும் விலை</Text>
-              </View>
-              {strikePrices.map((row, index) => (
-                <View key={index} style={index === strikePrices.length - 1 ? styles.strikePriceRowLast : styles.strikePriceRow}>
-                  <Text style={[styles.strikePriceCell, { width: '35%' }]}>{row.periodLabel}</Text>
-                  <Text style={[styles.strikePriceCell, { width: '25%', textAlign: 'center' }]}>{row.monthsMargin}</Text>
-                  <Text style={[styles.strikePriceCellLast, { width: '40%', fontWeight: 'bold' }]}>{formatCurrencyPrint(row.strikePrice)}</Text>
-                </View>
-              ))}
-            </View>
-            
-            {/* Expiry Note */}
-            <View style={styles.expiryNote}>
-              <Text>⚠️ Option Expiry Date: {formatDate(loan.maturity_date)} — After this date, the buyback option expires.</Text>
-            </View>
-          </View>
-        )}
 
         {/* Terms & Conditions - 13 Clauses */}
         <View style={styles.clausesSection}>
