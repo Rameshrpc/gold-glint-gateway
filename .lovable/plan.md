@@ -1,219 +1,214 @@
 
-## Plan: Protect Existing Sale Agreements from Scheme Changes
+## Plan: Activate Delete Functionality for Sale Agreements
 
-### Problem Statement
-Currently, when a Sale Agreement Scheme is edited or deleted in `SaleSchemes.tsx`:
-- **Edit**: Directly updates the scheme record, which could affect calculations for existing agreements
-- **Delete**: Forcefully deletes the scheme AND its versions, breaking any existing agreements that reference them
+### Current State
+The Sale Agreements page has a delete button (trash icon) that currently shows "Delete functionality coming soon" when clicked (line 2065). The button already has permission checks using `canDelete` and `attemptDelete()`.
 
-### Solution Overview
-Implement the same version history system already used in `Schemes.tsx` (for loans):
+### What We'll Add
 
-1. **On Edit**: Check if any agreements exist with this scheme. If yes, create a NEW version instead of modifying in place.
-2. **On Delete**: Check if any agreements exist. If yes, block deletion. If no, allow deletion.
+| Component | Description |
+|-----------|-------------|
+| **State** | `agreementToDelete` to track which agreement is being deleted |
+| **Handler** | `handleDeleteAgreement` function to delete agreement and related data |
+| **UI** | AlertDialog for delete confirmation |
 
 ---
 
 ### Technical Changes
 
-#### File: `src/pages/SaleSchemes.tsx`
+#### File: `src/pages/SaleAgreements.tsx`
 
-**1. Update `handleDelete` function (lines 134-157)**
-
-Add a check for existing agreements before deletion:
-
+**1. Add AlertDialog Import (line 10)**
 ```typescript
-const handleDelete = async () => {
-  if (!schemeToDelete) return;
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+```
+
+**2. Add State for Delete Confirmation (around line 267)**
+```typescript
+const [agreementToDelete, setAgreementToDelete] = useState<SaleAgreement | null>(null);
+```
+
+**3. Add Delete Handler Function (after line 874)**
+```typescript
+const handleDeleteAgreement = async () => {
+  if (!agreementToDelete) return;
   
   try {
-    // Check if any sale agreements use this scheme
-    const { count: agreementCount } = await supabase
-      .from('loans')
+    // Check if agreement has any payments (margin renewals)
+    const { count: paymentCount } = await supabase
+      .from('interest_payments')
       .select('id', { count: 'exact', head: true })
-      .eq('scheme_id', schemeToDelete.id)
-      .eq('transaction_type', 'sale_agreement');
+      .eq('loan_id', agreementToDelete.id);
     
-    if (agreementCount && agreementCount > 0) {
-      toast.error('Cannot delete scheme. It is being used by existing sale agreements.', {
-        description: `${agreementCount} agreement(s) are linked to this scheme.`
+    if (paymentCount && paymentCount > 0) {
+      toast.error('Cannot delete agreement with existing margin payments', {
+        description: `${paymentCount} payment(s) found. Please reverse them first.`
       });
-      setSchemeToDelete(null);
+      setAgreementToDelete(null);
       return;
     }
     
-    // Safe to delete - first delete versions
-    await supabase
-      .from('scheme_versions')
-      .delete()
-      .eq('scheme_id', schemeToDelete.id);
+    // Check if agreement has redemption (repurchase)
+    const { count: redemptionCount } = await supabase
+      .from('redemptions')
+      .select('id', { count: 'exact', head: true })
+      .eq('loan_id', agreementToDelete.id);
     
-    // Then delete the scheme
-    const { error } = await supabase
-      .from('schemes')
+    if (redemptionCount && redemptionCount > 0) {
+      toast.error('Cannot delete agreement with existing repurchase record');
+      setAgreementToDelete(null);
+      return;
+    }
+    
+    // Delete related voucher entries and vouchers
+    const { data: vouchers } = await supabase
+      .from('vouchers')
+      .select('id')
+      .eq('loan_id', agreementToDelete.id);
+    
+    if (vouchers && vouchers.length > 0) {
+      const voucherIds = vouchers.map(v => v.id);
+      await supabase
+        .from('voucher_entries')
+        .delete()
+        .in('voucher_id', voucherIds);
+      
+      await supabase
+        .from('vouchers')
+        .delete()
+        .eq('loan_id', agreementToDelete.id);
+    }
+    
+    // Delete approval requests if any
+    await supabase
+      .from('approval_requests')
       .delete()
-      .eq('id', schemeToDelete.id);
+      .eq('entity_id', agreementToDelete.id)
+      .eq('entity_type', 'loan');
+    
+    // Delete loan disbursements
+    await supabase
+      .from('loan_disbursements')
+      .delete()
+      .eq('loan_id', agreementToDelete.id);
+    
+    // Delete gold items
+    await supabase
+      .from('gold_items')
+      .delete()
+      .eq('loan_id', agreementToDelete.id);
+    
+    // Finally delete the agreement
+    const { error } = await supabase
+      .from('loans')
+      .delete()
+      .eq('id', agreementToDelete.id);
     
     if (error) throw error;
-    toast.success('Scheme deleted successfully');
-    setSchemeToDelete(null);
-    fetchSchemes();
+    
+    toast.success(`Agreement ${agreementToDelete.loan_number} deleted successfully`);
+    setAgreementToDelete(null);
+    fetchAgreements();
   } catch (error: any) {
+    console.error('Delete error:', error);
     if (error.code === '23503') {
-      toast.error('Cannot delete scheme. It is being used by existing agreements.');
+      toast.error('Cannot delete agreement. It has related records that must be removed first.');
     } else {
-      toast.error('Failed to delete scheme');
+      toast.error('Failed to delete agreement');
     }
   }
 };
 ```
 
-**2. Update `handleSubmit` function (lines 208-319)**
+**4. Update Delete Button Click Handler (lines 2060-2072)**
 
-Add version management when editing a scheme that has existing agreements:
-
+Replace:
 ```typescript
-const handleSubmit = async () => {
-  if (!client) return;
-  
-  // ... validation ...
+onClick={() => {
+  if (!attemptDelete()) return;
+  toast.info('Delete functionality coming soon');
+}}
+```
 
-  if (editingScheme) {
-    // Check if any sale agreements exist with this scheme
-    const { count: agreementCount } = await supabase
-      .from('loans')
-      .select('id', { count: 'exact', head: true })
-      .eq('scheme_id', editingScheme.id)
-      .eq('transaction_type', 'sale_agreement');
+With:
+```typescript
+onClick={() => {
+  if (!attemptDelete()) return;
+  setAgreementToDelete(agreement);
+}}
+```
 
-    if (agreementCount && agreementCount > 0) {
-      // Agreements exist - create NEW VERSION instead of modifying in place
-      
-      // Get current max version number
-      const { data: existingVersions } = await supabase
-        .from('scheme_versions')
-        .select('version_number')
-        .eq('scheme_id', editingScheme.id)
-        .order('version_number', { ascending: false })
-        .limit(1);
-
-      const nextVersionNumber = (existingVersions?.[0]?.version_number || 0) + 1;
-      const today = new Date().toISOString().split('T')[0];
-
-      // Close old version
-      const { data: currentScheme } = await supabase
-        .from('schemes')
-        .select('current_version_id')
-        .eq('id', editingScheme.id)
-        .single();
-
-      if (currentScheme?.current_version_id) {
-        await supabase
-          .from('scheme_versions')
-          .update({ effective_to: today })
-          .eq('id', currentScheme.current_version_id);
-      }
-
-      // Create new version with new rates
-      const { data: newVersion, error: versionError } = await supabase
-        .from('scheme_versions')
-        .insert({
-          scheme_id: editingScheme.id,
-          client_id: client.id,
-          version_number: nextVersionNumber,
-          effective_from: today,
-          change_reason: 'Scheme updated - new version for new agreements',
-          margin_per_month: marginPerMonth,
-          tenure_step: 15,
-          interest_rate: equivalentAnnualRate,
-          shown_rate: equivalentAnnualRate,
-          effective_rate: equivalentAnnualRate,
-          // ... other version fields ...
-        })
-        .select()
-        .single();
-
-      if (versionError) throw versionError;
-
-      // Update scheme header with new current_version_id
-      await supabase
-        .from('schemes')
-        .update({
-          ...schemeData,
-          current_version_id: newVersion.id,
-        })
-        .eq('id', editingScheme.id);
-
-      toast.success(`Scheme updated. Version ${nextVersionNumber} created for new agreements.`, {
-        description: 'Existing agreements will continue using their original terms.'
-      });
-    } else {
-      // No agreements exist - safe to update in place
-      const { error } = await supabase
-        .from('schemes')
-        .update(schemeData)
-        .eq('id', editingScheme.id);
-      
-      if (error) throw error;
-
-      // Also update the current version record
-      const { data: currentScheme } = await supabase
-        .from('schemes')
-        .select('current_version_id')
-        .eq('id', editingScheme.id)
-        .single();
-
-      if (currentScheme?.current_version_id) {
-        await supabase
-          .from('scheme_versions')
-          .update({
-            margin_per_month: marginPerMonth,
-            // ... other version fields ...
-          })
-          .eq('id', currentScheme.current_version_id);
-      }
-
-      toast.success('Scheme updated successfully');
-    }
-  } else {
-    // Create new scheme (existing logic)
-  }
-};
+**5. Add Delete Confirmation Dialog (before closing `</div>` around line 2252)**
+```typescript
+{/* Delete Confirmation Dialog */}
+<AlertDialog open={!!agreementToDelete} onOpenChange={(open) => !open && setAgreementToDelete(null)}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Delete Sale Agreement</AlertDialogTitle>
+      <AlertDialogDescription>
+        Are you sure you want to delete agreement <strong>{agreementToDelete?.loan_number}</strong>?
+        <br /><br />
+        This will also delete:
+        <ul className="list-disc list-inside mt-2 text-sm">
+          <li>All gold items linked to this agreement</li>
+          <li>Disbursement records</li>
+          <li>Accounting vouchers</li>
+        </ul>
+        <br />
+        This action cannot be undone.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogAction 
+        onClick={handleDeleteAgreement} 
+        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      >
+        Delete Agreement
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
 ```
 
 ---
 
-### Data Flow After Implementation
+### Safety Checks
+
+The delete handler includes important safety checks:
+
+| Check | Action if Found |
+|-------|-----------------|
+| **Margin Payments** | Block deletion - user must reverse payments first |
+| **Repurchase Record** | Block deletion - can't delete exercised agreements |
+| **Vouchers** | Auto-delete voucher entries and vouchers |
+| **Approval Requests** | Auto-delete pending approvals |
+| **Gold Items** | Auto-delete linked gold items |
+| **Disbursements** | Auto-delete payment records |
+
+---
+
+### Delete Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ SALE AGREEMENT SCHEME: SALE-01                              │
-├─────────────────────────────────────────────────────────────┤
-│ Version 1 (Original)          Version 2 (New)               │
-│ ─────────────────────         ─────────────────────         │
-│ Margin: ₹1,500/L/mo           Margin: ₹2,000/L/mo           │
-│ Effective: 2025-01-01         Effective: 2026-02-02         │
-│ Closed: 2026-02-01            Active                        │
-│                                                              │
-│ ↓ Used by:                    ↓ Used by:                    │
-│ SA202501010001                SA202602020144 (new)          │
-│ SA202501152345                                              │
-│ SA202501309876                                              │
-│ (These keep original terms)   (Gets new terms)              │
-└─────────────────────────────────────────────────────────────┘
+User clicks Delete → Permission check → Show Confirmation Dialog
+                                              ↓
+                                    User clicks "Delete Agreement"
+                                              ↓
+                            ┌─── Has payments? ────→ Block + Show Error
+                            │
+                            ├─── Has repurchase? ──→ Block + Show Error
+                            │
+                            └─── Safe to delete ───→ Delete in order:
+                                                      1. Voucher entries
+                                                      2. Vouchers
+                                                      3. Approval requests
+                                                      4. Loan disbursements
+                                                      5. Gold items
+                                                      6. Loan record
+                                                      ↓
+                                                    Success Toast + Refresh
 ```
-
----
-
-### Behavior Summary
-
-| Action | Has Existing Agreements? | Result |
-|--------|--------------------------|--------|
-| **Edit** | No | Updates scheme and version in place |
-| **Edit** | Yes | Creates new version; old agreements keep original version |
-| **Delete** | No | Deletes scheme and versions |
-| **Delete** | Yes | Blocked with error message |
-| **Toggle Status** | Any | Only affects visibility for new agreements (safe) |
 
 ---
 
@@ -221,23 +216,14 @@ const handleSubmit = async () => {
 
 | File | Change |
 |------|--------|
-| `src/pages/SaleSchemes.tsx` | Add agreement check in `handleDelete`, version management in `handleSubmit` |
+| `src/pages/SaleAgreements.tsx` | Add AlertDialog import, state, handler, and dialog component |
 
 ---
 
-### Why This Works
+### Expected Behavior
 
-1. **Agreements store `scheme_version_id`**: When a sale agreement is created, it captures the `current_version_id` from the scheme at that moment (already implemented in `SaleAgreements.tsx` line 705).
-
-2. **Calculations use version data**: When calculating interest/margin for existing agreements, the system should reference the stored `scheme_version_id` to get the original rates (already in place for Interest.tsx, Redemption.tsx).
-
-3. **New version for new agreements**: After an edit, only new agreements will use the new version, while existing agreements continue using their locked-in version.
-
----
-
-### Expected Outcome
-
-- Existing sale agreements maintain their original calculation parameters
-- Admins can freely update scheme rates for future agreements
-- Schemes with existing agreements cannot be deleted
-- Clear feedback messages explain what's happening
+1. User clicks trash icon → Confirmation dialog appears
+2. Dialog shows agreement number and what will be deleted
+3. User clicks "Delete Agreement" → Safety checks run
+4. If safe: All related data deleted, success toast, table refreshes
+5. If unsafe: Error toast explaining why deletion is blocked
