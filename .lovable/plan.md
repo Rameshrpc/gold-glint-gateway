@@ -1,106 +1,64 @@
 
 
-## Plan: Add Strike Price Schedule to Page 2 of Sale Agreement PDF
+## Plan: Completely Remove Blank Page 2 from Sale Agreement PDF
 
-### Overview
+### Problem Analysis
 
-Add a simple, easy-to-understand Strike Price Schedule section on Page 2 of the Sale Agreement PDF. This will explain the repurchase prices at different time intervals, written simply enough for a child to understand.
+The blank Page 2 is caused by Page 1 content overflowing. Currently:
+- Page 1 has a 320pt stamp area (mandatory for physical stamp paper)
+- The remaining content (title, parties, summary table, signatures) is wrapped in `wrap={false}`
+- When this content doesn't fit in the remaining ~480pt space, it creates an overflow page
 
-### Strike Price Calculation Logic
+The `wrap={false}` prevents content from splitting across pages, but it doesn't compress content. If the wrapped content is too tall, it still spills to a new page.
 
-The strike price follows a simple formula:
+### Solution
 
-**Strike Price = Purchase Price + (Monthly Margin x Number of Months)**
+Reduce the stamp area height from 320pt to a smaller value (200pt) that still provides adequate space for physical stamp paper while fitting all Page 1 content on a single sheet.
 
-Where:
-- **Purchase Price** = The amount paid for the gold ornaments
-- **Monthly Margin** = A fixed fee charged per month (derived from scheme)
-- **Number of Months** = `ceil(Days / 30)` - rounded up to the nearest month
-
-Example with ₹1,30,000 purchase and ₹3,000/month margin:
-| Days | Months (ceil) | Margin | Strike Price |
-|------|---------------|--------|--------------|
-| 0-15 | 1 | ₹3,000 | ₹1,33,000 |
-| 16-30 | 1 | ₹3,000 | ₹1,33,000 |
-| 31-45 | 2 | ₹6,000 | ₹1,36,000 |
-| 46-60 | 2 | ₹6,000 | ₹1,36,000 |
-| 61-75 | 3 | ₹9,000 | ₹1,39,000 |
-| 76-90 | 3 | ₹9,000 | ₹1,39,000 |
+Additionally, further reduce vertical spacing in Page 1 elements to guarantee everything fits.
 
 ### Technical Changes
 
-**File: `src/components/print/SaleAgreementPrintDialog.tsx`**
-
-1. Pass scheme data (margin_per_month) to the SaleAgreementPDF component
-
 **File: `src/components/print/documents/SaleAgreementPDF.tsx`**
 
-1. Add new props to receive margin_per_month
-2. Import `calculateSimpleStrikePrices` from `saleAgreementCalculations.ts`
-3. Calculate strike prices using loan data (principal, loan_date, tenure_days)
-4. Add new styles for the Strike Price Schedule section
-5. Add a new section on Page 2 before the Terms & Conditions that displays:
-   - A simple title: "Repurchase Price Schedule" (with Tamil translation)
-   - A child-friendly explanation paragraph
-   - A clean table showing each 15-day period and its strike price
-   - Option expiry date
+| Style Property | Current | New |
+|----------------|---------|-----|
+| `stampAreaBlank.height` | 320 | 200 |
+| `stampAreaBlank.marginBottom` | 8 | 5 |
+| `mainTitle.marginBottom` | 2 | 1 |
+| `mainTitleTamil.marginBottom` | 6 | 3 |
+| `partyTitleContainer.padding` | 3 | 2 |
+| `partyTitleContainer.marginBottom` | 2 | 1 |
+| `partyDetails.marginBottom` | 4 | 2 |
+| `partyRow.marginBottom` | 2 | 1 |
+| `summaryTable.marginTop` | 6 | 4 |
+| `summaryTable.marginBottom` | 8 | 4 |
+| `summaryRow padding` | 5 | 3 |
+| `signatureSection.marginTop` | 15 | 8 |
+| `signatureSection.paddingTop` | 8 | 4 |
+| `signatureLine.marginTop` | 30 | 20 |
 
-### Page 2 Layout After Change
+Total space saved: ~150pt (from stamp area reduction) + ~40pt (from spacing reductions) = ~190pt
 
-```
-+------------------------------------------+
-|        GOLD BUY BACK AGREEMENT           |
-|    தங்க திரும்ப கொள்முதல் ஒப்பந்தம்          |
-+------------------------------------------+
-| NAME OF THE CUSTOMER: [Name]             |
-+------------------------------------------+
-| ORNAMENTS DETAILS:                       |
-| [Table with gold items...]               |
-+------------------------------------------+
-| REPURCHASE PRICE SCHEDULE (NEW!)         |
-| திரும்ப வாங்கும் விலை அட்டவணை                |
-|                                          |
-| "If you want to buy back your gold,      |
-| here's how much you need to pay..."      |
-|                                          |
-| Days     | Months | Repurchase Price     |
-| 0-15     | 1      | ₹1,33,000           |
-| 16-30    | 1      | ₹1,33,000           |
-| 31-45    | 2      | ₹1,36,000           |
-| 46-60    | 2      | ₹1,36,000           |
-| 61-75    | 3      | ₹1,39,000           |
-| 76-90    | 3      | ₹1,39,000           |
-|                                          |
-| Option Expiry: 04/05/2026                |
-+------------------------------------------+
-| TERMS & CONDITIONS விதிமுறைகள்:            |
-| [13 clauses...]                          |
-+------------------------------------------+
-| [Signatures]                             |
-+------------------------------------------+
-```
+### Page Footer Updates
 
-### Simple Explanation Text (8-year-old friendly)
-
-**English:**
-> "When you want to buy back your gold, the price depends on how many days have passed. Each month, a small fee is added. Pay early to save money!"
-
-**Tamil:**
-> "உங்கள் தங்கத்தை திரும்ப வாங்க விரும்பும்போது, எத்தனை நாட்கள் கடந்தன என்பதை பொறுத்து விலை இருக்கும். ஒவ்வொரு மாதமும் ஒரு சிறிய கட்டணம் சேர்க்கப்படும். பணத்தை சேமிக்க சீக்கிரம் செலுத்துங்கள்!"
+After fix:
+- Page 1: "Page 1 of 3"
+- Page 2 (currently Page 3): "Page 2 of 3"
+- Page 3 (currently Page 4): "Page 3 of 3"
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/print/SaleAgreementPrintDialog.tsx` | Add scheme prop to SaleAgreementPDF, derive margin from loan.interest_rate |
-| `src/components/print/documents/SaleAgreementPDF.tsx` | 1. Add marginPerMonth prop<br>2. Import calculateSimpleStrikePrices<br>3. Add strike price schedule styles<br>4. Add strike price section on Page 2 before Terms |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | 1. Reduce stamp area height from 320pt to 200pt<br>2. Reduce vertical spacing across all Page 1 elements<br>3. Keep `wrap={false}` as safety net |
 
 ### Expected Result
 
-Page 2 of the Sale Agreement PDF will now include a clear, simple table showing:
-- What price to pay if repurchasing within 0-15 days
-- What price to pay if repurchasing within 16-30 days
-- And so on up to the full tenure (typically 90 days)
+After fix:
+- **Page 1**: Stamp area (200pt) + Title + Parties + Summary Table + Signatures (all fit on one page)
+- **Page 2**: Agreement Terms (ornaments table + 13 clauses + signatures)
+- **Page 3**: Customer Selling Declaration
 
-The explanation is written simply so anyone can understand that paying early costs less, and each month adds a fixed margin amount.
+No blank page will appear between Page 1 and Page 2.
 
