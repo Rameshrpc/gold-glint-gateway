@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -265,6 +266,9 @@ export default function SaleAgreements() {
   // Bulk operations
   const [selectedAgreementIds, setSelectedAgreementIds] = useState<Set<string>>(new Set());
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  
+  // Delete confirmation
+  const [agreementToDelete, setAgreementToDelete] = useState<SaleAgreement | null>(null);
   
   // Print settings for statement PDF
   const { settings: printSettings } = useEffectivePrintSettings();
@@ -871,6 +875,95 @@ export default function SaleAgreements() {
     if (!attemptEdit()) return;
     setEditingAgreement(agreement);
     setEditDialogOpen(true);
+  };
+
+  const handleDeleteAgreement = async () => {
+    if (!agreementToDelete) return;
+    
+    try {
+      // Check if agreement has any payments (margin renewals)
+      const { count: paymentCount } = await supabase
+        .from('interest_payments')
+        .select('id', { count: 'exact', head: true })
+        .eq('loan_id', agreementToDelete.id);
+      
+      if (paymentCount && paymentCount > 0) {
+        toast.error('Cannot delete agreement with existing margin payments', {
+          description: `${paymentCount} payment(s) found. Please reverse them first.`
+        });
+        setAgreementToDelete(null);
+        return;
+      }
+      
+      // Check if agreement has redemption (repurchase)
+      const { count: redemptionCount } = await supabase
+        .from('redemptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('loan_id', agreementToDelete.id);
+      
+      if (redemptionCount && redemptionCount > 0) {
+        toast.error('Cannot delete agreement with existing repurchase record');
+        setAgreementToDelete(null);
+        return;
+      }
+      
+      // Delete related voucher entries and vouchers
+      const { data: vouchers } = await supabase
+        .from('vouchers')
+        .select('id')
+        .eq('reference_id', agreementToDelete.id);
+      
+      if (vouchers && vouchers.length > 0) {
+        const voucherIds = vouchers.map(v => v.id);
+        await supabase
+          .from('voucher_entries')
+          .delete()
+          .in('voucher_id', voucherIds);
+        
+        await supabase
+          .from('vouchers')
+          .delete()
+          .eq('reference_id', agreementToDelete.id);
+      }
+      
+      // Delete approval requests if any
+      await supabase
+        .from('approval_requests')
+        .delete()
+        .eq('entity_id', agreementToDelete.id)
+        .eq('entity_type', 'loan');
+      
+      // Delete loan disbursements
+      await supabase
+        .from('loan_disbursements')
+        .delete()
+        .eq('loan_id', agreementToDelete.id);
+      
+      // Delete gold items
+      await supabase
+        .from('gold_items')
+        .delete()
+        .eq('loan_id', agreementToDelete.id);
+      
+      // Finally delete the agreement
+      const { error } = await supabase
+        .from('loans')
+        .delete()
+        .eq('id', agreementToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success(`Agreement ${agreementToDelete.loan_number} deleted successfully`);
+      setAgreementToDelete(null);
+      fetchAgreements();
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      if (error.code === '23503') {
+        toast.error('Cannot delete agreement. It has related records that must be removed first.');
+      } else {
+        toast.error('Failed to delete agreement');
+      }
+    }
   };
 
   const handlePrintAgreement = async (agreement: SaleAgreement) => {
@@ -2062,7 +2155,7 @@ export default function SaleAgreements() {
                               size="sm" 
                               onClick={() => {
                                 if (!attemptDelete()) return;
-                                toast.info('Delete functionality coming soon');
+                                setAgreementToDelete(agreement);
                               }}
                               disabled={!canDelete}
                               title={canDelete ? "Delete agreement" : "Only tenant admin can delete"}
@@ -2249,6 +2342,38 @@ export default function SaleAgreements() {
             }}
           />
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!agreementToDelete} onOpenChange={(open) => !open && setAgreementToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Sale Agreement</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div>
+                  Are you sure you want to delete agreement <strong>{agreementToDelete?.loan_number}</strong>?
+                  <br /><br />
+                  This will also delete:
+                  <ul className="list-disc list-inside mt-2 text-sm">
+                    <li>All gold items linked to this agreement</li>
+                    <li>Disbursement records</li>
+                    <li>Accounting vouchers</li>
+                  </ul>
+                  <br />
+                  This action cannot be undone.
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteAgreement} 
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete Agreement
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </DashboardLayout>
   );
