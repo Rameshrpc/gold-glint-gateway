@@ -426,113 +426,116 @@ export function SaleAgreementPDF({
         {/* Blank area for stamp paper - no text, just reserved space */}
         <View style={styles.stampAreaBlank} />
 
-        {/* Title */}
-        <Text style={styles.mainTitle}>GOLD BUY BACK AGREEMENT</Text>
-        <Text style={styles.mainTitleTamil}>தங்க திரும்ப கொள்முதல் ஒப்பந்தம்</Text>
+        {/* Wrap all content to prevent page break */}
+        <View wrap={false}>
+          {/* Title */}
+          <Text style={styles.mainTitle}>GOLD BUY BACK AGREEMENT</Text>
+          <Text style={styles.mainTitleTamil}>தங்க திரும்ப கொள்முதல் ஒப்பந்தம்</Text>
 
-        {/* Parties Section */}
-        <View style={styles.partiesSection}>
-          {/* Seller (Customer) */}
-          <View style={styles.partyTitleContainer}>
-            <Text style={styles.partyTitle}>1. THE SELLER </Text>
-            <Text style={styles.partyTitleTamil}>(விற்பவர்)</Text>
-          </View>
-          <View style={styles.partyDetails}>
-            <View style={styles.partyRow}>
-              <Text style={styles.partyLabel}>Name:</Text>
-              <Text style={styles.partyValue}>{customer.full_name}</Text>
+          {/* Parties Section */}
+          <View style={styles.partiesSection}>
+            {/* Seller (Customer) */}
+            <View style={styles.partyTitleContainer}>
+              <Text style={styles.partyTitle}>1. THE SELLER </Text>
+              <Text style={styles.partyTitleTamil}>(விற்பவர்)</Text>
             </View>
-            <View style={styles.partyRow}>
-              <Text style={styles.partyLabel}>Address:</Text>
-              <Text style={styles.partyValue}>{customerAddress || 'N/A'}</Text>
-            </View>
-            <View style={styles.partyRow}>
-              <Text style={styles.partyLabel}>Mobile:</Text>
-              <Text style={styles.partyValue}>{customer.phone}</Text>
-            </View>
-          </View>
-
-          {/* Buyer (Company) */}
-          <View style={styles.partyTitleContainer}>
-            <Text style={styles.partyTitle}>2. THE BUYER </Text>
-            <Text style={styles.partyTitleTamil}>(வாங்குபவர்)</Text>
-          </View>
-          <View style={styles.partyDetails}>
-            <View style={styles.partyRow}>
-              <Text style={styles.partyLabel}>Name:</Text>
-              <Text style={styles.partyValue}>M/s. {companyName}</Text>
-            </View>
-            {companyAddress && (
+            <View style={styles.partyDetails}>
+              <View style={styles.partyRow}>
+                <Text style={styles.partyLabel}>Name:</Text>
+                <Text style={styles.partyValue}>{customer.full_name}</Text>
+              </View>
               <View style={styles.partyRow}>
                 <Text style={styles.partyLabel}>Address:</Text>
-                <Text style={styles.partyValue}>{companyAddress}</Text>
+                <Text style={styles.partyValue}>{customerAddress || 'N/A'}</Text>
               </View>
-            )}
-            {gstin && (
               <View style={styles.partyRow}>
-                <Text style={styles.partyLabel}>GSTIN:</Text>
-                <Text style={styles.partyValue}>{gstin}</Text>
+                <Text style={styles.partyLabel}>Mobile:</Text>
+                <Text style={styles.partyValue}>{customer.phone}</Text>
               </View>
-            )}
-            {branchName && (
+            </View>
+
+            {/* Buyer (Company) */}
+            <View style={styles.partyTitleContainer}>
+              <Text style={styles.partyTitle}>2. THE BUYER </Text>
+              <Text style={styles.partyTitleTamil}>(வாங்குபவர்)</Text>
+            </View>
+            <View style={styles.partyDetails}>
               <View style={styles.partyRow}>
-                <Text style={styles.partyLabel}>Branch:</Text>
-                <Text style={styles.partyValue}>{branchName}</Text>
+                <Text style={styles.partyLabel}>Name:</Text>
+                <Text style={styles.partyValue}>M/s. {companyName}</Text>
               </View>
-            )}
+              {companyAddress && (
+                <View style={styles.partyRow}>
+                  <Text style={styles.partyLabel}>Address:</Text>
+                  <Text style={styles.partyValue}>{companyAddress}</Text>
+                </View>
+              )}
+              {gstin && (
+                <View style={styles.partyRow}>
+                  <Text style={styles.partyLabel}>GSTIN:</Text>
+                  <Text style={styles.partyValue}>{gstin}</Text>
+                </View>
+              )}
+              {branchName && (
+                <View style={styles.partyRow}>
+                  <Text style={styles.partyLabel}>Branch:</Text>
+                  <Text style={styles.partyValue}>{branchName}</Text>
+                </View>
+              )}
+            </View>
           </View>
-        </View>
 
-        {/* Summary Table */}
-        <View style={styles.summaryTable}>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Agreement Number</Text>
-            <Text style={styles.summaryValue}>{loan.loan_number}</Text>
+          {/* Summary Table */}
+          <View style={styles.summaryTable}>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Agreement Number</Text>
+              <Text style={styles.summaryValue}>{loan.loan_number}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Date</Text>
+              <Text style={styles.summaryValue}>{formatDate(loan.loan_date)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Amount (Purchase Price)</Text>
+              <Text style={styles.summaryValue}>{formatCurrencyPrint(displayPrincipal)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Gross Weight</Text>
+              <Text style={styles.summaryValue}>{formatWeightPrint(totals.grossWeight)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Net Weight</Text>
+              <Text style={styles.summaryValue}>{formatWeightPrint(totals.netWeight)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Value of Ornaments</Text>
+              <Text style={styles.summaryValue}>{formatCurrencyPrint(totals.value)}</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Tenure</Text>
+              <Text style={styles.summaryValue}>{loan.tenure_days} Days</Text>
+            </View>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Due Date</Text>
+              <Text style={styles.summaryValue}>{formatDate(loan.maturity_date)}</Text>
+            </View>
+            <View style={styles.summaryRowLast}>
+              <Text style={styles.summaryLabel}>Mobile Number</Text>
+              <Text style={styles.summaryValue}>{customer.phone}</Text>
+            </View>
           </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Date</Text>
-            <Text style={styles.summaryValue}>{formatDate(loan.loan_date)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Amount (Purchase Price)</Text>
-            <Text style={styles.summaryValue}>{formatCurrencyPrint(displayPrincipal)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Gross Weight</Text>
-            <Text style={styles.summaryValue}>{formatWeightPrint(totals.grossWeight)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Net Weight</Text>
-            <Text style={styles.summaryValue}>{formatWeightPrint(totals.netWeight)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Total Value of Ornaments</Text>
-            <Text style={styles.summaryValue}>{formatCurrencyPrint(totals.value)}</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Tenure</Text>
-            <Text style={styles.summaryValue}>{loan.tenure_days} Days</Text>
-          </View>
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Due Date</Text>
-            <Text style={styles.summaryValue}>{formatDate(loan.maturity_date)}</Text>
-          </View>
-          <View style={styles.summaryRowLast}>
-            <Text style={styles.summaryLabel}>Mobile Number</Text>
-            <Text style={styles.summaryValue}>{customer.phone}</Text>
-          </View>
-        </View>
 
-        {/* Signatures */}
-        <View style={styles.signatureSection}>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>For {companyName}</Text>
-            <View style={styles.signatureLine} />
-          </View>
-          <View style={styles.signatureBlock}>
-            <Text style={styles.signatureLabel}>Customer Signature:</Text>
-            <View style={styles.signatureLine} />
-            <Text style={styles.signatureSublabel}>Name: {customer.full_name}</Text>
+          {/* Signatures */}
+          <View style={styles.signatureSection}>
+            <View style={styles.signatureBlock}>
+              <Text style={styles.signatureLabel}>For {companyName}</Text>
+              <View style={styles.signatureLine} />
+            </View>
+            <View style={styles.signatureBlock}>
+              <Text style={styles.signatureLabel}>Customer Signature:</Text>
+              <View style={styles.signatureLine} />
+              <Text style={styles.signatureSublabel}>Name: {customer.full_name}</Text>
+            </View>
           </View>
         </View>
 
