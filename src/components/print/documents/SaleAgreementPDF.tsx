@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
   // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
   stampAreaBlank: {
     height: 320,
-    marginBottom: 15,
+    marginBottom: 8,
     // No border, no text - just blank space for physical stamp paper
   },
   // Title
@@ -75,14 +75,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 3,
+    marginBottom: 2,
     textDecoration: 'underline',
   },
   mainTitleTamil: {
     fontSize: 12,
     fontFamily: 'Noto Sans Tamil',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 6,
     color: '#333',
   },
   // Parties Section
@@ -93,8 +93,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f0f0f0',
-    padding: 4,
-    marginBottom: 3,
+    padding: 3,
+    marginBottom: 2,
   },
   partyTitle: {
     fontSize: 10,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   partyDetails: {
     paddingLeft: 10,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   partyRow: {
     flexDirection: 'row',
@@ -125,8 +125,8 @@ const styles = StyleSheet.create({
   },
   // Summary Table
   summaryTable: {
-    marginTop: 10,
-    marginBottom: 15,
+    marginTop: 6,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#333',
   },
@@ -156,8 +156,8 @@ const styles = StyleSheet.create({
   signatureSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 25,
-    paddingTop: 10,
+    marginTop: 15,
+    paddingTop: 8,
   },
   signatureBlock: {
     width: '40%',
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#333',
     width: '100%',
-    marginTop: 40,
+    marginTop: 30,
     marginBottom: 5,
   },
   signatureLabel: {
