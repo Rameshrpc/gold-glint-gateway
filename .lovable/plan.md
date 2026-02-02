@@ -1,64 +1,66 @@
 
 
-## Plan: Completely Remove Blank Page 2 from Sale Agreement PDF
+## Plan: Increase Stamp Area to 300pt Without Overflow
 
-### Problem Analysis
+### Current Situation
 
-The blank Page 2 is caused by Page 1 content overflowing. Currently:
-- Page 1 has a 320pt stamp area (mandatory for physical stamp paper)
-- The remaining content (title, parties, summary table, signatures) is wrapped in `wrap={false}`
-- When this content doesn't fit in the remaining ~480pt space, it creates an overflow page
+- Page 1 uses A4 size (842pt height) with 30pt padding = **782pt usable space**
+- Current stamp area: 200pt + 5pt margin = 205pt
+- Remaining space for content: ~577pt
 
-The `wrap={false}` prevents content from splitting across pages, but it doesn't compress content. If the wrapped content is too tall, it still spills to a new page.
+### After Change
 
-### Solution
+- New stamp area: 300pt + 5pt margin = 305pt  
+- New remaining space: 782pt - 305pt = **477pt for content**
 
-Reduce the stamp area height from 320pt to a smaller value (200pt) that still provides adequate space for physical stamp paper while fitting all Page 1 content on a single sheet.
+### Space Analysis
 
-Additionally, further reduce vertical spacing in Page 1 elements to guarantee everything fits.
+Current Page 1 content (approximate heights):
+| Element | Height |
+|---------|--------|
+| Title (English + Tamil) | ~25pt |
+| Parties section (Seller + Buyer) | ~75pt |
+| Summary table (9 rows) | ~90pt |
+| Signature section | ~60pt |
+| Page footer | ~15pt |
+| **Total** | **~265pt** |
+
+With 477pt available, this should fit. However, to ensure no overflow and add safety margin, I will:
+
+1. **Reduce signature section** (as user instructed):
+   - Reduce `signatureLine marginTop` from 20 to 10
+   - Reduce `signatureSection marginTop` from 8 to 4
+   - Keep signatures (not remove entirely) since space allows
+
+2. **Further compact spacing**:
+   - Reduce `summaryTable marginBottom` from 4 to 2
+   - Reduce `partiesSection marginBottom` from 12 to 6
 
 ### Technical Changes
 
 **File: `src/components/print/documents/SaleAgreementPDF.tsx`**
 
-| Style Property | Current | New |
-|----------------|---------|-----|
-| `stampAreaBlank.height` | 320 | 200 |
-| `stampAreaBlank.marginBottom` | 8 | 5 |
-| `mainTitle.marginBottom` | 2 | 1 |
-| `mainTitleTamil.marginBottom` | 6 | 3 |
-| `partyTitleContainer.padding` | 3 | 2 |
-| `partyTitleContainer.marginBottom` | 2 | 1 |
-| `partyDetails.marginBottom` | 4 | 2 |
-| `partyRow.marginBottom` | 2 | 1 |
-| `summaryTable.marginTop` | 6 | 4 |
-| `summaryTable.marginBottom` | 8 | 4 |
-| `summaryRow padding` | 5 | 3 |
-| `signatureSection.marginTop` | 15 | 8 |
-| `signatureSection.paddingTop` | 8 | 4 |
-| `signatureLine.marginTop` | 30 | 20 |
+| Style | Current | New |
+|-------|---------|-----|
+| `stampAreaBlank.height` | 200 | 300 |
+| `signatureSection.marginTop` | 8 | 4 |
+| `signatureLine.marginTop` | 20 | 10 |
+| `partiesSection.marginBottom` | 12 | 6 |
+| `summaryTable.marginBottom` | 4 | 2 |
 
-Total space saved: ~150pt (from stamp area reduction) + ~40pt (from spacing reductions) = ~190pt
-
-### Page Footer Updates
-
-After fix:
-- Page 1: "Page 1 of 3"
-- Page 2 (currently Page 3): "Page 2 of 3"
-- Page 3 (currently Page 4): "Page 3 of 3"
+Space saved from reductions: ~20pt extra buffer
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | 1. Reduce stamp area height from 320pt to 200pt<br>2. Reduce vertical spacing across all Page 1 elements<br>3. Keep `wrap={false}` as safety net |
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Increase stamp area height to 300pt; reduce signature and table margins |
 
 ### Expected Result
 
-After fix:
-- **Page 1**: Stamp area (200pt) + Title + Parties + Summary Table + Signatures (all fit on one page)
-- **Page 2**: Agreement Terms (ornaments table + 13 clauses + signatures)
-- **Page 3**: Customer Selling Declaration
+- **Page 1**: 300pt stamp area + Title + Parties + Summary + Signatures (all fits)
+- **Page 2**: Agreement Terms (ornaments + clauses)
+- **Page 3**: Customer Declaration
 
-No blank page will appear between Page 1 and Page 2.
+No overflow to a blank Page 2.
 
