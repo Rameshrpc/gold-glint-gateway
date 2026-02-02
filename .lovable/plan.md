@@ -1,61 +1,56 @@
 
 
-## Plan: Fix Blank Page 2 in Sale Agreement PDF
+## Plan: Remove Blank Page 2 in Sale Agreement PDF
 
 ### Problem
 
-The blank Page 2 you see is caused by **content overflow from Page 1**. When the PDF renders:
-
-1. Page 1 starts with 320pt stamp area + title + parties + summary table
-2. The signatures don't fit on Page 1, so they spill to a new page (the blank Page 2)
-3. The coded Page 2 (with ornaments + clauses) then appears as Page 3
-4. The coded Page 3 (declaration) appears as Page 4
+The blank Page 2 appears because the signature section on Page 1 is overflowing to a new page. With the 320pt stamp area, there's limited space, and the PDF renderer creates an empty overflow page.
 
 ### Solution
 
-Add `break="avoid"` to the signature section on Page 1 to prevent page breaks within it, AND ensure the View wrapping Page 1 content doesn't allow its children to break across pages.
-
-However, since the stamp area is 320pt and must stay, the better solution is to **reduce vertical spacing** in Page 1 to fit all content including signatures.
+Wrap all Page 1 content (after the stamp area) in a single View with `wrap={false}` to prevent any content from breaking to a new page. This forces all elements (title, parties, summary table, signatures) to fit within Page 1's remaining space.
 
 ### Technical Changes
 
 **File: `src/components/print/documents/SaleAgreementPDF.tsx`**
 
-| Change | Current | New |
-|--------|---------|-----|
-| Stamp area marginBottom | 15 | 8 |
-| Main title marginBottom | 3 | 2 |
-| Main title Tamil marginBottom | 12 | 6 |
-| Party title container padding | 4 | 3 |
-| Party details marginBottom | 8 | 4 |
-| Summary table marginTop | 10 | 6 |
-| Summary table marginBottom | 15 | 8 |
-| Signature section marginTop | 25 | 15 |
-| Signature line marginTop | 40 | 30 |
+Wrap lines 429-537 (from Title to Signatures) in a View with `wrap={false}`:
 
-These small reductions (total ~40-50pt saved) will ensure Page 1 content (including signatures) fits within the page.
+```typescript
+{/* Page 1: Cover / Stamp Paper Page */}
+<Page size={paperSize as any} style={styles.page}>
+  {/* Blank area for stamp paper */}
+  <View style={styles.stampAreaBlank} />
 
-### Page Footer Updates
+  {/* Wrap all content after stamp area to prevent page break */}
+  <View wrap={false}>
+    {/* Title */}
+    <Text style={styles.mainTitle}>GOLD BUY BACK AGREEMENT</Text>
+    ...
+    {/* Summary Table */}
+    ...
+    {/* Signatures */}
+    ...
+  </View>
 
-After fix, page numbering changes:
-- Page 1: Stamp Paper Page → "Page 1 of 3"
-- Page 2: Agreement Terms (ornaments + clauses) → "Page 2 of 3" 
-- Page 3: Customer Declaration → "Page 3 of 3"
+  <Text style={styles.pageFooter}>Page 1 of 3</Text>
+</Page>
+```
 
-No actual page deletion needed - just fixing the overflow issue.
+This ensures the signature section stays on Page 1 instead of creating a blank overflow page.
 
 ### Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/print/documents/SaleAgreementPDF.tsx` | Reduce vertical spacing in styles to fit Page 1 content on single page |
+| File | Change |
+|------|--------|
+| `src/components/print/documents/SaleAgreementPDF.tsx` | Add `<View wrap={false}>` wrapper around lines 429-537 (all content between stamp area and footer) |
 
 ### Expected Result
 
 After fix:
-- **Page 1**: Stamp area (320pt) + Title + Parties + Summary + Signatures (all on one page)
-- **Page 2**: Agreement Terms (ornaments table + 13 clauses + signatures)
+- **Page 1**: Stamp area (320pt) + Title + Parties + Summary + Signatures (no overflow)
+- **Page 2**: Agreement Terms (ornaments + clauses) 
 - **Page 3**: Customer Selling Declaration
 
-No blank page between Page 1 and the Agreement Terms page.
+No blank Page 2 will appear.
 
