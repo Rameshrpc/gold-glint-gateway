@@ -200,14 +200,18 @@ export function SaleAgreementPrintDialog({
           pan_card_url: panCardUrl,
         };
         
+        // Use Zamin Gold branding for Sale Agreement documents
+        const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+        const saleAgreementLogoUrl = effectiveSettings.sale_agreement_logo_url || effectiveSettings.logo_url;
+        
         const doc = (
           <KYCDocumentsPDF
             customer={customerWithSignedUrls}
             loanNumber={loan.loan_number}
-            companyName={companyName}
+            companyName={saleAgreementCompanyName}
             language={language}
             paperSize={paperSize}
-            logoUrl={effectiveSettings.logo_url}
+            logoUrl={saleAgreementLogoUrl}
           />
         );
         for (let i = 0; i < copies.kycDocuments; i++) {
@@ -221,6 +225,10 @@ export function SaleAgreementPrintDialog({
         // Fetch signed URL for jewel photo
         const jewelPhotoSignedUrl = await getSignedLoanDocumentUrl(loan.jewel_photo_url);
         
+        // Use Zamin Gold branding for Sale Agreement documents
+        const saleAgreementCompanyName = effectiveSettings.sale_agreement_company_name || companyName;
+        const saleAgreementLogoUrl = effectiveSettings.sale_agreement_logo_url || effectiveSettings.logo_url;
+        
         const doc = (
           <JewelImagePDF
             jewelPhotoUrl={jewelPhotoSignedUrl}
@@ -229,10 +237,10 @@ export function SaleAgreementPrintDialog({
             loanDate={loan.loan_date}
             customerName={customer.full_name}
             customerCode={customer.customer_code}
-            companyName={companyName}
+            companyName={saleAgreementCompanyName}
             language={language}
             paperSize={paperSize}
-            logoUrl={effectiveSettings.logo_url}
+            logoUrl={saleAgreementLogoUrl}
           />
         );
         for (let i = 0; i < copies.jewelImage; i++) {
