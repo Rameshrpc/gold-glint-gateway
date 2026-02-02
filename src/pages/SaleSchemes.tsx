@@ -135,7 +135,22 @@ export default function SaleSchemes() {
     if (!schemeToDelete) return;
     
     try {
-      // First delete any versions
+      // Check if any sale agreements use this scheme
+      const { count: agreementCount } = await supabase
+        .from('loans')
+        .select('id', { count: 'exact', head: true })
+        .eq('scheme_id', schemeToDelete.id)
+        .eq('transaction_type', 'sale_agreement');
+      
+      if (agreementCount && agreementCount > 0) {
+        toast.error('Cannot delete scheme. It is being used by existing sale agreements.', {
+          description: `${agreementCount} agreement(s) are linked to this scheme.`
+        });
+        setSchemeToDelete(null);
+        return;
+      }
+      
+      // Safe to delete - first delete versions
       await supabase
         .from('scheme_versions')
         .delete()
@@ -152,7 +167,11 @@ export default function SaleSchemes() {
       setSchemeToDelete(null);
       fetchSchemes();
     } catch (error: any) {
-      toast.error('Failed to delete scheme');
+      if (error.code === '23503') {
+        toast.error('Cannot delete scheme. It is being used by existing agreements.');
+      } else {
+        toast.error('Failed to delete scheme');
+      }
     }
   };
 
@@ -254,12 +273,128 @@ export default function SaleSchemes() {
       };
 
       if (editingScheme) {
-        const { error } = await supabase
-          .from('schemes')
-          .update(schemeData)
-          .eq('id', editingScheme.id);
-        if (error) throw error;
-        toast.success('Scheme updated successfully');
+        // Check if any sale agreements exist with this scheme
+        const { count: agreementCount } = await supabase
+          .from('loans')
+          .select('id', { count: 'exact', head: true })
+          .eq('scheme_id', editingScheme.id)
+          .eq('transaction_type', 'sale_agreement');
+
+        if (agreementCount && agreementCount > 0) {
+          // Agreements exist - create NEW VERSION instead of modifying in place
+          
+          // Get current max version number
+          const { data: existingVersions } = await supabase
+            .from('scheme_versions')
+            .select('version_number')
+            .eq('scheme_id', editingScheme.id)
+            .order('version_number', { ascending: false })
+            .limit(1);
+
+          const nextVersionNumber = (existingVersions?.[0]?.version_number || 0) + 1;
+          const today = new Date().toISOString().split('T')[0];
+
+          // Close old version
+          const { data: currentScheme } = await supabase
+            .from('schemes')
+            .select('current_version_id')
+            .eq('id', editingScheme.id)
+            .single();
+
+          if (currentScheme?.current_version_id) {
+            await supabase
+              .from('scheme_versions')
+              .update({ effective_to: today })
+              .eq('id', currentScheme.current_version_id);
+          }
+
+          // Create new version with new rates
+          const { data: newVersion, error: versionError } = await supabase
+            .from('scheme_versions')
+            .insert({
+              scheme_id: editingScheme.id,
+              client_id: client.id,
+              version_number: nextVersionNumber,
+              effective_from: today,
+              change_reason: 'Scheme updated - new version for new agreements',
+              margin_per_month: marginPerMonth,
+              tenure_step: 15,
+              interest_rate: schemeData.interest_rate,
+              shown_rate: schemeData.shown_rate,
+              effective_rate: schemeData.effective_rate,
+              minimum_days: schemeData.minimum_days,
+              advance_interest_months: schemeData.advance_interest_months,
+              rate_18kt: schemeData.rate_18kt,
+              rate_22kt: schemeData.rate_22kt,
+              min_amount: schemeData.min_amount,
+              max_amount: schemeData.max_amount,
+              min_tenure_days: schemeData.min_tenure_days,
+              max_tenure_days: schemeData.max_tenure_days,
+              ltv_percentage: schemeData.ltv_percentage,
+              processing_fee_percentage: schemeData.processing_fee_percentage,
+              document_charges: schemeData.document_charges,
+            })
+            .select()
+            .single();
+
+          if (versionError) throw versionError;
+
+          // Update scheme header with new current_version_id
+          const { error: updateError } = await supabase
+            .from('schemes')
+            .update({
+              ...schemeData,
+              current_version_id: newVersion.id,
+            })
+            .eq('id', editingScheme.id);
+
+          if (updateError) throw updateError;
+
+          toast.success(`Scheme updated. Version ${nextVersionNumber} created for new agreements.`, {
+            description: 'Existing agreements will continue using their original terms.'
+          });
+        } else {
+          // No agreements exist - safe to update in place
+          const { error } = await supabase
+            .from('schemes')
+            .update(schemeData)
+            .eq('id', editingScheme.id);
+          
+          if (error) throw error;
+
+          // Also update the current version record
+          const { data: currentScheme } = await supabase
+            .from('schemes')
+            .select('current_version_id')
+            .eq('id', editingScheme.id)
+            .single();
+
+          if (currentScheme?.current_version_id) {
+            await supabase
+              .from('scheme_versions')
+              .update({
+                margin_per_month: marginPerMonth,
+                tenure_step: 15,
+                interest_rate: schemeData.interest_rate,
+                shown_rate: schemeData.shown_rate,
+                effective_rate: schemeData.effective_rate,
+                minimum_days: schemeData.minimum_days,
+                advance_interest_months: schemeData.advance_interest_months,
+                rate_18kt: schemeData.rate_18kt,
+                rate_22kt: schemeData.rate_22kt,
+                min_amount: schemeData.min_amount,
+                max_amount: schemeData.max_amount,
+                min_tenure_days: schemeData.min_tenure_days,
+                max_tenure_days: schemeData.max_tenure_days,
+                ltv_percentage: schemeData.ltv_percentage,
+                processing_fee_percentage: schemeData.processing_fee_percentage,
+                document_charges: schemeData.document_charges,
+              })
+              .eq('id', currentScheme.current_version_id);
+          }
+
+          toast.success('Scheme updated successfully');
+        }
       } else {
         // Create new scheme
         const { data: newScheme, error: schemeError } = await supabase
