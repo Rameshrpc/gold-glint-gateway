@@ -11,9 +11,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { Loader2, ChevronDown, ChevronRight, Save, ShieldCheck, Users, Banknote, FileText, Gavel, Coins } from 'lucide-react';
+import { Loader2, ChevronDown, ChevronRight, Save, ShieldCheck, Users, Banknote, FileText, Gavel, Coins, ShoppingCart, RotateCcw, TrendingUp } from 'lucide-react';
 
-type WorkflowType = 'loan' | 'redemption' | 'voucher' | 'auction' | 'commission';
+type WorkflowType = 'loan' | 'redemption' | 'voucher' | 'auction' | 'commission' | 'sale_agreement' | 'repurchase' | 'margin_renewal';
 type AppRole = 'tenant_admin' | 'branch_manager' | 'loan_officer' | 'appraiser' | 'collection_agent' | 'auditor';
 
 interface ApprovalWorkflow {
@@ -28,12 +28,15 @@ interface ApprovalWorkflow {
   l2_approver_roles: AppRole[];
 }
 
-const WORKFLOW_TYPES: { key: WorkflowType; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'loan', label: 'Loan Creation', icon: Banknote },
-  { key: 'redemption', label: 'Redemption', icon: Coins },
-  { key: 'voucher', label: 'Voucher', icon: FileText },
-  { key: 'auction', label: 'Auction', icon: Gavel },
-  { key: 'commission', label: 'Commission Payment', icon: Users },
+const WORKFLOW_TYPES: { key: WorkflowType; label: string; description: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'loan', label: 'Loan Creation', description: 'Gold loan disbursement approval', icon: Banknote },
+  { key: 'redemption', label: 'Redemption', description: 'Loan closure and gold release', icon: Coins },
+  { key: 'voucher', label: 'Voucher', description: 'Accounting voucher approval', icon: FileText },
+  { key: 'auction', label: 'Auction', description: 'Gold auction approval', icon: Gavel },
+  { key: 'commission', label: 'Commission Payment', description: 'Agent commission payout', icon: Users },
+  { key: 'sale_agreement', label: 'Sale Agreement Creation', description: 'Trading format gold purchase approval', icon: ShoppingCart },
+  { key: 'repurchase', label: 'Repurchase (Buyback)', description: 'Customer buyback and goods release', icon: RotateCcw },
+  { key: 'margin_renewal', label: 'Margin Renewal', description: 'High-value margin payment approval', icon: TrendingUp },
 ];
 
 const ALL_ROLES: { value: AppRole; label: string }[] = [
@@ -202,7 +205,7 @@ export function ApprovalWorkflowSettings() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {WORKFLOW_TYPES.map(({ key, label, icon: Icon }) => {
+          {WORKFLOW_TYPES.map(({ key, label, description, icon: Icon }) => {
             const workflow = workflows[key];
             const isExpanded = expandedWorkflow === key;
             
@@ -213,11 +216,12 @@ export function ApprovalWorkflowSettings() {
                 onOpenChange={(open) => setExpandedWorkflow(open ? key : null)}
               >
                 <div className="border rounded-lg">
-                  <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-muted/50 transition-colors">
                     <div className="flex items-center gap-3">
                       <Icon className="h-5 w-5 text-muted-foreground" />
                       <div className="text-left">
                         <p className="font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground mb-0.5">{description}</p>
                         <p className="text-sm text-muted-foreground">
                           {workflow.is_enabled 
                             ? `Enabled • Threshold: ₹${workflow.threshold_amount.toLocaleString()}`

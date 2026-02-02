@@ -676,8 +676,8 @@ export default function SaleAgreements() {
     try {
       // Check if approval is required
       const purchaseAmount = agreementCalculation.finalApprovedAmount;
-      const { required: approvalRequired } = await checkApprovalRequired('loan', purchaseAmount);
-      const userCanAutoApprove = await canAutoApprove('loan');
+      const { required: approvalRequired } = await checkApprovalRequired('sale_agreement', purchaseAmount);
+      const userCanAutoApprove = await canAutoApprove('sale_agreement');
       
       const approvalStatus = (!approvalRequired || userCanAutoApprove) ? 'approved' : 'pending';
       
@@ -839,13 +839,18 @@ export default function SaleAgreements() {
       // Submit for approval if required
       if (approvalStatus === 'pending') {
         await submitForApproval({
-          workflowType: 'loan',
-          entityType: 'loan',
+          workflowType: 'sale_agreement',
+          entityType: 'sale_agreement',
           entityId: agreementResult.id,
           entityNumber: agreementResult.loan_number,
           branchId: selectedBranchId,
           amount: purchaseAmount,
           description: `Sale Agreement ${agreementResult.loan_number} for ${customers.find(c => c.id === selectedCustomerId)?.full_name}`,
+          metadata: {
+            customer_name: customers.find(c => c.id === selectedCustomerId)?.full_name,
+            customer_code: customers.find(c => c.id === selectedCustomerId)?.customer_code,
+            gold_weight: goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0),
+          },
         });
         toast.info('Agreement submitted for approval');
       }

@@ -371,8 +371,8 @@ export default function SaleRepurchase() {
     setSubmitting(true);
     try {
       // Check if approval is required
-      const { required: approvalRequired, workflow } = await checkApprovalRequired('redemption', repurchaseCalc.breakdown.total);
-      const userCanAutoApprove = await canAutoApprove('redemption');
+      const { required: approvalRequired, workflow } = await checkApprovalRequired('repurchase', repurchaseCalc.breakdown.total);
+      const userCanAutoApprove = await canAutoApprove('repurchase');
       const needsApproval = approvalRequired && !userCanAutoApprove;
 
       // Generate repurchase number
@@ -431,8 +431,8 @@ export default function SaleRepurchase() {
       // If approval is needed, submit for approval and don't close agreement yet
       if (needsApproval) {
         await submitForApproval({
-          workflowType: 'redemption',
-          entityType: 'redemption',
+          workflowType: 'repurchase',
+          entityType: 'repurchase',
           entityId: repurchaseResult.id,
           entityNumber: repurchaseNumber,
           branchId: selectedAgreement.branch_id,
@@ -441,8 +441,10 @@ export default function SaleRepurchase() {
           metadata: {
             loan_number: selectedAgreement.loan_number,
             customer_name: selectedAgreement.customer.full_name,
+            customer_code: selectedAgreement.customer.customer_code,
             principal: repurchaseCalc.breakdown.principal,
             interest: repurchaseCalc.breakdown.interest,
+            gold_weight: goldItems.reduce((sum, item) => sum + item.net_weight_grams, 0),
           },
         });
 
