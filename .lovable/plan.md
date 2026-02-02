@@ -1,133 +1,132 @@
 
+## Plan: Create Unique Print Dialog for Sale Agreements
 
-## Plan: Add Mock Data for Sale Agreements Testing
+### Problem Statement
+Currently, Sale Agreements use the generic `LoanPrintDialog` component which shows all 6 document types (Loan Receipt, Bill of Sale, Gold Declaration, Terms & Conditions, KYC Documents, Jewel Image). For Sale Agreements, only 3 documents are needed:
+1. Bill of Sale Agreement (Sale Agreement PDF)
+2. KYC Documents
+3. Jewel Image
 
-### Purpose
-Insert mock sale agreements at various dates to test:
-- Overdue agreements (past maturity)
-- Agreements maturing soon
-- Recently created agreements
-- Active agreements at different stages
-
-### Mock Data Configuration
-
-| Agreement | Date | Tenure | Status | Customer | Scheme | Gold Item | Purpose |
-|-----------|------|--------|--------|----------|--------|-----------|---------|
-| SA-90 days ago | 90 days ago | 60 days | **Overdue** | Senthil Kumar | SALE13 (₹13K/g) | 22K Chain 15g | Test overdue logic |
-| SA-60 days ago | 60 days ago | 45 days | **Overdue** | Anand | SALE 12 (₹12K/g) | 22K Ring 8g | Test penalty calculation |
-| SA-30 days ago | 30 days ago | 45 days | Active, maturing in 15 days | Kannan | SALE13 | 22K Bangle 25g | Test upcoming maturity |
-| SA-15 days ago | 15 days ago | 30 days | Active, maturing in 15 days | Karthik | SALE 12 | 22K Necklace 12g | Test near maturity |
-| SA-7 days ago | 7 days ago | 60 days | Active, fresh | Suresh GV | SALE13 | Gold Coin 10g | Test active agreement |
-| SA-Today | Today | 90 days | Active, fresh | Stalin | SALE 12 | Gold Bar 20g | Test new agreement |
+### Solution Overview
+Create a dedicated `SaleAgreementPrintDialog` component specifically for Sale Agreements with:
+- Only 3 document options instead of 6
+- Sale Agreement-appropriate terminology
+- Title: "Print Sale Agreement Documents" instead of "Print Loan Documents"
 
 ---
 
-### Technical Details
+### Technical Changes
 
-**Target Client**: `2abc571d-ce56-4e32-ac8e-0761fafe8999` (has active sale schemes)
-**Target Branch**: `e28769c4-3a51-4187-b6ee-2c53f8473561` (Main Branch)
+#### 1. Create New Component: `src/components/print/SaleAgreementPrintDialog.tsx`
 
-**Schemes Available**:
-- `SALE13` (id: `128eafb4-d2df-4f1e-b2a8-3c13e3fc303d`) - ₹13,000/g, ₹3,000 margin/month
-- `SALE 12` (id: `a96b296a-f4a2-4237-b60e-411b40b7292a`) - ₹12,000/g, ₹2,000 margin/month
+A simplified version of `LoanPrintDialog.tsx` that:
+- Only includes 3 document types: Bill of Sale Agreement, KYC Documents, Jewel Image
+- Uses appropriate terminology ("Sale Agreement" instead of "Loan")
+- Uses `SaleAgreementPDF` for the Bill of Sale Agreement
+- Sets Bill of Sale Agreement as selected by default
 
-**Customers**:
-| Customer | ID |
-|----------|-----|
-| Senthil Kumar | `8cfce6c5-bcc3-481b-b217-0ea8e3006611` |
-| Anand | `e05f769d-a317-44fd-b741-8a83f443d060` |
-| Kannan Moorthy | `690ac7b4-e445-4234-8725-6c12ff5cf245` |
-| Karthik | `c3688d6b-7085-458d-9635-8fdcc7324760` |
-| Suresh GV | `fd41cca3-1ff9-43db-8be4-2aa2da51f879` |
-| Stalin | `58f30128-96a3-4fde-b32d-20c5ea9f80ec` |
+```typescript
+interface DocumentSelection {
+  billOfSale: boolean;
+  kycDocuments: boolean;
+  jewelImage: boolean;
+}
 
-**Items**: Gold items will be linked from existing items (COIN, BAR, HAARAM, etc.)
+interface CopyCounts {
+  billOfSale: number;
+  kycDocuments: number;
+  jewelImage: number;
+}
 
----
-
-### SQL Migrations
-
-#### 1. Insert Sale Agreements (loans table)
-
-```sql
--- Mock Sale Agreements with various dates for testing
--- All for client: 2abc571d-ce56-4e32-ac8e-0761fafe8999
-
--- Agreement 1: 90 days ago (OVERDUE - matured 30 days ago)
-INSERT INTO loans (
-  client_id, branch_id, customer_id, scheme_id, scheme_version_id,
-  loan_number, loan_date, principal_amount, interest_rate, tenure_days,
-  maturity_date, net_disbursed, status, transaction_type, approval_status,
-  shown_principal, actual_principal
-) VALUES (
-  '2abc571d-ce56-4e32-ac8e-0761fafe8999',
-  'e28769c4-3a51-4187-b6ee-2c53f8473561',
-  '8cfce6c5-bcc3-481b-b217-0ea8e3006611', -- Senthil Kumar
-  '128eafb4-d2df-4f1e-b2a8-3c13e3fc303d', -- SALE13
-  '89ed7826-0493-44ac-8b5f-6c39c9e17a30',
-  'SA202511040001',
-  CURRENT_DATE - INTERVAL '90 days',
-  195000, -- 15g x 13000
-  36,
-  60,
-  CURRENT_DATE - INTERVAL '30 days',
-  195000,
-  'overdue',
-  'sale_agreement',
-  'approved',
-  195000,
-  195000
-);
-
--- Agreement 2: 60 days ago (OVERDUE - matured 15 days ago)
-INSERT INTO loans (...) VALUES (...);
-
--- Agreement 3: 30 days ago (Active - matures in 15 days)
-INSERT INTO loans (...) VALUES (...);
-
--- Agreement 4: 15 days ago (Active - matures in 15 days)
-INSERT INTO loans (...) VALUES (...);
-
--- Agreement 5: 7 days ago (Active - fresh)
-INSERT INTO loans (...) VALUES (...);
-
--- Agreement 6: Today (Active - brand new)
-INSERT INTO loans (...) VALUES (...);
+const documents = [
+  { key: 'billOfSale', label: 'Bill of Sale Agreement', icon: FileText },
+  { key: 'kycDocuments', label: 'KYC Documents', icon: FileText },
+  { key: 'jewelImage', label: 'Jewel Image', icon: FileText },
+];
 ```
 
-#### 2. Insert Gold Items
+**Key differences from LoanPrintDialog:**
+- Removed: `loanReceipt`, `goldDeclaration`, `termsConditions`
+- Dialog title: "Print Sale Agreement Documents"
+- Default selection: `billOfSale: true`, `kycDocuments: true`, `jewelImage: true`
+- Download filename: `SaleAgreement_${loan.loan_number}_...pdf`
 
-```sql
--- Gold items for each agreement
-INSERT INTO gold_items (
-  loan_id, item_type, item_id, item_group_id, description,
-  gross_weight_grams, net_weight_grams, purity, purity_percentage,
-  stone_weight_grams, market_rate_per_gram, appraised_value, market_value,
-  market_rate_date
-) VALUES (...);
+#### 2. Update Component Exports: `src/components/print/index.ts`
+
+Add export for the new component:
+```typescript
+export * from './SaleAgreementPrintDialog';
 ```
 
-#### 3. Insert Disbursement Records
+#### 3. Update Sale Agreements Page: `src/pages/SaleAgreements.tsx`
 
-```sql
--- Disbursement record for each agreement
-INSERT INTO loan_disbursements (
-  loan_id, payment_mode, amount, source_type
-) VALUES (...);
+Replace `LoanPrintDialog` with `SaleAgreementPrintDialog`:
+
+```typescript
+// Change import
+import { SaleAgreementPrintDialog } from '@/components/print/SaleAgreementPrintDialog';
+
+// In JSX (around line 2310)
+{printingAgreement && printingCustomer && (
+  <SaleAgreementPrintDialog
+    open={printDialogOpen}
+    onOpenChange={setPrintDialogOpen}
+    loan={printingAgreement as any}
+    customer={printingCustomer}
+    goldItems={printingGoldItems}
+  />
+)}
 ```
 
 ---
 
-### Test Scenarios After Implementation
+### Component Structure
 
-| Test Case | Expected Behavior |
-|-----------|-------------------|
-| View overdue agreements | SA202511040001, SA202512040001 should show with red "Overdue" badge |
-| View maturing soon | SA202601040001, SA202601180001 should highlight maturity countdown |
-| Calculate trade margin | Agreements should show correct margin based on days elapsed |
-| Strike price calculation | Spot price + (margin × months) should be accurate |
-| Delete fresh agreement | Today's agreement can be deleted (no payments) |
-| Delete overdue | Overdue agreements cannot be deleted if margin payments exist |
+```
+SaleAgreementPrintDialog
+├── Dialog Header: "Print Sale Agreement Documents"
+├── Agreement Info Box (Number + Customer Name)
+├── Quick Actions (Select All / Deselect All)
+├── Document Selection (3 items only):
+│   ├── ☑️ Bill of Sale Agreement [2]
+│   ├── ☑️ KYC Documents         [1]
+│   └── ☑️ Jewel Image           [1]
+└── Footer (Cancel | Download | Print)
+```
+
+---
+
+### PDF Generation Logic (Simplified)
+
+```typescript
+const generatePDF = async (action: 'print' | 'download') => {
+  const blobs: Blob[] = [];
+
+  // 1. Bill of Sale Agreement (uses SaleAgreementPDF)
+  if (selection.billOfSale) {
+    const doc = <SaleAgreementPDF ... />;
+    blobs.push(await pdf(doc).toBlob());
+  }
+
+  // 2. KYC Documents
+  if (selection.kycDocuments) {
+    const signedUrls = await Promise.all([...]);
+    const doc = <KYCDocumentsPDF ... />;
+    blobs.push(await pdf(doc).toBlob());
+  }
+
+  // 3. Jewel Image
+  if (selection.jewelImage) {
+    const signedUrl = await getSignedLoanDocumentUrl(...);
+    const doc = <JewelImagePDF ... />;
+    blobs.push(await pdf(doc).toBlob());
+  }
+
+  // Merge and output
+  const mergedPdf = await PDFDocument.create();
+  // ... merge logic
+};
+```
 
 ---
 
@@ -135,16 +134,33 @@ INSERT INTO loan_disbursements (
 
 | File | Change |
 |------|--------|
-| **Database Migration** | Add SQL to insert 6 mock sale agreements with gold items and disbursements |
+| `src/components/print/SaleAgreementPrintDialog.tsx` | **NEW** - Create dedicated print dialog with 3 documents |
+| `src/components/print/index.ts` | Add export for `SaleAgreementPrintDialog` |
+| `src/pages/SaleAgreements.tsx` | Replace `LoanPrintDialog` with `SaleAgreementPrintDialog` |
 
 ---
 
-### Data Integrity
+### UI Comparison
 
-All mock data will use:
-- Existing valid customer IDs
-- Existing valid scheme IDs with version references
-- Existing valid item IDs for gold items
-- Proper status assignment (overdue for past maturity, active for future)
-- Correct principal calculations based on gold weight × scheme rate
+| Current (LoanPrintDialog) | New (SaleAgreementPrintDialog) |
+|---------------------------|--------------------------------|
+| "Print Loan Documents" | "Print Sale Agreement Documents" |
+| 6 document options | 3 document options |
+| Loan Receipt (default) | Bill of Sale Agreement (default) |
+| Bill of Sale Agreement | Bill of Sale Agreement |
+| Gold Declaration | - |
+| Terms & Conditions | - |
+| KYC Documents | KYC Documents |
+| Jewel Image | Jewel Image |
 
+---
+
+### Expected Behavior
+
+1. User clicks Print icon on any Sale Agreement row
+2. New simplified dialog appears with title "Print Sale Agreement Documents"
+3. Shows agreement number and customer name
+4. Only 3 documents available to select (all pre-selected by default)
+5. User can adjust copies for each document
+6. Download/Print generates merged PDF with only selected documents
+7. Filename format: `SaleAgreement_SA202602020001_2026-02-02.pdf`
