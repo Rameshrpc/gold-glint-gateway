@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
   stampAreaBlank: {
-    height: 200,
+    height: 320,
     marginBottom: 15,
     // No border, no text - just blank space for physical stamp paper
   },
@@ -528,7 +528,6 @@ export function SaleAgreementPDF({
           <View style={styles.signatureBlock}>
             <Text style={styles.signatureLabel}>For {companyName}</Text>
             <View style={styles.signatureLine} />
-            <Text style={styles.signatureSublabel}>Authorised Signatory</Text>
           </View>
           <View style={styles.signatureBlock}>
             <Text style={styles.signatureLabel}>Customer Signature:</Text>
