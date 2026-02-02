@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
   stampAreaBlank: {
-    height: 320,
+    height: 200,
     marginBottom: 15,
     // No border, no text - just blank space for physical stamp paper
   },
