@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
   // Page 1 - Blank Stamp Paper Area (for physical stamp paper printing)
   stampAreaBlank: {
-    height: 200,
+    height: 300,
     marginBottom: 5,
     // No border, no text - just blank space for physical stamp paper
   },
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   },
   // Parties Section
   partiesSection: {
-    marginBottom: 12,
+    marginBottom: 6,
   },
   partyTitleContainer: {
     flexDirection: 'row',
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   // Summary Table
   summaryTable: {
     marginTop: 4,
-    marginBottom: 4,
+    marginBottom: 2,
     borderWidth: 1,
     borderColor: '#333',
   },
@@ -156,7 +156,7 @@ const styles = StyleSheet.create({
   signatureSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 4,
     paddingTop: 4,
   },
   signatureBlock: {
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#333',
     width: '100%',
-    marginTop: 20,
+    marginTop: 10,
     marginBottom: 5,
   },
   signatureLabel: {
