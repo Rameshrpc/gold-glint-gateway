@@ -33,7 +33,7 @@ import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
 import ImageCapture from '@/components/loans/ImageCapture';
 import LoanEditDialog from '@/components/loans/LoanEditDialog';
-import { LoanPrintDialog } from '@/components/print/LoanPrintDialog';
+import { SaleAgreementPrintDialog } from '@/components/print/SaleAgreementPrintDialog';
 import { BulkOperationsDialog } from '@/components/loans/BulkOperationsDialog';
 import { generateLoanDisbursementVoucher, generateAgentCommissionAccrualVoucher } from '@/hooks/useVoucherGeneration';
 import { LoanStatementPDF } from '@/components/print/documents';
@@ -2307,7 +2307,7 @@ export default function SaleAgreements() {
 
         {/* Print Dialog */}
         {printingAgreement && printingCustomer && (
-          <LoanPrintDialog
+          <SaleAgreementPrintDialog
             open={printDialogOpen}
             onOpenChange={setPrintDialogOpen}
             loan={printingAgreement as any}
