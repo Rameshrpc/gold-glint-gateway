@@ -48,6 +48,13 @@ const menuGroups: MenuGroup[] = [
     ]
   },
   {
+    title: 'Gold Vault',
+    icon: Vault,
+    items: [
+      { title: 'Gold Vault', icon: Vault, href: '/gold-vault' }
+    ]
+  },
+  {
     title: 'Administration',
     icon: Building2,
     roles: ['super_admin', 'moderator', 'tenant_admin'],
@@ -80,7 +87,6 @@ const menuGroups: MenuGroup[] = [
       { title: 'Redemption', icon: Wallet, href: '/redemption', moduleKey: 'redemption' },
       { title: 'Reloan', icon: RefreshCw, href: '/reloan' },
       { title: 'Auction', icon: Gavel, href: '/auction' },
-      { title: 'Gold Vault', icon: Vault, href: '/gold-vault' },
       { title: 'Approvals', icon: Bell, href: '/approvals' },
     ]
   },
@@ -181,9 +187,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const filterMenuGroup = (group: MenuGroup) => {
     // Feature flag checks for entire menu groups
-    // Show Operations if either loans OR sale agreements is enabled (for Gold Vault access)
-    if (group.title === 'Operations') {
+    // Gold Vault is shared - show if either loans OR sale agreements is enabled
+    if (group.title === 'Gold Vault') {
       if (client && !client.supports_loans && !client.supports_sale_agreements) {
+        return false;
+      }
+    }
+    // Operations only shown if loans is enabled (Gold Vault moved out)
+    if (group.title === 'Operations') {
+      if (client && !client.supports_loans) {
         return false;
       }
     }
@@ -344,6 +356,22 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                   >
                     <LayoutDashboard className="h-5 w-5" />
                     <span>Dashboard</span>
+                  </NavLink>
+                );
+              }
+
+              // For Gold Vault, render as single item without collapsible
+              if (group.title === 'Gold Vault') {
+                return (
+                  <NavLink 
+                    key={group.title}
+                    to="/gold-vault" 
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-amber-100/80 dark:text-amber-200/70 hover:bg-white/10 dark:hover:bg-amber-500/10 hover:text-white dark:hover:text-amber-50 transition-colors"
+                    activeClassName="bg-white/20 dark:bg-amber-500/20 text-white dark:text-amber-50 font-medium"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Vault className="h-5 w-5" />
+                    <span>Gold Vault</span>
                   </NavLink>
                 );
               }
