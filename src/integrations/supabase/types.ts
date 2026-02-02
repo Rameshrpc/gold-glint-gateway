@@ -2558,6 +2558,7 @@ export type Database = {
           paper_size: string
           sale_agreement_company_address: string | null
           sale_agreement_company_name: string | null
+          sale_agreement_logo_url: string | null
           terms_conditions_copies: number
           updated_at: string | null
           use_trading_format: boolean | null
@@ -2591,6 +2592,7 @@ export type Database = {
           paper_size?: string
           sale_agreement_company_address?: string | null
           sale_agreement_company_name?: string | null
+          sale_agreement_logo_url?: string | null
           terms_conditions_copies?: number
           updated_at?: string | null
           use_trading_format?: boolean | null
@@ -2624,6 +2626,7 @@ export type Database = {
           paper_size?: string
           sale_agreement_company_address?: string | null
           sale_agreement_company_name?: string | null
+          sale_agreement_logo_url?: string | null
           terms_conditions_copies?: number
           updated_at?: string | null
           use_trading_format?: boolean | null
