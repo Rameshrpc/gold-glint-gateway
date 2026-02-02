@@ -1,33 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Pencil, Trash2, FileText, X, Calculator } from 'lucide-react';
+import { Plus, Pencil, Calculator, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { calculateStrikePrices, type StrikePeriodConfig } from '@/lib/strike-price-utils';
 import { format } from 'date-fns';
-
-interface StrikePeriod {
-  days: number;
-  label_en: string;
-  label_ta: string;
-}
+import {
+  calculateSaleAgreement,
+  calculateSimpleStrikePrices,
+  marginToAnnualRate,
+  annualRateToMargin,
+  generateTenureOptions,
+  formatSaleAgreementCurrency,
+  type SaleAgreementScheme,
+} from '@/lib/saleAgreementCalculations';
 
 interface SaleScheme {
   id: string;
   scheme_code: string;
   scheme_name: string;
-  shown_rate: number;
-  effective_rate: number;
-  minimum_days: number;
+  margin_per_month: number;
   advance_interest_months: number;
   ltv_percentage: number;
   min_amount: number;
@@ -40,6 +40,9 @@ interface SaleScheme {
   rate_22kt: number | null;
   strike_periods: unknown;
   is_active: boolean;
+  // Legacy fields (for backward compatibility)
+  shown_rate?: number;
+  effective_rate?: number;
 }
 
 export default function SaleSchemes() {
@@ -50,33 +53,22 @@ export default function SaleSchemes() {
   const [editingScheme, setEditingScheme] = useState<SaleScheme | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   
-  // Form state
+  // Form state - simplified for sale agreements
   const [formData, setFormData] = useState({
     scheme_code: '',
     scheme_name: '',
-    shown_rate: '',
-    effective_rate: '',
-    minimum_days: '30',
-    advance_interest_months: '3',
+    margin_per_month: '1500',       // ₹ per month per ₹1 lakh
+    advance_interest_months: '1',    // Months collected upfront
     ltv_percentage: '100',
     min_amount: '5000',
     max_amount: '10000000',
-    min_tenure_days: '30',
+    min_tenure_days: '15',
     max_tenure_days: '90',
     processing_fee_percentage: '0',
     document_charges: '0',
     rate_18kt: '',
     rate_22kt: '',
   });
-  
-  // Strike periods state
-  const [strikePeriods, setStrikePeriods] = useState<StrikePeriod[]>([
-    { days: 30, label_en: '0-30 Days', label_ta: '0-30 நாட்கள்' },
-    { days: 45, label_en: '31-45 Days', label_ta: '31-45 நாட்கள்' },
-    { days: 60, label_en: '46-60 Days', label_ta: '46-60 நாட்கள்' },
-    { days: 75, label_en: '61-75 Days', label_ta: '61-75 நாட்கள்' },
-    { days: 90, label_en: '76-90 Days', label_ta: '76-90 நாட்கள்' },
-  ]);
 
   useEffect(() => {
     if (client) fetchSchemes();
@@ -105,38 +97,34 @@ export default function SaleSchemes() {
     setFormData({
       scheme_code: '',
       scheme_name: '',
-      shown_rate: '',
-      effective_rate: '',
-      minimum_days: '30',
-      advance_interest_months: '3',
+      margin_per_month: '1500',
+      advance_interest_months: '1',
       ltv_percentage: '100',
       min_amount: '5000',
       max_amount: '10000000',
-      min_tenure_days: '30',
+      min_tenure_days: '15',
       max_tenure_days: '90',
       processing_fee_percentage: '0',
       document_charges: '0',
       rate_18kt: '',
       rate_22kt: '',
     });
-    setStrikePeriods([
-      { days: 30, label_en: '0-30 Days', label_ta: '0-30 நாட்கள்' },
-      { days: 45, label_en: '31-45 Days', label_ta: '31-45 நாட்கள்' },
-      { days: 60, label_en: '46-60 Days', label_ta: '46-60 நாட்கள்' },
-      { days: 75, label_en: '61-75 Days', label_ta: '61-75 நாட்கள்' },
-      { days: 90, label_en: '76-90 Days', label_ta: '76-90 நாட்கள்' },
-    ]);
     setEditingScheme(null);
   };
 
   const handleEdit = (scheme: SaleScheme) => {
     setEditingScheme(scheme);
+    
+    // If scheme has legacy shown_rate but no margin_per_month, convert
+    let marginPerMonth = scheme.margin_per_month || 0;
+    if (marginPerMonth === 0 && scheme.shown_rate) {
+      marginPerMonth = annualRateToMargin(scheme.shown_rate);
+    }
+    
     setFormData({
       scheme_code: scheme.scheme_code,
       scheme_name: scheme.scheme_name,
-      shown_rate: scheme.shown_rate.toString(),
-      effective_rate: scheme.effective_rate.toString(),
-      minimum_days: scheme.minimum_days.toString(),
+      margin_per_month: marginPerMonth.toString(),
       advance_interest_months: scheme.advance_interest_months.toString(),
       ltv_percentage: scheme.ltv_percentage.toString(),
       min_amount: scheme.min_amount.toString(),
@@ -148,25 +136,47 @@ export default function SaleSchemes() {
       rate_18kt: (scheme.rate_18kt || '').toString(),
       rate_22kt: (scheme.rate_22kt || '').toString(),
     });
-    setStrikePeriods(
-      Array.isArray(scheme.strike_periods) 
-        ? (scheme.strike_periods as StrikePeriod[])
-        : [
-            { days: 30, label_en: '0-30 Days', label_ta: '0-30 நாட்கள்' },
-            { days: 60, label_en: '31-60 Days', label_ta: '31-60 நாட்கள்' },
-            { days: 90, label_en: '61-90 Days', label_ta: '61-90 நாட்கள்' },
-          ]
-    );
     setIsFormOpen(true);
+  };
+
+  // Auto-generate strike periods based on tenure settings
+  const generateStrikePeriods = (maxTenure: number, step: number = 15) => {
+    const periods: { days: number; label_en: string; label_ta: string }[] = [];
+    let currentDay = step;
+    let previousDay = 0;
+    
+    while (currentDay <= maxTenure) {
+      const label_en = previousDay === 0 
+        ? `0-${currentDay} Days` 
+        : `${previousDay + 1}-${currentDay} Days`;
+      const label_ta = previousDay === 0 
+        ? `0-${currentDay} நாட்கள்` 
+        : `${previousDay + 1}-${currentDay} நாட்கள்`;
+      
+      periods.push({ days: currentDay, label_en, label_ta });
+      previousDay = currentDay;
+      currentDay += step;
+    }
+    
+    return periods;
   };
 
   const handleSubmit = async () => {
     if (!client) return;
     
-    if (!formData.scheme_code || !formData.scheme_name || !formData.shown_rate || !formData.effective_rate) {
+    if (!formData.scheme_code || !formData.scheme_name || !formData.margin_per_month) {
       toast.error('Please fill all required fields');
       return;
     }
+
+    const marginPerMonth = parseFloat(formData.margin_per_month) || 0;
+    const maxTenure = parseInt(formData.max_tenure_days) || 90;
+    
+    // Auto-generate strike periods (15-day intervals)
+    const strikePeriods = generateStrikePeriods(maxTenure, 15);
+    
+    // Convert margin to equivalent annual rate for legacy fields
+    const equivalentAnnualRate = marginToAnnualRate(marginPerMonth);
 
     try {
       const schemeData = {
@@ -174,16 +184,24 @@ export default function SaleSchemes() {
         scheme_code: formData.scheme_code,
         scheme_name: formData.scheme_name,
         scheme_type: 'sale_agreement' as const,
-        interest_rate: parseFloat(formData.shown_rate),
-        shown_rate: parseFloat(formData.shown_rate),
-        effective_rate: parseFloat(formData.effective_rate),
-        minimum_days: parseInt(formData.minimum_days),
+        
+        // New simplified fields
+        margin_per_month: marginPerMonth,
+        tenure_step: 15,  // Fixed 15-day intervals
+        
+        // Legacy fields (for backward compatibility)
+        interest_rate: equivalentAnnualRate,
+        shown_rate: equivalentAnnualRate,
+        effective_rate: equivalentAnnualRate,  // No differential for sale agreements
+        minimum_days: parseInt(formData.min_tenure_days),
+        
+        // Common fields
         advance_interest_months: parseInt(formData.advance_interest_months),
         ltv_percentage: parseFloat(formData.ltv_percentage),
         min_amount: parseFloat(formData.min_amount),
         max_amount: parseFloat(formData.max_amount),
         min_tenure_days: parseInt(formData.min_tenure_days),
-        max_tenure_days: parseInt(formData.max_tenure_days),
+        max_tenure_days: maxTenure,
         processing_fee_percentage: parseFloat(formData.processing_fee_percentage) || 0,
         document_charges: parseFloat(formData.document_charges) || 0,
         rate_18kt: formData.rate_18kt ? parseFloat(formData.rate_18kt) : null,
@@ -217,6 +235,8 @@ export default function SaleSchemes() {
             version_number: 1,
             effective_from: new Date().toISOString().split('T')[0],
             change_reason: 'Initial version',
+            margin_per_month: marginPerMonth,
+            tenure_step: 15,
             interest_rate: schemeData.interest_rate,
             shown_rate: schemeData.shown_rate,
             effective_rate: schemeData.effective_rate,
@@ -254,51 +274,44 @@ export default function SaleSchemes() {
     }
   };
 
-  const addStrikePeriod = () => {
-    const lastPeriod = strikePeriods[strikePeriods.length - 1];
-    const newDays = lastPeriod ? lastPeriod.days + 15 : 30;
-    const prevDays = lastPeriod ? lastPeriod.days + 1 : 0;
-    setStrikePeriods([
-      ...strikePeriods,
-      { days: newDays, label_en: `${prevDays}-${newDays} Days`, label_ta: `${prevDays}-${newDays} நாட்கள்` }
-    ]);
-  };
-
-  const removeStrikePeriod = (index: number) => {
-    if (strikePeriods.length <= 1) {
-      toast.error('At least one strike period is required');
-      return;
-    }
-    setStrikePeriods(strikePeriods.filter((_, i) => i !== index));
-  };
-
-  const updateStrikePeriod = (index: number, field: keyof StrikePeriod, value: string | number) => {
-    const updated = [...strikePeriods];
-    if (field === 'days') {
-      updated[index] = { ...updated[index], days: parseInt(value as string) || 0 };
-    } else {
-      updated[index] = { ...updated[index], [field]: value };
-    }
-    setStrikePeriods(updated);
-  };
-
   // Preview calculation
-  const getPreviewStrikePrices = () => {
-    const principal = 100000;
-    const shownRate = parseFloat(formData.shown_rate) || 18;
-    const effectiveRate = parseFloat(formData.effective_rate) || 36;
+  const previewCalc = useMemo(() => {
+    const marginPerMonth = parseFloat(formData.margin_per_month) || 1500;
+    const maxTenure = parseInt(formData.max_tenure_days) || 90;
+    const advanceMonths = parseInt(formData.advance_interest_months) || 1;
     const processingFee = parseFloat(formData.processing_fee_percentage) || 0;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const tenure = parseInt(formData.max_tenure_days) || 90;
+    const documentCharges = parseFloat(formData.document_charges) || 0;
     
-    const customPeriods: StrikePeriodConfig[] = strikePeriods.map(p => ({
-      days: p.days,
-      labelEnglish: p.label_en,
-      labelTamil: p.label_ta,
-    }));
+    const scheme: SaleAgreementScheme = {
+      id: 'preview',
+      scheme_name: 'Preview',
+      margin_per_month: marginPerMonth,
+      advance_interest_months: advanceMonths,
+      min_tenure_days: parseInt(formData.min_tenure_days) || 15,
+      max_tenure_days: maxTenure,
+      tenure_step: 15,
+      processing_fee_percentage: processingFee,
+      document_charges: documentCharges,
+      rate_22kt: parseFloat(formData.rate_22kt) || 6500,
+      rate_18kt: parseFloat(formData.rate_18kt) || 4875,
+      ltv_percentage: parseFloat(formData.ltv_percentage) || 100,
+    };
     
-    return calculateStrikePrices(principal, shownRate, effectiveRate, processingFee, today, tenure, customPeriods);
-  };
+    return calculateSaleAgreement(100000, scheme, maxTenure, format(new Date(), 'yyyy-MM-dd'));
+  }, [formData]);
+
+  // Get tenure options for the form display
+  const tenureOptions = useMemo(() => {
+    const min = parseInt(formData.min_tenure_days) || 15;
+    const max = parseInt(formData.max_tenure_days) || 90;
+    return generateTenureOptions(min, max, 15);
+  }, [formData.min_tenure_days, formData.max_tenure_days]);
+
+  // Calculate equivalent annual rate for display
+  const equivalentAnnualRate = useMemo(() => {
+    const margin = parseFloat(formData.margin_per_month) || 0;
+    return marginToAnnualRate(margin).toFixed(2);
+  }, [formData.margin_per_month]);
 
   return (
     <DashboardLayout>
@@ -320,10 +333,9 @@ export default function SaleSchemes() {
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead className="text-right">Trade Margin</TableHead>
-                  <TableHead className="text-right">Effective</TableHead>
+                  <TableHead className="text-right">Monthly Margin</TableHead>
                   <TableHead className="text-right">22KT Rate</TableHead>
-                  <TableHead className="text-center">Periods</TableHead>
+                  <TableHead className="text-center">Tenure</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -331,37 +343,47 @@ export default function SaleSchemes() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">Loading...</TableCell>
+                    <TableCell colSpan={7} className="text-center py-8">Loading...</TableCell>
                   </TableRow>
                 ) : schemes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No sale agreement schemes configured. Create one to get started.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  schemes.map(scheme => (
-                    <TableRow key={scheme.id}>
-                      <TableCell className="font-medium">{scheme.scheme_code}</TableCell>
-                      <TableCell>{scheme.scheme_name}</TableCell>
-                      <TableCell className="text-right">{scheme.shown_rate}%</TableCell>
-                      <TableCell className="text-right">{scheme.effective_rate}%</TableCell>
-                      <TableCell className="text-right">₹{scheme.rate_22kt?.toLocaleString() || '-'}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="secondary">{Array.isArray(scheme.strike_periods) ? scheme.strike_periods.length : 3}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
-                          {scheme.is_active ? 'Active' : 'Inactive'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleEdit(scheme)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                  schemes.map(scheme => {
+                    // Display margin - convert from legacy rate if needed
+                    const displayMargin = scheme.margin_per_month || 
+                      (scheme.shown_rate ? annualRateToMargin(scheme.shown_rate) : 0);
+                    
+                    return (
+                      <TableRow key={scheme.id}>
+                        <TableCell className="font-medium">{scheme.scheme_code}</TableCell>
+                        <TableCell>{scheme.scheme_name}</TableCell>
+                        <TableCell className="text-right">
+                          ₹{displayMargin.toLocaleString('en-IN')}/L/mo
+                          <span className="text-xs text-muted-foreground block">
+                            (~{marginToAnnualRate(displayMargin).toFixed(1)}% p.a.)
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right">₹{scheme.rate_22kt?.toLocaleString() || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="secondary">{scheme.min_tenure_days}-{scheme.max_tenure_days} days</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant={scheme.is_active ? 'default' : 'secondary'}>
+                            {scheme.is_active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" onClick={() => handleEdit(scheme)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -370,7 +392,7 @@ export default function SaleSchemes() {
 
         {/* Create/Edit Dialog */}
         <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingScheme ? 'Edit Scheme' : 'New Sale Agreement Scheme'}</DialogTitle>
             </DialogHeader>
@@ -398,30 +420,44 @@ export default function SaleSchemes() {
 
               <Separator />
 
-              {/* Rate Configuration */}
+              {/* Margin Configuration - Simplified */}
               <div>
-                <h3 className="font-medium mb-3">Trade Margin Rates (% per annum)</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <h3 className="font-medium mb-3">Margin Configuration</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Trade Margin (Shown) *</Label>
+                    <Label>Monthly Margin (₹ per ₹1 Lakh) *</Label>
                     <Input 
                       type="number"
-                      value={formData.shown_rate}
-                      onChange={e => setFormData({ ...formData, shown_rate: e.target.value })}
-                      placeholder="18"
+                      value={formData.margin_per_month}
+                      onChange={e => setFormData({ ...formData, margin_per_month: e.target.value })}
+                      placeholder="1500"
                     />
-                    <p className="text-xs text-muted-foreground">Visible on Bill of Sale</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      Equivalent to ~{equivalentAnnualRate}% p.a.
+                    </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Effective Rate (Internal) *</Label>
+                    <Label>Advance Margin (Months)</Label>
                     <Input 
                       type="number"
-                      value={formData.effective_rate}
-                      onChange={e => setFormData({ ...formData, effective_rate: e.target.value })}
-                      placeholder="36"
+                      value={formData.advance_interest_months}
+                      onChange={e => setFormData({ ...formData, advance_interest_months: e.target.value })}
+                      placeholder="1"
+                      min="1"
+                      max="3"
                     />
-                    <p className="text-xs text-muted-foreground">Actual rate for calculation</p>
+                    <p className="text-xs text-muted-foreground">Months collected upfront</p>
                   </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Fees */}
+              <div>
+                <h3 className="font-medium mb-3">Fees & Charges</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Processing Fee %</Label>
                     <Input 
@@ -432,7 +468,7 @@ export default function SaleSchemes() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Document Charges</Label>
+                    <Label>Document Charges %</Label>
                     <Input 
                       type="number"
                       value={formData.document_charges}
@@ -450,12 +486,12 @@ export default function SaleSchemes() {
                 <h3 className="font-medium mb-3">Gold Valuation Rates (₹ per gram)</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>22KT Rate</Label>
+                    <Label>22KT Rate *</Label>
                     <Input 
                       type="number"
                       value={formData.rate_22kt}
                       onChange={e => setFormData({ ...formData, rate_22kt: e.target.value })}
-                      placeholder="5500"
+                      placeholder="6500"
                     />
                   </div>
                   <div className="space-y-2">
@@ -464,7 +500,7 @@ export default function SaleSchemes() {
                       type="number"
                       value={formData.rate_18kt}
                       onChange={e => setFormData({ ...formData, rate_18kt: e.target.value })}
-                      placeholder="4500"
+                      placeholder="4875"
                     />
                   </div>
                 </div>
@@ -472,69 +508,63 @@ export default function SaleSchemes() {
 
               <Separator />
 
-              {/* Strike Periods Configuration */}
+              {/* Tenure - 15-day intervals */}
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="font-medium">Strike Price Periods</h3>
-                    <p className="text-sm text-muted-foreground">Configure repurchase option exercise periods</p>
+                    <h3 className="font-medium">Option Period (Tenure)</h3>
+                    <p className="text-sm text-muted-foreground">Tenure in 15-day intervals</p>
                   </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
-                      <Calculator className="h-4 w-4 mr-2" /> Preview
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={addStrikePeriod}>
-                      <Plus className="h-4 w-4 mr-2" /> Add Period
-                    </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
+                    <Calculator className="h-4 w-4 mr-2" /> Preview
+                  </Button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Minimum Tenure (Days)</Label>
+                    <Input 
+                      type="number"
+                      value={formData.min_tenure_days}
+                      onChange={e => {
+                        const val = Math.ceil(parseInt(e.target.value) / 15) * 15;
+                        setFormData({ ...formData, min_tenure_days: val.toString() });
+                      }}
+                      step="15"
+                      min="15"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Maximum Tenure (Days)</Label>
+                    <Input 
+                      type="number"
+                      value={formData.max_tenure_days}
+                      onChange={e => {
+                        const val = Math.ceil(parseInt(e.target.value) / 15) * 15;
+                        setFormData({ ...formData, max_tenure_days: val.toString() });
+                      }}
+                      step="15"
+                      min="15"
+                    />
                   </div>
                 </div>
                 
-                <div className="space-y-2 border rounded-lg p-4">
-                  {strikePeriods.map((period, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <div className="flex-1 grid grid-cols-3 gap-2">
-                        <Input
-                          value={period.label_en}
-                          onChange={e => updateStrikePeriod(index, 'label_en', e.target.value)}
-                          placeholder="0-30 Days"
-                          className="text-sm"
-                        />
-                        <Input
-                          value={period.label_ta}
-                          onChange={e => updateStrikePeriod(index, 'label_ta', e.target.value)}
-                          placeholder="0-30 நாட்கள்"
-                          className="text-sm"
-                        />
-                        <Input
-                          type="number"
-                          value={period.days}
-                          onChange={e => updateStrikePeriod(index, 'days', e.target.value)}
-                          placeholder="30"
-                          className="text-sm"
-                        />
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => removeStrikePeriod(index)}
-                        disabled={strikePeriods.length <= 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Enter: English Label | Tamil Label | Days (cumulative from loan date)
-                  </p>
+                {/* Show available tenure options */}
+                <div className="mt-3 p-3 bg-muted/50 rounded-lg">
+                  <p className="text-sm font-medium mb-2">Available Option Periods:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {tenureOptions.map(days => (
+                      <Badge key={days} variant="secondary">{days} days</Badge>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               <Separator />
 
-              {/* Limits */}
+              {/* Amount Limits */}
               <div>
-                <h3 className="font-medium mb-3">Amount & Tenure Limits</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <h3 className="font-medium mb-3">Amount Limits</h3>
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>LTV %</Label>
                     <Input 
@@ -560,22 +590,6 @@ export default function SaleSchemes() {
                       onChange={e => setFormData({ ...formData, max_amount: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Min Tenure (Days)</Label>
-                    <Input 
-                      type="number"
-                      value={formData.min_tenure_days}
-                      onChange={e => setFormData({ ...formData, min_tenure_days: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Max Tenure (Days)</Label>
-                    <Input 
-                      type="number"
-                      value={formData.max_tenure_days}
-                      onChange={e => setFormData({ ...formData, max_tenure_days: e.target.value })}
-                    />
-                  </div>
                 </div>
               </div>
             </div>
@@ -595,50 +609,68 @@ export default function SaleSchemes() {
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Strike Price Preview</DialogTitle>
+              <DialogTitle>Repurchase Price Preview</DialogTitle>
               <p className="text-sm text-muted-foreground">
                 Example calculation for ₹1,00,000 purchase
               </p>
             </DialogHeader>
             
             <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg p-4">
-                <div className="flex justify-between mb-2">
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
                   <span className="text-muted-foreground">Spot Purchase Price:</span>
                   <span className="font-medium">₹1,00,000</span>
                 </div>
-                <div className="flex justify-between mb-2">
-                  <span className="text-muted-foreground">Trade Margin Rate:</span>
-                  <span>{formData.shown_rate || 18}% p.a.</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Monthly Margin:</span>
+                  <span>₹{previewCalc.monthlyMargin.toLocaleString('en-IN')}/month</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Effective Rate:</span>
-                  <span>{formData.effective_rate || 36}% p.a.</span>
+                  <span className="text-muted-foreground">Advance Margin ({previewCalc.advanceMarginMonths} mo):</span>
+                  <span>₹{previewCalc.advanceMargin.toLocaleString('en-IN')}</span>
+                </div>
+                {previewCalc.processingFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Processing Fee:</span>
+                    <span>₹{previewCalc.processingFee.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <Separator className="my-2" />
+                <div className="flex justify-between font-medium">
+                  <span>Net Cash to Seller:</span>
+                  <span className="text-primary">₹{previewCalc.netCashToSeller.toLocaleString('en-IN')}</span>
                 </div>
               </div>
               
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Period</TableHead>
-                    <TableHead className="text-right">Strike Price</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {getPreviewStrikePrices().strikePrices.map((row, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{row.periodLabel}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        ₹{row.strikePrice.toLocaleString('en-IN')}
-                      </TableCell>
+              <div>
+                <h4 className="font-medium mb-2">Repurchase Price Schedule</h4>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Period</TableHead>
+                      <TableHead className="text-center">Months</TableHead>
+                      <TableHead className="text-right">Strike Price</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {previewCalc.strikePrices.map((row, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{row.periodLabel}</TableCell>
+                        <TableCell className="text-center">{row.monthsMargin}</TableCell>
+                        <TableCell className="text-right font-medium">
+                          ₹{row.strikePrice.toLocaleString('en-IN')}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               
-              <p className="text-xs text-muted-foreground">
-                Formula: Strike Price = Spot Price + (Principal × Effective Rate × Days / 36500) + Processing Fee
-              </p>
+              <div className="bg-muted/50 border border-border rounded-lg p-3">
+                <p className="text-xs text-muted-foreground">
+                  <strong>Formula:</strong> Strike Price = Spot Price + (Monthly Margin × ceil(Days / 30))
+                </p>
+              </div>
             </div>
           </DialogContent>
         </Dialog>

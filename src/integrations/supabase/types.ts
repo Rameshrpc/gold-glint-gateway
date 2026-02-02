@@ -3369,6 +3369,7 @@ export type Database = {
           id: string
           interest_rate: number
           ltv_percentage: number
+          margin_per_month: number | null
           max_amount: number
           max_tenure_days: number
           min_amount: number
@@ -3382,6 +3383,7 @@ export type Database = {
           scheme_id: string
           shown_rate: number
           strike_periods: Json | null
+          tenure_step: number | null
           version_number: number
         }
         Insert: {
@@ -3398,6 +3400,7 @@ export type Database = {
           id?: string
           interest_rate: number
           ltv_percentage?: number
+          margin_per_month?: number | null
           max_amount?: number
           max_tenure_days?: number
           min_amount?: number
@@ -3411,6 +3414,7 @@ export type Database = {
           scheme_id: string
           shown_rate?: number
           strike_periods?: Json | null
+          tenure_step?: number | null
           version_number?: number
         }
         Update: {
@@ -3427,6 +3431,7 @@ export type Database = {
           id?: string
           interest_rate?: number
           ltv_percentage?: number
+          margin_per_month?: number | null
           max_amount?: number
           max_tenure_days?: number
           min_amount?: number
@@ -3440,6 +3445,7 @@ export type Database = {
           scheme_id?: string
           shown_rate?: number
           strike_periods?: Json | null
+          tenure_step?: number | null
           version_number?: number
         }
         Relationships: [
@@ -3473,6 +3479,7 @@ export type Database = {
           interest_rate: number
           is_active: boolean | null
           ltv_percentage: number
+          margin_per_month: number | null
           max_amount: number
           max_tenure_days: number
           min_amount: number
@@ -3488,6 +3495,7 @@ export type Database = {
           scheme_type: string | null
           shown_rate: number
           strike_periods: Json | null
+          tenure_step: number | null
           updated_at: string | null
         }
         Insert: {
@@ -3503,6 +3511,7 @@ export type Database = {
           interest_rate: number
           is_active?: boolean | null
           ltv_percentage?: number
+          margin_per_month?: number | null
           max_amount?: number
           max_tenure_days?: number
           min_amount?: number
@@ -3518,6 +3527,7 @@ export type Database = {
           scheme_type?: string | null
           shown_rate?: number
           strike_periods?: Json | null
+          tenure_step?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -3533,6 +3543,7 @@ export type Database = {
           interest_rate?: number
           is_active?: boolean | null
           ltv_percentage?: number
+          margin_per_month?: number | null
           max_amount?: number
           max_tenure_days?: number
           min_amount?: number
@@ -3548,6 +3559,7 @@ export type Database = {
           scheme_type?: string | null
           shown_rate?: number
           strike_periods?: Json | null
+          tenure_step?: number | null
           updated_at?: string | null
         }
         Relationships: [
