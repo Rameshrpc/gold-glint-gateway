@@ -19,8 +19,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from 'sonner';
 import { format, addDays, addMonths } from 'date-fns';
-import { calculateAdvanceInterest, calculateRebateSchedule, formatIndianCurrency, type RebateSchedule } from '@/lib/interestCalculations';
-import { calculateStrikePrices, parseSchemeStrikePeriods } from '@/lib/strike-price-utils';
+import { formatIndianCurrency } from '@/lib/interestCalculations';
+import { 
+  calculateSaleAgreement, 
+  calculateMonthlyMargin,
+  annualRateToMargin,
+  type SaleAgreementScheme,
+  type SaleAgreementCalculation
+} from '@/lib/saleAgreementCalculations';
 import { useTodayMarketRate } from '@/hooks/useMarketRates';
 import CustomerSummaryCard from '@/components/loans/CustomerSummaryCard';
 import InlineCustomerForm from '@/components/loans/InlineCustomerForm';
@@ -524,78 +530,89 @@ export default function SaleAgreements() {
     setGoldItems(goldItems.filter((_, i) => i !== index));
   };
 
-  // Calculate agreement with dual-rate system
+  // Calculate agreement with simplified monthly margin system
   const agreementCalculation = useMemo(() => {
     const scheme = schemes.find(s => s.id === selectedSchemeId);
     if (!scheme || goldItems.length === 0) return null;
 
     const totalAppraisedValue = goldItems.reduce((sum, item) => sum + item.appraised_value, 0);
-    const maxPurchaseAmount = totalAppraisedValue * (scheme.ltv_percentage / 100);
-    const purchaseAmount = Math.round(Math.min(Math.max(maxPurchaseAmount, scheme.min_amount), scheme.max_amount));
-    
     const selectedTenure = tenureDays ? parseInt(tenureDays) : scheme.max_tenure_days;
     
-    // Calculate dual-rate advance margin
-    const advanceCalc = calculateAdvanceInterest(purchaseAmount, {
+    // Get margin per month from scheme (convert from legacy rate if needed)
+    const marginPerMonth = (scheme as any).margin_per_month || annualRateToMargin(scheme.shown_rate || 18);
+    
+    // Build scheme config for calculation
+    const schemeConfig: SaleAgreementScheme = {
       id: scheme.id,
       scheme_name: scheme.scheme_name,
-      shown_rate: scheme.shown_rate || 18,
-      effective_rate: scheme.effective_rate || 24,
-      minimum_days: scheme.minimum_days || 30,
-      advance_interest_months: scheme.advance_interest_months || 3,
-    }, selectedTenure);
+      margin_per_month: marginPerMonth,
+      advance_interest_months: (scheme as any).advance_interest_months || 1,
+      min_tenure_days: scheme.min_tenure_days,
+      max_tenure_days: scheme.max_tenure_days,
+      tenure_step: (scheme as any).tenure_step || 15,
+      processing_fee_percentage: scheme.processing_fee_percentage || 0,
+      document_charges: scheme.document_charges || 0,
+      rate_22kt: scheme.rate_22kt || 0,
+      rate_18kt: scheme.rate_18kt || 0,
+      ltv_percentage: scheme.ltv_percentage,
+    };
 
-    // Purchase Price on Record = Purchase Amount + Differential
-    const priceOnRecord = advanceCalc.actualPrincipal;
-    
-    // Max Approved Amount = Price on Record × 1.10 (10% above)
-    const maxApprovedAmount = Math.round(priceOnRecord * 1.10);
-    
-    // Use user-entered approved amount or default to price on record
-    const finalApprovedAmount = approvedAmount ? parseFloat(approvedAmount) : priceOnRecord;
-    
-    // Document charges percentage
-    const docChargesPercent = userDocumentChargesPercent ? parseFloat(userDocumentChargesPercent) : (scheme.document_charges || 0);
-    
-    // Document charges calculated on Price on Record
-    const documentCharges = Math.round(priceOnRecord * (docChargesPercent / 100));
-    
-    // Processing fee on the final approved amount
-    const processingFee = Math.round(finalApprovedAmount * ((scheme.processing_fee_percentage || 0) / 100));
-
-    // Net cash to seller = Approved Amount - Advance Margin - Processing Fee - Document Charges
-    const netCashToSeller = finalApprovedAmount - advanceCalc.shownInterest - processingFee - documentCharges;
-    
-    // Calculate rebate schedule
-    const rebateSchedule = calculateRebateSchedule(advanceCalc.differential);
-
-    // Calculate strike prices
-    const strikePeriods = parseSchemeStrikePeriods(scheme.strike_periods);
-    const strikeCalc = calculateStrikePrices(
-      finalApprovedAmount,
-      scheme.shown_rate,
-      scheme.effective_rate,
-      scheme.processing_fee_percentage || 0,
-      format(new Date(), 'yyyy-MM-dd'),
+    // Use the new simplified calculation
+    const calc = calculateSaleAgreement(
+      totalAppraisedValue,
+      schemeConfig,
       selectedTenure,
-      strikePeriods
+      format(new Date(), 'yyyy-MM-dd')
     );
-
+    
+    // Document charges percentage from user override or scheme
+    const docChargesPercent = userDocumentChargesPercent 
+      ? parseFloat(userDocumentChargesPercent) 
+      : (scheme.document_charges || 0);
+    const documentCharges = Math.round(calc.spotPurchasePrice * (docChargesPercent / 100));
+    
+    // Use user-entered approved amount or default to spot price
+    const finalApprovedAmount = approvedAmount 
+      ? parseFloat(approvedAmount) 
+      : calc.spotPurchasePrice;
+    
+    // Max approved = 10% above spot price
+    const maxApprovedAmount = Math.round(calc.spotPurchasePrice * 1.10);
+    
+    // Recalculate net cash with any overrides
+    const netCashToSeller = finalApprovedAmount - calc.advanceMargin - calc.processingFee - documentCharges;
+    
     return {
       totalAppraisedValue,
-      purchaseAmount,
-      priceOnRecord,
+      purchaseAmount: calc.spotPurchasePrice,
+      priceOnRecord: calc.spotPurchasePrice,  // No differential in new model
       maxApprovedAmount,
       finalApprovedAmount,
-      processingFee,
+      processingFee: calc.processingFee,
       documentCharges,
       documentChargesPercentage: docChargesPercent,
-      advanceCalc,
+      // Map to legacy format for compatibility
+      advanceCalc: {
+        shownInterest: calc.advanceMargin,
+        actualInterest: calc.advanceMargin,  // Same in new model
+        differential: 0,  // No differential
+        actualPrincipal: calc.spotPurchasePrice,
+      },
       netCashToSeller,
-      rebateSchedule,
+      rebateSchedule: [] as any[],  // No rebate schedule in new model
       scheme,
-      strikePrices: strikeCalc.strikePrices,
-      expiryDate: strikeCalc.expiryDate,
+      strikePrices: calc.strikePrices.map(sp => ({
+        periodLabel: sp.periodLabel,
+        periodLabelTamil: sp.periodLabelTamil,
+        periodDays: sp.periodDays,
+        strikePrice: sp.strikePrice,
+        status: 'future' as const,
+        expiryDate: sp.expiryDate,
+      })),
+      expiryDate: calc.expiryDate,
+      // New model specific
+      monthlyMargin: calc.monthlyMargin,
+      advanceMarginMonths: calc.advanceMarginMonths,
     };
   }, [goldItems, selectedSchemeId, schemes, tenureDays, userDocumentChargesPercent, approvedAmount]);
 
@@ -1506,27 +1523,22 @@ export default function SaleAgreements() {
                         </CardContent>
                       </Card>
 
-                      {/* Early Exercise Rebate Schedule */}
+                      {/* Monthly Margin Info - New simplified model */}
                       <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
                         <CardHeader className="pb-2">
                           <CardTitle className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
                             <Calculator className="h-4 w-4" />
-                            Early Exercise Benefit
+                            Monthly Margin
                           </CardTitle>
-                          <p className="text-xs text-muted-foreground">Rebate on early repurchase</p>
                         </CardHeader>
                         <CardContent className="space-y-2 text-sm">
-                          <div className="space-y-2">
-                            {agreementCalculation.rebateSchedule.slots.map((slot, index) => (
-                              <div key={index} className="flex justify-between items-center py-1 border-b border-amber-200/50 dark:border-amber-800/50 last:border-0">
-                                <span className="text-muted-foreground">Within {slot.dayRange}</span>
-                                <span className="font-medium text-green-600">{formatIndianCurrency(slot.rebateAmount)}</span>
-                              </div>
-                            ))}
-                            <div className="flex justify-between items-center py-1 pt-2">
-                              <span className="text-muted-foreground">After 75 days</span>
-                              <span className="font-medium text-muted-foreground">No rebate</span>
-                            </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Per Month:</span>
+                            <span className="font-medium">{formatIndianCurrency((agreementCalculation as any).monthlyMargin || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Advance:</span>
+                            <span className="font-medium">{(agreementCalculation as any).advanceMarginMonths || 1} month(s)</span>
                           </div>
                         </CardContent>
                       </Card>
