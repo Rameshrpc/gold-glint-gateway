@@ -470,11 +470,11 @@ export default function Loans() {
         // 24KT = 22KT rate × (24/22) - proportional to 22KT
         return (scheme.rate_22kt || 0) * (24 / 22);
       case '20k':
-        // 20KT = 22KT rate × (20/22)
-        return (scheme.rate_22kt || 0) * (20 / 22);
+        // Below 22KT: use 18KT rate
+        return scheme.rate_18kt || 0;
       case '14k':
-        // 14KT = 22KT rate × (14/22)
-        return (scheme.rate_22kt || 0) * (14 / 22);
+        // Below 22KT: use 18KT rate
+        return scheme.rate_18kt || 0;
       default:
         return 0;
     }
