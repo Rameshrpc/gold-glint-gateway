@@ -1,81 +1,45 @@
 
-## Plan: Enhanced Approval Workflow for Sale Agreements (Remote Control)
 
-### Overview
+## Plan: Gold Valuation -- Only 22KT Gets Maximum Rate, Below 22KT Uses 18KT Rate
 
-As a Tenant Admin working remotely, you need to control and monitor all Sale Agreement transactions happening at your branches. This plan integrates a dedicated approval workflow for Sale Agreements that allows you to:
+### Business Rule
 
-1. **Review & Approve** new Sale Agreements before disbursement
-2. **Review & Approve** Repurchase transactions before releasing goods
-3. **Review & Approve** high-value Margin Renewals (optional)
-4. **Receive Notifications** when transactions need your attention
-5. **Track** all pending, approved, and rejected requests from anywhere
+Currently, purities like 20k and 14k are valued by interpolating from the 22kt rate (e.g., 20k = 22kt rate x 20/22). This is incorrect.
 
----
+**New rule:**
+- **22kt and above (22k, 24k):** Use their respective rates (22kt rate, or 22kt x 24/22 for 24k)
+- **Below 22kt (20k, 18k, 14k):** All use the **18kt rate** -- no interpolation
 
-### Implementation Status
+### Technical Changes
 
-| Phase | Status | Description |
-|-------|--------|-------------|
-| Phase 1 | ✅ Complete | Add dedicated workflow types (sale_agreement, repurchase, margin_renewal) |
-| Phase 2 | ✅ Complete | Update Sale Agreement pages to use new workflow types |
-| Phase 3 | ✅ Complete | Enhanced Dashboard Widget with type grouping and filters |
-| Phase 4 | 🔲 Pending | SMS/WhatsApp notification integration |
+The `getRateForPurity` function is duplicated in 3 files. All 3 will be updated identically:
 
----
+| Purity | Current Logic | New Logic |
+|--------|--------------|-----------|
+| 24k | 22kt rate x 24/22 | 22kt rate x 24/22 (unchanged) |
+| 22k | 22kt rate | 22kt rate (unchanged) |
+| 20k | 22kt rate x 20/22 | **18kt rate** |
+| 18k | 18kt rate | 18kt rate (unchanged) |
+| 14k | 22kt rate x 14/22 | **18kt rate** |
 
-### Completed Changes
+### Files to Modify
 
-#### Phase 1: Workflow Types ✅
-- Added `sale_agreement`, `repurchase`, `margin_renewal` to `WorkflowType` in `useApprovalWorkflow.tsx`
-- Updated `ApprovalWorkflowSettings.tsx` with new workflow cards for:
-  - Sale Agreement Creation (ShoppingCart icon)
-  - Repurchase/Buyback (RotateCcw icon)
-  - Margin Renewal (TrendingUp icon)
-- Updated entity status handler to support new entity types
+| File | Change |
+|------|--------|
+| `src/pages/Loans.tsx` (line ~463) | Update `getRateForPurity`: 20k and 14k return `scheme.rate_18kt` instead of interpolated values |
+| `src/pages/SaleAgreements.tsx` (line ~450) | Same change |
+| `src/pages/Reloan.tsx` (line ~337) | Same change |
 
-#### Phase 2: Sale Agreement Integration ✅
-- `SaleAgreements.tsx`: Uses `sale_agreement` workflow type with enriched metadata (customer_name, gold_weight)
-- `SaleRepurchase.tsx`: Uses `repurchase` workflow type with enriched metadata
-- Added approval filter tab for easy visibility
+### Example Impact
 
-#### Phase 3: Dashboard Widget ✅
-- `PendingApprovalsWidget.tsx`: Added type-based icons and grouping
-- Quick filter tabs: All, Loans, Sales
-- Shows customer name from metadata
-- Displays amount prominently
+With 22kt rate = 11,500 and 18kt rate = 9,500:
 
----
+| Purity | Before | After |
+|--------|--------|-------|
+| 22k | 11,500/g | 11,500/g |
+| 20k | 10,454/g (interpolated) | **9,500/g** (18kt rate) |
+| 14k | 7,318/g (interpolated) | **9,500/g** (18kt rate) |
+| 18k | 9,500/g | 9,500/g |
 
-### Remaining Work (Phase 4)
+This is a simple, 3-file change affecting only the `getRateForPurity` function in each.
 
-**SMS/WhatsApp Notification Integration:**
-- Create `supabase/functions/approval-notifications/index.ts` edge function
-- Triggered when new approval request is created
-- Sends SMS/WhatsApp to configured approvers (tenant_admin roles)
-- Templates:
-  - "New Sale Agreement Pending" 
-  - "Repurchase Request Pending"
-  - "Approval Status Changed"
-
----
-
-### Settings Configuration (for Tenant Admin)
-
-Navigate to **Settings > Approval Workflows** to configure:
-
-| Workflow | Recommended Settings |
-|----------|---------------------|
-| **Sale Agreement Creation** | Enabled, Threshold: ₹50,000+, L1: Branch Manager, L2: Admin |
-| **Repurchase** | Enabled, Threshold: ₹50,000+, Dual Approval: Optional |
-| **Margin Renewal** | Optional, Threshold: ₹25,000+ |
-
----
-
-### Security Considerations
-
-1. **RLS Protection**: Approval requests are scoped to `client_id`
-2. **Role Validation**: Only users with L1/L2 approver roles can approve
-3. **Dual Approval**: Same person cannot approve both L1 and L2
-4. **Audit Trail**: All approvals/rejections logged with timestamps and user IDs
-5. **Transaction Lock**: Pending agreements cannot be printed/disbursed
