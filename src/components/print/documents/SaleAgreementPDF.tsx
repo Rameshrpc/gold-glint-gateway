@@ -394,9 +394,10 @@ const calculateTotals = (items: GoldItem[]) => {
       grossWeight: acc.grossWeight + item.gross_weight_grams,
       netWeight: acc.netWeight + item.net_weight_grams,
       value: acc.value + item.appraised_value,
+      spotValue: acc.spotValue + (item.market_value || item.appraised_value),
       count: acc.count + 1,
     }),
-    { grossWeight: 0, netWeight: 0, value: 0, count: 0 }
+    { grossWeight: 0, netWeight: 0, value: 0, spotValue: 0, count: 0 }
   );
 };
 
@@ -509,7 +510,7 @@ export function SaleAgreementPDF({
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Total Value of Ornaments</Text>
-              <Text style={styles.summaryValue}>{formatCurrencyPrint(totals.value)}</Text>
+              <Text style={styles.summaryValue}>{formatCurrencyPrint(totals.spotValue)}</Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tenure</Text>
@@ -570,7 +571,7 @@ export function SaleAgreementPDF({
               <Text style={[styles.ornamentCell, { width: '15%' }]}>{item.gross_weight_grams.toFixed(3)}</Text>
               <Text style={[styles.ornamentCell, { width: '15%' }]}>{item.net_weight_grams.toFixed(3)}</Text>
               <Text style={[styles.ornamentCell, { width: '12%' }]}>{item.purity}</Text>
-              <Text style={[styles.ornamentCellLast, { width: '18%' }]}>{formatCurrencyPrint(item.appraised_value)}</Text>
+              <Text style={[styles.ornamentCellLast, { width: '18%' }]}>{formatCurrencyPrint(item.market_value || item.appraised_value)}</Text>
             </View>
           ))}
           {/* Totals Row */}
@@ -580,7 +581,7 @@ export function SaleAgreementPDF({
             <Text style={[styles.ornamentCell, { width: '15%', fontWeight: 'bold' }]}>{totals.grossWeight.toFixed(3)}</Text>
             <Text style={[styles.ornamentCell, { width: '15%', fontWeight: 'bold' }]}>{totals.netWeight.toFixed(3)}</Text>
             <Text style={[styles.ornamentCell, { width: '12%' }]}></Text>
-            <Text style={[styles.ornamentCellLast, { width: '18%', fontWeight: 'bold' }]}>{formatCurrencyPrint(totals.value)}</Text>
+            <Text style={[styles.ornamentCellLast, { width: '18%', fontWeight: 'bold' }]}>{formatCurrencyPrint(totals.spotValue)}</Text>
           </View>
         </View>
 
