@@ -339,8 +339,8 @@ export default function Reloan() {
       case '22k': return scheme.rate_22kt || 0;
       case '18k': return scheme.rate_18kt || 0;
       case '24k': return (scheme.rate_22kt || 0) * (24 / 22);
-      case '20k': return (scheme.rate_22kt || 0) * (20 / 22);
-      case '14k': return (scheme.rate_22kt || 0) * (14 / 22);
+      case '20k': return scheme.rate_18kt || 0;
+      case '14k': return scheme.rate_18kt || 0;
       default: return 0;
     }
   };
