@@ -36,6 +36,8 @@ export default function Dashboard() {
   // Feature flags
   const supportsLoans = client?.supports_loans ?? true;
   const supportsSaleAgreements = client?.supports_sale_agreements ?? false;
+  const supportsAccounting = client?.supports_accounting ?? true;
+  const supportsAgents = client?.supports_agents ?? true;
   
   const dashboardData = useDashboardData({ 
     includeLoans: supportsLoans, 
@@ -183,7 +185,7 @@ export default function Dashboard() {
             data={dashboardData.overdueBuckets} 
             isLoading={dashboardData.isLoading} 
           />
-          <AccountingHealthWidget />
+          {supportsAccounting && <AccountingHealthWidget />}
         </div>
 
         {/* Role Info Card - Compact */}

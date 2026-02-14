@@ -1146,7 +1146,14 @@ export type Database = {
           show_differential_details: boolean
           show_reloan_module: boolean
           state_code: string | null
+          supports_accounting: boolean
+          supports_agents: boolean
+          supports_approvals: boolean
+          supports_customer_portal: boolean
+          supports_gold_vault: boolean
           supports_loans: boolean
+          supports_notifications: boolean
+          supports_reports: boolean
           supports_sale_agreements: boolean
           updated_at: string | null
         }
@@ -1167,7 +1174,14 @@ export type Database = {
           show_differential_details?: boolean
           show_reloan_module?: boolean
           state_code?: string | null
+          supports_accounting?: boolean
+          supports_agents?: boolean
+          supports_approvals?: boolean
+          supports_customer_portal?: boolean
+          supports_gold_vault?: boolean
           supports_loans?: boolean
+          supports_notifications?: boolean
+          supports_reports?: boolean
           supports_sale_agreements?: boolean
           updated_at?: string | null
         }
@@ -1188,7 +1202,14 @@ export type Database = {
           show_differential_details?: boolean
           show_reloan_module?: boolean
           state_code?: string | null
+          supports_accounting?: boolean
+          supports_agents?: boolean
+          supports_approvals?: boolean
+          supports_customer_portal?: boolean
+          supports_gold_vault?: boolean
           supports_loans?: boolean
+          supports_notifications?: boolean
+          supports_reports?: boolean
           supports_sale_agreements?: boolean
           updated_at?: string | null
         }

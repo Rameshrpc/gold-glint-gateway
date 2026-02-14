@@ -23,6 +23,13 @@ interface Client {
   company_name: string;
   supports_loans: boolean;
   supports_sale_agreements: boolean;
+  supports_accounting: boolean;
+  supports_reports: boolean;
+  supports_notifications: boolean;
+  supports_gold_vault: boolean;
+  supports_agents: boolean;
+  supports_customer_portal: boolean;
+  supports_approvals: boolean;
 }
 
 interface Branch {
@@ -93,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fetch client with feature flags
         const { data: clientData } = await supabase
           .from('clients')
-          .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
+          .select('id, client_code, company_name, supports_loans, supports_sale_agreements, supports_accounting, supports_reports, supports_notifications, supports_gold_vault, supports_agents, supports_customer_portal, supports_approvals')
           .eq('id', profileData.client_id)
           .maybeSingle();
 
@@ -102,6 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ...clientData,
             supports_loans: clientData.supports_loans ?? true,
             supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+            supports_accounting: clientData.supports_accounting ?? true,
+            supports_reports: clientData.supports_reports ?? true,
+            supports_notifications: clientData.supports_notifications ?? true,
+            supports_gold_vault: clientData.supports_gold_vault ?? true,
+            supports_agents: clientData.supports_agents ?? true,
+            supports_customer_portal: clientData.supports_customer_portal ?? false,
+            supports_approvals: clientData.supports_approvals ?? true,
           } as Client);
         }
 
@@ -375,7 +389,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: clientData, error } = await supabase
       .from('clients')
-      .select('id, client_code, company_name, supports_loans, supports_sale_agreements')
+      .select('id, client_code, company_name, supports_loans, supports_sale_agreements, supports_accounting, supports_reports, supports_notifications, supports_gold_vault, supports_agents, supports_customer_portal, supports_approvals')
       .eq('id', clientId)
       .maybeSingle();
 
@@ -390,19 +404,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...clientData,
       supports_loans: clientData.supports_loans ?? true,
       supports_sale_agreements: clientData.supports_sale_agreements ?? false,
+      supports_accounting: clientData.supports_accounting ?? true,
+      supports_reports: clientData.supports_reports ?? true,
+      supports_notifications: clientData.supports_notifications ?? true,
+      supports_gold_vault: clientData.supports_gold_vault ?? true,
+      supports_agents: clientData.supports_agents ?? true,
+      supports_customer_portal: clientData.supports_customer_portal ?? false,
+      supports_approvals: clientData.supports_approvals ?? true,
     } as Client;
 
-    // Prevent redundant re-renders: if nothing changed, keep the previous reference.
     setClient((prev) => {
       if (!prev) return nextClient;
-
-      const unchanged =
-        prev.id === nextClient.id &&
-        prev.client_code === nextClient.client_code &&
-        prev.company_name === nextClient.company_name &&
-        prev.supports_loans === nextClient.supports_loans &&
-        prev.supports_sale_agreements === nextClient.supports_sale_agreements;
-
+      const unchanged = JSON.stringify(prev) === JSON.stringify(nextClient);
       return unchanged ? prev : nextClient;
     });
   }, [profile?.client_id]);
