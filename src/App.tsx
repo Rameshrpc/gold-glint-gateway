@@ -88,48 +88,48 @@ const App = () => (
             <Route path="/users" element={<ProtectedRoute><Users /></ProtectedRoute>} />
             
             {/* Loans & Operations */}
-            <Route path="/loans" element={<ProtectedRoute><Loans /></ProtectedRoute>} />
-            <Route path="/new-loan" element={<ProtectedRoute><Loans /></ProtectedRoute>} />
+            <Route path="/loans" element={<ProtectedRoute requiredFeature="loans"><Loans /></ProtectedRoute>} />
+            <Route path="/new-loan" element={<ProtectedRoute requiredFeature="loans"><Loans /></ProtectedRoute>} />
             <Route path="/schemes" element={<ProtectedRoute><Schemes /></ProtectedRoute>} />
-            <Route path="/interest" element={<ProtectedRoute><Interest /></ProtectedRoute>} />
-            <Route path="/redemption" element={<ProtectedRoute><Redemption /></ProtectedRoute>} />
-            <Route path="/reloan" element={<ProtectedRoute><Reloan /></ProtectedRoute>} />
-            <Route path="/agents" element={<ProtectedRoute><Agents /></ProtectedRoute>} />
+            <Route path="/interest" element={<ProtectedRoute requiredFeature="loans"><Interest /></ProtectedRoute>} />
+            <Route path="/redemption" element={<ProtectedRoute requiredFeature="loans"><Redemption /></ProtectedRoute>} />
+            <Route path="/reloan" element={<ProtectedRoute requiredFeature="loans"><Reloan /></ProtectedRoute>} />
+            <Route path="/agents" element={<ProtectedRoute requiredFeature="agents"><Agents /></ProtectedRoute>} />
             <Route path="/items" element={<ProtectedRoute><Items /></ProtectedRoute>} />
             <Route path="/item-groups" element={<ProtectedRoute><ItemGroups /></ProtectedRoute>} />
             <Route path="/market-rates" element={<ProtectedRoute><MarketRates /></ProtectedRoute>} />
-            <Route path="/auction" element={<ProtectedRoute><Auction /></ProtectedRoute>} />
+            <Route path="/auction" element={<ProtectedRoute requiredFeature="loans"><Auction /></ProtectedRoute>} />
             
             {/* Sale Agreements (Trading Format) */}
-            <Route path="/sale-agreements" element={<ProtectedRoute><SaleAgreements /></ProtectedRoute>} />
-            <Route path="/sale-schemes" element={<ProtectedRoute><SaleSchemes /></ProtectedRoute>} />
-            <Route path="/sale-margin-renewal" element={<ProtectedRoute><SaleMarginRenewal /></ProtectedRoute>} />
-            <Route path="/sale-repurchase" element={<ProtectedRoute><SaleRepurchase /></ProtectedRoute>} />
+            <Route path="/sale-agreements" element={<ProtectedRoute requiredFeature="sale_agreements"><SaleAgreements /></ProtectedRoute>} />
+            <Route path="/sale-schemes" element={<ProtectedRoute requiredFeature="sale_agreements"><SaleSchemes /></ProtectedRoute>} />
+            <Route path="/sale-margin-renewal" element={<ProtectedRoute requiredFeature="sale_agreements"><SaleMarginRenewal /></ProtectedRoute>} />
+            <Route path="/sale-repurchase" element={<ProtectedRoute requiredFeature="sale_agreements"><SaleRepurchase /></ProtectedRoute>} />
             
             <Route path="/banks-nbfc" element={<ProtectedRoute><BanksNbfc /></ProtectedRoute>} />
             <Route path="/loyalties" element={<ProtectedRoute><Loyalties /></ProtectedRoute>} />
-            <Route path="/gold-vault" element={<ProtectedRoute><GoldVault /></ProtectedRoute>} />
+            <Route path="/gold-vault" element={<ProtectedRoute requiredFeature="gold_vault"><GoldVault /></ProtectedRoute>} />
             
             {/* Financial Reports */}
             <Route path="/reports" element={<Navigate to="/mis-reports" replace />} />
-            <Route path="/mis-reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-            <Route path="/audit-logs" element={<ProtectedRoute><AuditLogs /></ProtectedRoute>} />
-            <Route path="/activity-log" element={<ProtectedRoute><ActivityLog /></ProtectedRoute>} />
-            <Route path="/trial-balance" element={<ProtectedRoute><TrialBalance /></ProtectedRoute>} />
-            <Route path="/profit-loss" element={<ProtectedRoute><ProfitAndLoss /></ProtectedRoute>} />
-            <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheet /></ProtectedRoute>} />
-            <Route path="/ledger-statement" element={<ProtectedRoute><LedgerStatement /></ProtectedRoute>} />
-            <Route path="/day-book" element={<ProtectedRoute><DayBook /></ProtectedRoute>} />
-            <Route path="/accounts" element={<ProtectedRoute><ChartOfAccounts /></ProtectedRoute>} />
-            <Route path="/agent-commissions" element={<ProtectedRoute><AgentCommissions /></ProtectedRoute>} />
-            <Route path="/commission-reports" element={<ProtectedRoute><CommissionReports /></ProtectedRoute>} />
-            <Route path="/vouchers" element={<ProtectedRoute><Vouchers /></ProtectedRoute>} />
-            <Route path="/backfill-vouchers" element={<ProtectedRoute><BackfillVouchers /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
-            <Route path="/notification-logs" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
-            <Route path="/whatsapp" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
-            <Route path="/sms" element={<ProtectedRoute><NotificationLogs /></ProtectedRoute>} />
-            <Route path="/approvals" element={<ProtectedRoute><Approvals /></ProtectedRoute>} />
+            <Route path="/mis-reports" element={<ProtectedRoute requiredFeature="reports"><Reports /></ProtectedRoute>} />
+            <Route path="/audit-logs" element={<ProtectedRoute requiredFeature="reports"><AuditLogs /></ProtectedRoute>} />
+            <Route path="/activity-log" element={<ProtectedRoute requiredFeature="reports"><ActivityLog /></ProtectedRoute>} />
+            <Route path="/trial-balance" element={<ProtectedRoute requiredFeature="accounting"><TrialBalance /></ProtectedRoute>} />
+            <Route path="/profit-loss" element={<ProtectedRoute requiredFeature="accounting"><ProfitAndLoss /></ProtectedRoute>} />
+            <Route path="/balance-sheet" element={<ProtectedRoute requiredFeature="accounting"><BalanceSheet /></ProtectedRoute>} />
+            <Route path="/ledger-statement" element={<ProtectedRoute requiredFeature="accounting"><LedgerStatement /></ProtectedRoute>} />
+            <Route path="/day-book" element={<ProtectedRoute requiredFeature="accounting"><DayBook /></ProtectedRoute>} />
+            <Route path="/accounts" element={<ProtectedRoute requiredFeature="accounting"><ChartOfAccounts /></ProtectedRoute>} />
+            <Route path="/agent-commissions" element={<ProtectedRoute requiredFeature="agents"><AgentCommissions /></ProtectedRoute>} />
+            <Route path="/commission-reports" element={<ProtectedRoute requiredFeature="agents"><CommissionReports /></ProtectedRoute>} />
+            <Route path="/vouchers" element={<ProtectedRoute requiredFeature="accounting"><Vouchers /></ProtectedRoute>} />
+            <Route path="/backfill-vouchers" element={<ProtectedRoute requiredFeature="accounting"><BackfillVouchers /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/notification-logs" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/sms" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/approvals" element={<ProtectedRoute requiredFeature="approvals"><Approvals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />

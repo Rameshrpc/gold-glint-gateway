@@ -117,6 +117,13 @@ export function ClientRightsSheet({ open, onOpenChange, client, onSave }: Client
       // Determine feature flag states from module toggles
       const supportsLoans = modules['loans'] ?? true;
       const supportsSaleAgreements = modules['sale_agreements'] ?? false;
+      const supportsAccounting = modules['accounting'] ?? true;
+      const supportsReports = modules['reports'] ?? true;
+      const supportsNotifications = modules['notifications'] ?? true;
+      const supportsGoldVault = modules['quick_view'] !== false; // gold vault tied to quick_view or always true
+      const supportsAgents = modules['agents'] ?? true;
+      const supportsCustomerPortal = false; // controlled separately
+      const supportsApprovals = modules['settings'] !== false; // approvals available if settings enabled
 
       // Update client limits AND feature flags
       const { error: clientError } = await supabase
@@ -127,6 +134,13 @@ export function ClientRightsSheet({ open, onOpenChange, client, onSave }: Client
           plan_name: planName,
           supports_loans: supportsLoans,
           supports_sale_agreements: supportsSaleAgreements,
+          supports_accounting: supportsAccounting,
+          supports_reports: supportsReports,
+          supports_notifications: supportsNotifications,
+          supports_gold_vault: supportsGoldVault,
+          supports_agents: supportsAgents,
+          supports_customer_portal: supportsCustomerPortal,
+          supports_approvals: supportsApprovals,
         })
         .eq('id', client.id);
 

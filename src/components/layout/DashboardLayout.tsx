@@ -185,22 +185,28 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return item.roles.some(role => hasRole(role));
   };
 
+  // Items that belong to specific feature groups (for filtering within mixed groups)
+  const agentItems = ['/agents', '/agent-commissions', '/commission-reports'];
+  const notificationItems = ['/notifications', '/whatsapp', '/sms'];
+  const reportItems = ['/mis-reports', '/audit-logs', '/activity-log'];
+
+  const filterMenuItemByFeature = (item: MenuItem) => {
+    if (!client) return true;
+    if (agentItems.includes(item.href) && !client.supports_agents) return false;
+    if (notificationItems.includes(item.href) && !client.supports_notifications) return false;
+    if (reportItems.includes(item.href) && !client.supports_reports) return false;
+    return true;
+  };
+
   const filterMenuGroup = (group: MenuGroup) => {
     // Feature flag checks for entire menu groups
-    // Gold Vault is shared - show if either loans OR sale agreements is enabled
-    if (group.title === 'Gold Vault') {
-      if (client && !client.supports_loans && !client.supports_sale_agreements) {
-        return false;
-      }
-    }
-    // Operations only shown if loans is enabled (Gold Vault moved out)
-    if (group.title === 'Operations') {
-      if (client && !client.supports_loans) {
-        return false;
-      }
-    }
-    if (group.title === 'Sale Agreements' && client && !client.supports_sale_agreements) {
-      return false;
+    if (client) {
+      if (group.title === 'Gold Vault' && !client.supports_gold_vault) return false;
+      if (group.title === 'Operations' && !client.supports_loans) return false;
+      if (group.title === 'Sale Agreements' && !client.supports_sale_agreements) return false;
+      if (group.title === 'Accounting' && !client.supports_accounting) return false;
+      // Reports & Comms: hide if both reports AND notifications are disabled
+      if (group.title === 'Reports & Comms' && !client.supports_reports && !client.supports_notifications) return false;
     }
     
     // Role-based checks
@@ -209,7 +215,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         return false;
       }
     }
-    const filteredItems = group.items.filter(filterMenuItem);
+    const filteredItems = group.items.filter(item => filterMenuItem(item) && filterMenuItemByFeature(item));
     return filteredItems.length > 0;
   };
 
@@ -341,7 +347,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         <ScrollArea className="flex-1 h-[calc(100vh-14rem)]">
           <nav className="p-3 space-y-1">
             {menuGroups.filter(filterMenuGroup).map(group => {
-              const filteredItems = group.items.filter(filterMenuItem);
+              const filteredItems = group.items.filter(item => filterMenuItem(item) && filterMenuItemByFeature(item));
               const isOpen = openGroups.includes(group.title) || isGroupActive(group);
               
               // For Dashboard, render as single item without collapsible
