@@ -20,6 +20,10 @@ interface NotificationLog {
   message_content: string;
   entity_type: string | null;
   status: string;
+  delivery_status: string | null;
+  provider_message_id: string | null;
+  template_code: string | null;
+  error_message: string | null;
   sent_at: string | null;
   created_at: string;
 }
@@ -97,6 +101,8 @@ export default function NotificationLogs() {
   // Stats
   const smsCount = logs.filter(l => l.channel === 'sms').length;
   const whatsappCount = logs.filter(l => l.channel === 'whatsapp').length;
+  const sentCount = logs.filter(l => l.delivery_status === 'sent' || l.status === 'sent').length;
+  const failedCount = logs.filter(l => l.delivery_status === 'failed' || l.status === 'failed').length;
 
   return (
     <DashboardLayout>
@@ -245,9 +251,20 @@ export default function NotificationLogs() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary" className="text-xs">
-                              {log.status}
+                            <Badge 
+                              variant="secondary" 
+                              className={`text-xs ${
+                                (log.delivery_status || log.status) === 'sent' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                (log.delivery_status || log.status) === 'failed' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                (log.delivery_status || log.status) === 'queued' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                ''
+                              }`}
+                            >
+                              {log.delivery_status || log.status}
                             </Badge>
+                            {log.template_code && (
+                              <p className="text-xs text-muted-foreground mt-1">{log.template_code}</p>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))

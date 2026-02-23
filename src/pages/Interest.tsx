@@ -35,6 +35,7 @@ import {
 import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { generateInterestVoucher } from '@/hooks/useVoucherGeneration';
+import { SendButtons } from '@/components/notifications';
 
 interface LoanWithDetails {
   id: string;
@@ -631,7 +632,16 @@ export default function Interest() {
                             {getStatusBadge(loan.interestStatus)}
                           </TableCell>
                           <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-end gap-1">
+                              <SendButtons
+                                recipient={{ id: loan.customer.id, name: loan.customer.full_name, phone: loan.customer.phone }}
+                                loan={{ id: loan.id, loan_number: loan.loan_number, principal_amount: loan.principal_amount, interest_rate: loan.interest_rate, loan_date: loan.loan_date, maturity_date: loan.maturity_date }}
+                                templateType="interest_reminder"
+                                variant="icon-only"
+                                entityType="interest"
+                                entityId={loan.id}
+                                extraVariables={{ amount: loan.interestDue.totalDue.toLocaleString('en-IN'), due_date: loan.dueDate }}
+                              />
                               <Button
                                 variant="outline"
                                 size="sm"
