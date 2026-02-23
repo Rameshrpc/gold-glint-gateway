@@ -38,6 +38,7 @@ import { useEffectivePrintSettings } from '@/hooks/useEffectivePrintSettings';
 import { useApprovalWorkflow, WorkflowType } from '@/hooks/useApprovalWorkflow';
 import { ApprovalBadge } from '@/components/approvals/ApprovalBadge';
 import { pdf } from '@react-pdf/renderer';
+import { SendButtons } from '@/components/notifications';
 
 interface Customer {
   id: string;
@@ -2445,6 +2446,14 @@ export default function Loans() {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <SendButtons
+                              recipient={{ id: loan.customer.id, name: loan.customer.full_name, phone: loan.customer.phone }}
+                              loan={{ id: loan.id, loan_number: loan.loan_number, principal_amount: loan.principal_amount, interest_rate: loan.interest_rate, loan_date: loan.loan_date, maturity_date: loan.maturity_date }}
+                              templateType="loan_disbursed"
+                              variant="icon-only"
+                              entityType="loan"
+                              entityId={loan.id}
+                            />
                             <Button variant="ghost" size="sm" onClick={() => viewLoanDetails(loan)} title="View loan details">
                               <Eye className="h-4 w-4" />
                             </Button>

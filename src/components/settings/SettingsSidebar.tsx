@@ -14,7 +14,9 @@ import {
   ChevronRight,
   FileStack,
   ShieldCheck,
-  Scale
+  Scale,
+  Bell,
+  MessageSquare
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useState } from 'react';
@@ -23,6 +25,8 @@ export type SettingsSection =
   | 'user-rights' 
   | 'client-rights' 
   | 'approval-workflows'
+  | 'notification-settings'
+  | 'notification-templates'
   | 'print-loan-docs'
   | 'print-general' 
   | 'print-documents' 
@@ -57,10 +61,17 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
   const [configOpen, setConfigOpen] = useState(true);
   const [printOpen, setPrintOpen] = useState(true);
 
+  const [notifOpen, setNotifOpen] = useState(false);
+
   const configItems: MenuItem[] = [
     { id: 'user-rights', label: 'User Rights', icon: Users },
     ...(showClientRights ? [{ id: 'client-rights' as const, label: 'Client Rights', icon: Building2 }] : []),
     { id: 'approval-workflows', label: 'Approval Workflows', icon: ShieldCheck },
+  ];
+
+  const notifItems: MenuItem[] = [
+    { id: 'notification-settings', label: 'Configuration', icon: Settings2 },
+    { id: 'notification-templates', label: 'Templates', icon: MessageSquare },
   ];
 
   const printItems: MenuItem[] = [
@@ -76,11 +87,8 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
     { id: 'print-branches', label: 'Branch Settings', icon: GitBranch },
   ];
 
-  const isConfigSection = (section: SettingsSection) => 
-    section === 'user-rights' || section === 'client-rights' || section === 'approval-workflows';
-  
-  const isPrintSection = (section: SettingsSection) => 
-    section.startsWith('print-');
+  const isNotifSection = (section: SettingsSection) =>
+    section === 'notification-settings' || section === 'notification-templates';
 
   return (
     <div className="w-64 shrink-0 border-r bg-muted/30">
@@ -100,6 +108,38 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-1 space-y-1 pl-2">
             {configItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onSectionChange(item.id)}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2 text-sm rounded-md transition-colors",
+                  activeSection === item.id
+                    ? "bg-primary text-primary-foreground font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </button>
+            ))}
+          </CollapsibleContent>
+        </Collapsible>
+
+        {/* Notifications Section */}
+        <Collapsible open={notifOpen} onOpenChange={setNotifOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted rounded-md transition-colors">
+            <div className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
+            </div>
+            {notifOpen ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-1 space-y-1 pl-2">
+            {notifItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => onSectionChange(item.id)}

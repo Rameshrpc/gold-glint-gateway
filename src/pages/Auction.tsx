@@ -32,6 +32,7 @@ import SourceAccountSelector from '@/components/payments/SourceAccountSelector';
 import { useSourceAccount } from '@/hooks/useSourceAccount';
 import { checkRepledgeStatus, showRepledgeWarning } from '@/hooks/useRepledgeCheck';
 import { generateAuctionVoucher } from '@/hooks/useVoucherGeneration';
+import { SendButtons } from '@/components/notifications';
 
 interface Customer {
   id: string;
@@ -499,9 +500,19 @@ const Auction = () => {
                                 <p className="font-semibold">{loan.loan_number}</p>
                                 <p className="text-sm text-muted-foreground">{loan.customer?.full_name}</p>
                               </div>
-                              <Badge variant="destructive">
-                                {daysOverdue} days overdue
-                              </Badge>
+                              <div className="flex items-center gap-2">
+                                <SendButtons
+                                  recipient={{ id: loan.customer?.id, name: loan.customer?.full_name || '', phone: loan.customer?.phone || '' }}
+                                  templateType="auction_notice"
+                                  variant="icon-only"
+                                  entityType="auction"
+                                  entityId={loan.id}
+                                  extraVariables={{ amount: outstanding.total.toLocaleString('en-IN'), auction_date: format(new Date(), 'dd/MM/yyyy') }}
+                                />
+                                <Badge variant="destructive">
+                                  {daysOverdue} days overdue
+                                </Badge>
+                              </div>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>

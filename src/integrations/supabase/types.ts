@@ -2348,6 +2348,7 @@ export type Database = {
           cost_credits: number | null
           created_at: string
           delivered_at: string | null
+          delivery_status: string | null
           entity_id: string | null
           entity_type: string | null
           error_message: string | null
@@ -2365,6 +2366,7 @@ export type Database = {
           scheduled_for: string | null
           sent_at: string | null
           status: string
+          template_code: string | null
           template_id: string | null
           updated_at: string
         }
@@ -2375,6 +2377,7 @@ export type Database = {
           cost_credits?: number | null
           created_at?: string
           delivered_at?: string | null
+          delivery_status?: string | null
           entity_id?: string | null
           entity_type?: string | null
           error_message?: string | null
@@ -2392,6 +2395,7 @@ export type Database = {
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
+          template_code?: string | null
           template_id?: string | null
           updated_at?: string
         }
@@ -2402,6 +2406,7 @@ export type Database = {
           cost_credits?: number | null
           created_at?: string
           delivered_at?: string | null
+          delivery_status?: string | null
           entity_id?: string | null
           entity_type?: string | null
           error_message?: string | null
@@ -2419,6 +2424,7 @@ export type Database = {
           scheduled_for?: string | null
           sent_at?: string | null
           status?: string
+          template_code?: string | null
           template_id?: string | null
           updated_at?: string
         }
@@ -2449,6 +2455,7 @@ export type Database = {
       notification_templates: {
         Row: {
           channel: string
+          channel_type: string | null
           client_id: string
           created_at: string | null
           days_before_due: number | null
@@ -2459,12 +2466,14 @@ export type Database = {
           send_time: string | null
           template_code: string
           template_content: string
+          template_content_whatsapp: string | null
           template_name: string
           updated_at: string | null
           variables: string[] | null
         }
         Insert: {
           channel?: string
+          channel_type?: string | null
           client_id: string
           created_at?: string | null
           days_before_due?: number | null
@@ -2475,12 +2484,14 @@ export type Database = {
           send_time?: string | null
           template_code: string
           template_content: string
+          template_content_whatsapp?: string | null
           template_name: string
           updated_at?: string | null
           variables?: string[] | null
         }
         Update: {
           channel?: string
+          channel_type?: string | null
           client_id?: string
           created_at?: string | null
           days_before_due?: number | null
@@ -2491,6 +2502,7 @@ export type Database = {
           send_time?: string | null
           template_code?: string
           template_content?: string
+          template_content_whatsapp?: string | null
           template_name?: string
           updated_at?: string | null
           variables?: string[] | null

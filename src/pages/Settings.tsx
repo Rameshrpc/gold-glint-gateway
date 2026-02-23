@@ -23,6 +23,8 @@ import { BranchPrintSettingsTab } from '@/components/print/BranchPrintSettingsTa
 import { LoanDocumentsOverview } from '@/components/print/LoanDocumentsOverview';
 import { BillOfSaleSettings } from '@/components/print/BillOfSaleSettings';
 import { SaleAgreementSettings } from '@/components/print/SaleAgreementSettings';
+import { NotificationTemplateSettings } from '@/components/settings/NotificationTemplateSettings';
+import { NotificationSettings as NotificationSettingsPanel } from '@/components/settings/NotificationSettings';
 import { MODULE_KEYS } from '@/lib/modules';
 
 interface UserProfile {
@@ -395,6 +397,10 @@ export default function Settings() {
         return <TemplatesTab />;
       case 'print-branches':
         return <BranchPrintSettingsTab />;
+      case 'notification-settings':
+        return <NotificationSettingsPanel />;
+      case 'notification-templates':
+        return <NotificationTemplateSettings />;
       default:
         return null;
     }
