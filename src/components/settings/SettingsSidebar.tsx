@@ -27,6 +27,7 @@ export type SettingsSection =
   | 'approval-workflows'
   | 'notification-settings'
   | 'notification-templates'
+  | 'whatsapp-settings'
   | 'print-loan-docs'
   | 'print-general' 
   | 'print-documents' 
@@ -72,6 +73,7 @@ export function SettingsSidebar({ activeSection, onSectionChange, showClientRigh
   const notifItems: MenuItem[] = [
     { id: 'notification-settings', label: 'Configuration', icon: Settings2 },
     { id: 'notification-templates', label: 'Templates', icon: MessageSquare },
+    { id: 'whatsapp-settings', label: 'WhatsApp', icon: MessageSquare },
   ];
 
   const printItems: MenuItem[] = [

@@ -1025,6 +1025,7 @@ export type Database = {
           email_enabled: boolean | null
           id: string
           last_reset_date: string | null
+          make_webhook_url: string | null
           monthly_sms_limit: number | null
           msg91_auth_key: string | null
           msg91_dlt_entity_id: string | null
@@ -1033,6 +1034,7 @@ export type Database = {
           sms_sent_this_month: number | null
           sms_sent_today: number | null
           updated_at: string | null
+          wasender_api_key: string | null
           whatsapp_enabled: boolean | null
           whatsapp_template_namespace: string | null
         }
@@ -1044,6 +1046,7 @@ export type Database = {
           email_enabled?: boolean | null
           id?: string
           last_reset_date?: string | null
+          make_webhook_url?: string | null
           monthly_sms_limit?: number | null
           msg91_auth_key?: string | null
           msg91_dlt_entity_id?: string | null
@@ -1052,6 +1055,7 @@ export type Database = {
           sms_sent_this_month?: number | null
           sms_sent_today?: number | null
           updated_at?: string | null
+          wasender_api_key?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_template_namespace?: string | null
         }
@@ -1063,6 +1067,7 @@ export type Database = {
           email_enabled?: boolean | null
           id?: string
           last_reset_date?: string | null
+          make_webhook_url?: string | null
           monthly_sms_limit?: number | null
           msg91_auth_key?: string | null
           msg91_dlt_entity_id?: string | null
@@ -1071,6 +1076,7 @@ export type Database = {
           sms_sent_this_month?: number | null
           sms_sent_today?: number | null
           updated_at?: string | null
+          wasender_api_key?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_template_namespace?: string | null
         }
