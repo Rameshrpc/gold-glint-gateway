@@ -3404,6 +3404,7 @@ export type Database = {
           grace_period_days: number | null
           id: string
           interest_rate: number
+          interest_rate_slabs: Json | null
           ltv_percentage: number
           margin_per_month: number | null
           max_amount: number
@@ -3412,12 +3413,14 @@ export type Database = {
           min_tenure_days: number
           minimum_days: number
           penalty_rate: number | null
+          penalty_slabs: Json | null
           processing_fee_percentage: number | null
           rate_18kt: number | null
           rate_22kt: number | null
           rate_per_gram: number | null
           scheme_id: string
           shown_rate: number
+          slab_mode: string | null
           strike_periods: Json | null
           tenure_step: number | null
           version_number: number
@@ -3435,6 +3438,7 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           interest_rate: number
+          interest_rate_slabs?: Json | null
           ltv_percentage?: number
           margin_per_month?: number | null
           max_amount?: number
@@ -3443,12 +3447,14 @@ export type Database = {
           min_tenure_days?: number
           minimum_days?: number
           penalty_rate?: number | null
+          penalty_slabs?: Json | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
           rate_22kt?: number | null
           rate_per_gram?: number | null
           scheme_id: string
           shown_rate?: number
+          slab_mode?: string | null
           strike_periods?: Json | null
           tenure_step?: number | null
           version_number?: number
@@ -3466,6 +3472,7 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           interest_rate?: number
+          interest_rate_slabs?: Json | null
           ltv_percentage?: number
           margin_per_month?: number | null
           max_amount?: number
@@ -3474,12 +3481,14 @@ export type Database = {
           min_tenure_days?: number
           minimum_days?: number
           penalty_rate?: number | null
+          penalty_slabs?: Json | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
           rate_22kt?: number | null
           rate_per_gram?: number | null
           scheme_id?: string
           shown_rate?: number
+          slab_mode?: string | null
           strike_periods?: Json | null
           tenure_step?: number | null
           version_number?: number
@@ -3513,6 +3522,7 @@ export type Database = {
           grace_period_days: number | null
           id: string
           interest_rate: number
+          interest_rate_slabs: Json | null
           is_active: boolean | null
           ltv_percentage: number
           margin_per_month: number | null
@@ -3522,6 +3532,7 @@ export type Database = {
           min_tenure_days: number
           minimum_days: number
           penalty_rate: number | null
+          penalty_slabs: Json | null
           processing_fee_percentage: number | null
           rate_18kt: number | null
           rate_22kt: number | null
@@ -3530,6 +3541,7 @@ export type Database = {
           scheme_name: string
           scheme_type: string | null
           shown_rate: number
+          slab_mode: string | null
           strike_periods: Json | null
           tenure_step: number | null
           updated_at: string | null
@@ -3545,6 +3557,7 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           interest_rate: number
+          interest_rate_slabs?: Json | null
           is_active?: boolean | null
           ltv_percentage?: number
           margin_per_month?: number | null
@@ -3554,6 +3567,7 @@ export type Database = {
           min_tenure_days?: number
           minimum_days?: number
           penalty_rate?: number | null
+          penalty_slabs?: Json | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
           rate_22kt?: number | null
@@ -3562,6 +3576,7 @@ export type Database = {
           scheme_name: string
           scheme_type?: string | null
           shown_rate?: number
+          slab_mode?: string | null
           strike_periods?: Json | null
           tenure_step?: number | null
           updated_at?: string | null
@@ -3577,6 +3592,7 @@ export type Database = {
           grace_period_days?: number | null
           id?: string
           interest_rate?: number
+          interest_rate_slabs?: Json | null
           is_active?: boolean | null
           ltv_percentage?: number
           margin_per_month?: number | null
@@ -3586,6 +3602,7 @@ export type Database = {
           min_tenure_days?: number
           minimum_days?: number
           penalty_rate?: number | null
+          penalty_slabs?: Json | null
           processing_fee_percentage?: number | null
           rate_18kt?: number | null
           rate_22kt?: number | null
@@ -3594,6 +3611,7 @@ export type Database = {
           scheme_name?: string
           scheme_type?: string | null
           shown_rate?: number
+          slab_mode?: string | null
           strike_periods?: Json | null
           tenure_step?: number | null
           updated_at?: string | null

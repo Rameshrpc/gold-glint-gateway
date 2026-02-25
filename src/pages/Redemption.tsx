@@ -227,7 +227,7 @@ export default function Redemption() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days),
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days, interest_rate_slabs, slab_mode, penalty_slabs),
           scheme_version:scheme_versions(id, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
@@ -303,9 +303,12 @@ export default function Redemption() {
       shown_rate: selectedLoan.scheme.shown_rate || 18,
       effective_rate: selectedLoan.scheme.effective_rate || selectedLoan.scheme.interest_rate * 12,
       minimum_days: selectedLoan.scheme.minimum_days || 30,
-      advance_interest_months: 1, // Default 1 month = 30 days advance interest
+      advance_interest_months: 1,
       penalty_rate: selectedLoan.scheme.penalty_rate || 2,
       grace_period_days: selectedLoan.scheme.grace_period_days || 7,
+      interest_rate_slabs: (selectedLoan.scheme as any).interest_rate_slabs || [],
+      slab_mode: (selectedLoan.scheme as any).slab_mode || 'prospective',
+      penalty_slabs: (selectedLoan.scheme as any).penalty_slabs || [],
     };
 
     const lastPaidDate = selectedLoan.last_interest_paid_date || selectedLoan.loan_date;
