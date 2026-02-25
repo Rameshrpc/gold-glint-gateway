@@ -8,12 +8,13 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   MessageCircle, Send, Bot, UserCheck, Search, Phone, 
   Clock, Check, CheckCheck, AlertCircle, Info, IndianRupee,
   CalendarClock, FileText, ArrowLeft, Zap, ChevronRight,
-  AlertTriangle, User, CreditCard
+  AlertTriangle, User, CreditCard, Plus, Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday, differenceInDays } from 'date-fns';
@@ -140,7 +141,13 @@ export default function WhatsAppInbox() {
   const [customerLoans, setCustomerLoans] = useState<LoanSummary[]>([]);
   const [showTemplates, setShowTemplates] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerResults, setCustomerResults] = useState<{ id: string; full_name: string; phone: string }[]>([]);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
+  const [creatingChat, setCreatingChat] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const customerSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clientId = profile?.client_id;
   const selectedChat = chats.find(c => c.id === selectedChatId);
@@ -247,6 +254,77 @@ export default function WhatsAppInbox() {
       .limit(10);
     setCustomerLoans((data as LoanSummary[]) || []);
   }, [clientId]);
+
+  // ── Search customers for new chat ──
+  const searchCustomers = useCallback(async (query: string) => {
+    if (!clientId || query.length < 2) { setCustomerResults([]); return; }
+    setSearchingCustomers(true);
+    const { data } = await supabase
+      .from('customers')
+      .select('id, full_name, phone')
+      .eq('client_id', clientId)
+      .or(`full_name.ilike.%${query}%,phone.ilike.%${query}%`)
+      .limit(10);
+    setCustomerResults(data || []);
+    setSearchingCustomers(false);
+  }, [clientId]);
+
+  const handleCustomerSearchChange = (value: string) => {
+    setCustomerSearch(value);
+    if (customerSearchTimeout.current) clearTimeout(customerSearchTimeout.current);
+    customerSearchTimeout.current = setTimeout(() => searchCustomers(value), 300);
+  };
+
+  // ── Start new chat with customer ──
+  const startNewChat = async (customer: { id: string; full_name: string; phone: string }) => {
+    if (!clientId) return;
+    setCreatingChat(true);
+
+    // Check for existing chat
+    const { data: existing } = await supabase
+      .from('whatsapp_chats')
+      .select('id')
+      .eq('client_id', clientId)
+      .eq('customer_phone', customer.phone)
+      .maybeSingle();
+
+    if (existing) {
+      setSelectedChatId(existing.id);
+      setNewChatOpen(false);
+      setCustomerSearch('');
+      setCustomerResults([]);
+      setCreatingChat(false);
+      toast.info('Chat already exists — switched to it');
+      return;
+    }
+
+    // Create new chat
+    const { data: newChat, error } = await supabase
+      .from('whatsapp_chats')
+      .insert({
+        client_id: clientId,
+        customer_id: customer.id,
+        customer_phone: customer.phone,
+        status: 'open',
+        unread_count: 0,
+      })
+      .select('id')
+      .single();
+
+    if (error) {
+      toast.error('Failed to create chat');
+      console.error(error);
+    } else if (newChat) {
+      await fetchChats();
+      setSelectedChatId(newChat.id);
+      toast.success(`Chat started with ${customer.full_name}`);
+    }
+
+    setNewChatOpen(false);
+    setCustomerSearch('');
+    setCustomerResults([]);
+    setCreatingChat(false);
+  };
 
   useEffect(() => { fetchChats(); }, [fetchChats]);
   useEffect(() => { fetchMessages(); }, [fetchMessages]);
@@ -388,15 +466,72 @@ export default function WhatsAppInbox() {
           )}>
             {/* Search */}
             <div className="p-3 border-b space-y-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search chats..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 bg-muted/50"
-                />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="pl-9 h-9 bg-muted/50"
+                  />
+                </div>
+                <Button size="sm" className="h-9 px-3" onClick={() => setNewChatOpen(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> New
+                </Button>
               </div>
+
+              {/* New Chat Dialog */}
+              <Dialog open={newChatOpen} onOpenChange={(open) => { setNewChatOpen(open); if (!open) { setCustomerSearch(''); setCustomerResults([]); } }}>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Start New Chat</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-3">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search customer by name or phone..."
+                        value={customerSearch}
+                        onChange={e => handleCustomerSearchChange(e.target.value)}
+                        className="pl-9"
+                        autoFocus
+                      />
+                    </div>
+                    <ScrollArea className="max-h-64">
+                      {searchingCustomers ? (
+                        <div className="flex items-center justify-center py-4 text-muted-foreground text-sm">
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" /> Searching...
+                        </div>
+                      ) : customerResults.length > 0 ? (
+                        <div className="space-y-1">
+                          {customerResults.map(c => (
+                            <button
+                              key={c.id}
+                              disabled={creatingChat}
+                              onClick={() => startNewChat(c)}
+                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-muted/70 transition-colors text-left"
+                            >
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-primary/10 text-primary text-xs">{getInitials(c.full_name)}</AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate text-foreground">{c.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{c.phone}</p>
+                              </div>
+                              <MessageCircle className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          ))}
+                        </div>
+                      ) : customerSearch.length >= 2 ? (
+                        <p className="text-center text-muted-foreground text-sm py-4">No customers found</p>
+                      ) : (
+                        <p className="text-center text-muted-foreground text-sm py-4">Type at least 2 characters to search</p>
+                      )}
+                    </ScrollArea>
+                  </div>
+                </DialogContent>
+              </Dialog>
               {/* Filter Tabs */}
               <Tabs value={filterTab} onValueChange={(v) => setFilterTab(v as FilterTab)}>
                 <TabsList className="w-full h-8 bg-muted/50">
