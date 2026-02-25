@@ -1,106 +1,175 @@
 
 
-## Plan: WhatsApp Shared Inbox Tables (Periskope-style)
+## Plan: Enhanced Indian Slab Interest Calculation with Jumping Rates & Penal Interest
 
-### Context
+### Current State
 
-Your project **already has** the following tables that cover the first two requirements:
-- **`customers`** -- Full KYC, phone number, branch/client scoping
-- **`loans`** + **`gold_items`** -- Loan ID, principal, interest rate, weights, status
+Your system already has a robust dual-rate interest engine in `src/lib/interestCalculations.ts` that handles:
+- Shown rate vs effective rate (e.g., 18% shown, 30% effective)
+- Advance interest deduction at loan creation
+- Billable days logic (excluding advance interest period)
+- Penalty rate (flat, applied after grace period)
+- Rebate schedule for early closure
 
-So **no new tables are needed** for customers or gold pledges. We only need to create the two WhatsApp shared inbox tables.
+The `schemes` table stores a single `interest_rate`, `shown_rate`, `effective_rate`, and `penalty_rate` per scheme -- no slab/tier support.
 
----
+### What Is Missing
 
-### New Tables
+Indian pawnbroker "slab interest" means the rate **changes** based on how long the loan has been outstanding (e.g., 1.5%/month for first 3 months, then jumps to 2%/month). Your current system uses a flat rate for the entire duration. Two enhancements are needed:
 
-#### 1. `whatsapp_chats`
+1. **Interest Rate Slabs** -- Time-based rate tiers per scheme (e.g., 0-90 days at 18% p.a., 91-180 days at 24% p.a., 181+ days at 30% p.a.)
+2. **Retroactive vs Prospective application** -- Some NBFCs apply the higher slab retroactively from day 1; others apply it only going forward from the slab boundary
 
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID PK | |
-| `client_id` | UUID FK → clients | Multi-tenant isolation |
-| `customer_id` | UUID FK → customers | Linked customer |
-| `customer_phone` | VARCHAR NOT NULL | WhatsApp number (E.164) |
-| `status` | VARCHAR DEFAULT 'open' | `open`, `resolved`, `bot_handled` |
-| `assigned_to` | UUID FK → profiles(user_id) | Staff agent handling chat |
-| `last_message_at` | TIMESTAMPTZ | For sorting inbox |
-| `last_message_preview` | TEXT | Snippet for inbox list |
-| `unread_count` | INT DEFAULT 0 | Unread messages for agent |
-| `tags` | TEXT[] | Labels like "overdue", "payment" |
-| `created_at` / `updated_at` | TIMESTAMPTZ | |
+### Architecture
 
-Unique constraint on `(client_id, customer_phone)` -- one chat per customer per tenant.
-
-#### 2. `whatsapp_messages`
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | UUID PK | |
-| `chat_id` | UUID FK → whatsapp_chats | Parent chat |
-| `client_id` | UUID FK → clients | Denormalized for RLS |
-| `sender_type` | VARCHAR NOT NULL | `customer`, `bot`, `human` |
-| `sender_id` | UUID NULL | Staff user_id if `human` |
-| `message_text` | TEXT | |
-| `message_type` | VARCHAR DEFAULT 'text' | `text`, `image`, `document`, `template` |
-| `media_url` | TEXT NULL | Attachment URL |
-| `provider_message_id` | VARCHAR NULL | MSG91/WhatsApp message ID |
-| `delivery_status` | VARCHAR DEFAULT 'sent' | `sent`, `delivered`, `read`, `failed` |
-| `is_outbound` | BOOLEAN DEFAULT false | true = sent by staff/bot |
-| `created_at` | TIMESTAMPTZ | |
-
-Index on `(chat_id, created_at)` for message history queries.
-
----
-
-### RLS Policies
-
-Both tables use the existing `get_user_client_id()` security definer function for tenant isolation:
-
-```sql
--- whatsapp_chats: Staff can only see their tenant's chats
-CREATE POLICY "tenant_isolation" ON whatsapp_chats
-  FOR ALL TO authenticated
-  USING (client_id = get_user_client_id(auth.uid()));
-
--- whatsapp_messages: Staff can only see their tenant's messages  
-CREATE POLICY "tenant_isolation" ON whatsapp_messages
-  FOR ALL TO authenticated
-  USING (client_id = get_user_client_id(auth.uid()));
+```text
+schemes table
+  └── interest_rate_slabs (JSONB)
+        ├── { from_day: 0,  to_day: 90,  rate: 18 }
+        ├── { from_day: 91, to_day: 180, rate: 24 }
+        └── { from_day: 181, to_day: null, rate: 30 }
+        + slab_mode: "prospective" | "retroactive"
 ```
 
 ---
 
-### Realtime
+### Step 1: Database -- Add slab columns to `schemes`
 
-Enable realtime on both tables so the shared inbox updates live when new messages arrive:
+Add two new columns to the `schemes` table:
 
 ```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_chats;
-ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_messages;
+ALTER TABLE schemes
+  ADD COLUMN IF NOT EXISTS interest_rate_slabs JSONB DEFAULT '[]',
+  ADD COLUMN IF NOT EXISTS slab_mode VARCHAR DEFAULT 'prospective'
+    CHECK (slab_mode IN ('prospective', 'retroactive'));
+```
+
+`interest_rate_slabs` stores an array of `{ from_day, to_day, shown_rate, effective_rate }` objects. When empty, the existing flat `shown_rate`/`effective_rate` is used (backward compatible).
+
+---
+
+### Step 2: New utility function -- `calculateSlabInterest()`
+
+Add to `src/lib/interestCalculations.ts`:
+
+```typescript
+interface InterestRateSlab {
+  from_day: number;
+  to_day: number | null; // null = open-ended
+  shown_rate: number;    // annual %
+  effective_rate: number; // annual %
+}
+
+function calculateSlabInterest(
+  principal: number,
+  disbursementDate: Date,
+  currentDate: Date,
+  slabs: InterestRateSlab[],
+  slabMode: 'prospective' | 'retroactive',
+  advanceInterestDays: number = 30
+): { shownInterest: number; actualInterest: number; differential: number; totalDays: number; billableDays: number; slabBreakdown: SlabBreakdownEntry[] }
+```
+
+**Prospective mode**: Interest is calculated segment-by-segment. Days 0-90 at slab 1 rate, days 91-180 at slab 2 rate, etc. Each segment contributes independently.
+
+**Retroactive mode**: The highest applicable slab rate is applied to ALL days from day 1. If the loan crosses 90 days, the 91-180 slab rate applies to the entire duration.
+
+The function returns a `slabBreakdown` array showing each slab's contribution for transparency in receipts.
+
+---
+
+### Step 3: Update `calculateDualRateInterest()` to use slabs
+
+Modify the existing function to accept an optional `slabs` parameter. If slabs are present (non-empty array), delegate to `calculateSlabInterest()`. Otherwise, use the current flat-rate logic. This ensures zero breaking changes.
+
+```typescript
+export function calculateDualRateInterest(
+  actualPrincipal: number,
+  scheme: Scheme & { interest_rate_slabs?: InterestRateSlab[]; slab_mode?: string },
+  days: number,
+  gracePeriodDays?: number,
+  advanceInterestDays?: number
+): DualRateInterest {
+  // If scheme has slabs, use slab calculation
+  if (scheme.interest_rate_slabs?.length) {
+    return calculateSlabInterest(...);
+  }
+  // Otherwise, existing flat-rate logic (unchanged)
+  ...
+}
 ```
 
 ---
 
-### What This Does NOT Include (Future Phases)
+### Step 4: Update `Scheme` interface
 
-- **Inbox UI page** -- React component for the shared inbox view (chat list + message thread)
-- **Webhook endpoint** -- Edge function to receive incoming WhatsApp messages from MSG91
-- **Bot routing logic** -- Auto-reply rules before escalating to human agent
-- **Assignment logic** -- Round-robin or manual agent assignment
+Extend the TypeScript interface in `interestCalculations.ts`:
 
-These can be built incrementally once the schema is in place.
+```typescript
+export interface Scheme {
+  // ... existing fields ...
+  interest_rate_slabs?: InterestRateSlab[];
+  slab_mode?: 'prospective' | 'retroactive';
+}
+```
 
 ---
 
-### Files to Create/Modify
+### Step 5: Scheme Settings UI -- Slab Editor
 
-| File | Change |
+Update the Schemes page (`src/pages/Schemes.tsx`) to add a slab configuration section when creating/editing a scheme:
+
+- Toggle: "Use rate slabs" (checkbox)
+- When enabled, show a table to add slab rows: From Day, To Day, Shown Rate, Effective Rate
+- Radio: Prospective / Retroactive application mode
+- Validation: slabs must be contiguous (no gaps), last slab must have `to_day = null`
+
+---
+
+### Step 6: Update downstream consumers
+
+These pages/components read from `calculateDualRateInterest` and will automatically benefit once the function is updated:
+
+| Consumer | Change Needed |
+|----------|---------------|
+| `src/pages/Interest.tsx` | Pass slabs from scheme to calculation -- minimal change |
+| `src/pages/Redemption.tsx` | Same -- pass slabs through |
+| `src/pages/Reloan.tsx` | Same |
+| `src/pages/SaleRepurchase.tsx` | Same |
+| `src/components/customer-portal/CustomerInterestDue.tsx` | Same |
+| Interest receipts / PDFs | Add optional slab breakdown display |
+
+---
+
+### Step 7: Penal interest enhancement
+
+The current `penalty_rate` is a single flat rate. Enhance to support tiered penalties:
+
+```sql
+ALTER TABLE schemes
+  ADD COLUMN IF NOT EXISTS penalty_slabs JSONB DEFAULT '[]';
+-- e.g., [{ from_day: 0, to_day: 30, rate: 2 }, { from_day: 31, to_day: null, rate: 3 }]
+```
+
+Update penalty calculation in `calculateDualRateInterest()` to use `penalty_slabs` when present, falling back to flat `penalty_rate`.
+
+---
+
+### Files Summary
+
+| File | Action |
 |------|--------|
-| Database Migration | Create `whatsapp_chats` and `whatsapp_messages` tables with FKs, RLS, indexes, realtime |
-| `src/integrations/supabase/types.ts` | Auto-updated after migration |
+| Database migration | Add `interest_rate_slabs`, `slab_mode`, `penalty_slabs` to `schemes` |
+| `src/lib/interestCalculations.ts` | Add `calculateSlabInterest()`, update `Scheme` interface, modify `calculateDualRateInterest()` |
+| `src/pages/Schemes.tsx` | Add slab editor UI in scheme form |
+| `src/pages/Interest.tsx` | Pass slab data from scheme to calculator |
+| `src/pages/Redemption.tsx` | Same |
+| `src/pages/Reloan.tsx` | Same |
+| `src/pages/SaleRepurchase.tsx` | Same |
 
 ### No Breaking Changes
 
-Additive schema only. No existing tables or code are modified.
+- Empty `interest_rate_slabs` array = flat rate (current behavior)
+- All existing loans and schemes continue to work identically
+- Slab logic only activates when a scheme explicitly configures slabs
 
