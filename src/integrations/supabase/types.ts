@@ -3799,6 +3799,140 @@ export type Database = {
           },
         ]
       }
+      whatsapp_chats: {
+        Row: {
+          assigned_to: string | null
+          client_id: string
+          created_at: string
+          customer_id: string | null
+          customer_phone: string
+          id: string
+          last_message_at: string | null
+          last_message_preview: string | null
+          status: string
+          tags: string[] | null
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          client_id: string
+          created_at?: string
+          customer_id?: string | null
+          customer_phone: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          tags?: string[] | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          client_id?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_phone?: string
+          id?: string
+          last_message_at?: string | null
+          last_message_preview?: string | null
+          status?: string
+          tags?: string[] | null
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_chats_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "whatsapp_chats_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_chats_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          chat_id: string
+          client_id: string
+          created_at: string
+          delivery_status: string
+          id: string
+          is_outbound: boolean
+          media_url: string | null
+          message_text: string | null
+          message_type: string
+          provider_message_id: string | null
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          chat_id: string
+          client_id: string
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          is_outbound?: boolean
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string
+          provider_message_id?: string | null
+          sender_id?: string | null
+          sender_type: string
+        }
+        Update: {
+          chat_id?: string
+          client_id?: string
+          created_at?: string
+          delivery_status?: string
+          id?: string
+          is_outbound?: boolean
+          media_url?: string | null
+          message_text?: string | null
+          message_type?: string
+          provider_message_id?: string | null
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       v_unbalanced_vouchers: {
