@@ -51,6 +51,7 @@ import AuditLogs from "./pages/AuditLogs";
 import ActivityLog from "./pages/ActivityLog";
 import PlaceholderPage from "./pages/placeholder/PlaceholderPage";
 import NotificationLogs from "./pages/NotificationLogs";
+import WhatsAppInbox from "./pages/WhatsAppInbox";
 import NotFound from "./pages/NotFound";
 
 // Customer Portal
@@ -128,7 +129,7 @@ const App = () => (
             <Route path="/backfill-vouchers" element={<ProtectedRoute requiredFeature="accounting"><BackfillVouchers /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
             <Route path="/notification-logs" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
-            <Route path="/whatsapp" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
+            <Route path="/whatsapp" element={<ProtectedRoute requiredFeature="notifications"><WhatsAppInbox /></ProtectedRoute>} />
             <Route path="/sms" element={<ProtectedRoute requiredFeature="notifications"><NotificationLogs /></ProtectedRoute>} />
             <Route path="/approvals" element={<ProtectedRoute requiredFeature="approvals"><Approvals /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
