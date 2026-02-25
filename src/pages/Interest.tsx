@@ -155,7 +155,7 @@ export default function Interest() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days),
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days, interest_rate_slabs, slab_mode, penalty_slabs),
           scheme_version:scheme_versions(id, scheme_name:id, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
         `)
         .eq('client_id', client.id)
@@ -234,7 +234,10 @@ export default function Interest() {
         minimum_days: loan.scheme.minimum_days || 30,
         penalty_rate: loan.scheme.penalty_rate || 2,
         grace_period_days: loan.scheme.grace_period_days || 7,
-        advance_interest_months: 1, // Default 1 month = 30 days advance interest
+        advance_interest_months: 1,
+        interest_rate_slabs: (loan.scheme as any).interest_rate_slabs || [],
+        slab_mode: (loan.scheme as any).slab_mode || 'prospective',
+        penalty_slabs: (loan.scheme as any).penalty_slabs || [],
       };
 
       // Calculate advance interest days from scheme (default 30 days = 1 month)

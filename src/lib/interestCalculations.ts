@@ -2,6 +2,29 @@
 // 18% shown rate to customer, 24-36% effective rate internally
 // Differential is added to principal at creation, debited as part payment when interest is paid
 
+export interface InterestRateSlab {
+  from_day: number;
+  to_day: number | null; // null = open-ended (last slab)
+  shown_rate: number;    // annual %
+  effective_rate: number; // annual %
+}
+
+export interface PenaltySlab {
+  from_day: number;
+  to_day: number | null;
+  rate: number; // monthly %
+}
+
+export interface SlabBreakdownEntry {
+  fromDay: number;
+  toDay: number;
+  days: number;
+  shownRate: number;
+  effectiveRate: number;
+  shownInterest: number;
+  actualInterest: number;
+}
+
 export interface Scheme {
   id: string;
   scheme_name: string;
@@ -11,6 +34,9 @@ export interface Scheme {
   advance_interest_months: number;
   penalty_rate?: number;
   grace_period_days?: number;
+  interest_rate_slabs?: InterestRateSlab[];
+  slab_mode?: 'prospective' | 'retroactive';
+  penalty_slabs?: PenaltySlab[];
 }
 
 export interface Loan {
@@ -301,34 +327,168 @@ export function calculateAdvanceInterest(
  * IMPORTANT: Advance interest for first 30 days (or advance_interest_months * 30) 
  * is already deducted at loan creation. So we only charge for days BEYOND that period.
  */
+/**
+ * Calculate slab-based interest for a given number of billable days.
+ * Prospective: each slab's rate applies only to its own day range.
+ * Retroactive: the highest reached slab rate applies to ALL days.
+ */
+export function calculateSlabInterest(
+  principal: number,
+  billableDays: number,
+  slabs: InterestRateSlab[],
+  slabMode: 'prospective' | 'retroactive'
+): { shownInterest: number; actualInterest: number; differential: number; slabBreakdown: SlabBreakdownEntry[] } {
+  if (billableDays <= 0 || slabs.length === 0) {
+    return { shownInterest: 0, actualInterest: 0, differential: 0, slabBreakdown: [] };
+  }
+
+  // Sort slabs by from_day ascending
+  const sorted = [...slabs].sort((a, b) => a.from_day - b.from_day);
+
+  if (slabMode === 'retroactive') {
+    // Find the highest slab the loan has reached
+    let applicableSlab = sorted[0];
+    for (const slab of sorted) {
+      if (billableDays >= slab.from_day) {
+        applicableSlab = slab;
+      }
+    }
+    // Apply that single rate to all billable days
+    const shownInterest = calculateInterest(principal, applicableSlab.shown_rate, billableDays);
+    const actualInterest = calculateInterest(principal, applicableSlab.effective_rate, billableDays);
+    return {
+      shownInterest,
+      actualInterest,
+      differential: actualInterest - shownInterest,
+      slabBreakdown: [{
+        fromDay: 0,
+        toDay: billableDays,
+        days: billableDays,
+        shownRate: applicableSlab.shown_rate,
+        effectiveRate: applicableSlab.effective_rate,
+        shownInterest,
+        actualInterest,
+      }],
+    };
+  }
+
+  // Prospective: calculate segment-by-segment
+  let totalShown = 0;
+  let totalActual = 0;
+  const breakdown: SlabBreakdownEntry[] = [];
+
+  for (const slab of sorted) {
+    const slabEnd = slab.to_day != null ? slab.to_day : Infinity;
+    if (billableDays <= slab.from_day) break;
+
+    const segStart = slab.from_day;
+    const segEnd = Math.min(billableDays, slabEnd);
+    const segDays = segEnd - segStart;
+
+    if (segDays <= 0) continue;
+
+    const shown = calculateInterest(principal, slab.shown_rate, segDays);
+    const actual = calculateInterest(principal, slab.effective_rate, segDays);
+    totalShown += shown;
+    totalActual += actual;
+
+    breakdown.push({
+      fromDay: segStart,
+      toDay: segEnd,
+      days: segDays,
+      shownRate: slab.shown_rate,
+      effectiveRate: slab.effective_rate,
+      shownInterest: shown,
+      actualInterest: actual,
+    });
+  }
+
+  return {
+    shownInterest: totalShown,
+    actualInterest: totalActual,
+    differential: totalActual - totalShown,
+    slabBreakdown: breakdown,
+  };
+}
+
+/**
+ * Calculate penalty using tiered penalty slabs.
+ * Each slab specifies a monthly penalty rate for a day range of overdue days.
+ */
+export function calculateSlabPenalty(
+  principal: number,
+  overdueDays: number,
+  penaltySlabs: PenaltySlab[]
+): number {
+  if (overdueDays <= 0 || penaltySlabs.length === 0) return 0;
+
+  const sorted = [...penaltySlabs].sort((a, b) => a.from_day - b.from_day);
+  let totalPenalty = 0;
+
+  for (const slab of sorted) {
+    const slabEnd = slab.to_day != null ? slab.to_day : Infinity;
+    if (overdueDays <= slab.from_day) break;
+
+    const segStart = slab.from_day;
+    const segEnd = Math.min(overdueDays, slabEnd);
+    const segDays = segEnd - segStart;
+    if (segDays <= 0) continue;
+
+    // rate is monthly %, convert to annual for calculateInterest
+    totalPenalty += calculateInterest(principal, slab.rate * 12, segDays);
+  }
+
+  return totalPenalty;
+}
+
 export function calculateDualRateInterest(
   actualPrincipal: number,
   scheme: Scheme,
   days: number,
   gracePeriodDays: number = 7,
-  advanceInterestDays: number = 30  // Days already covered by advance interest deducted at creation
+  advanceInterestDays: number = 30
 ): DualRateInterest {
   // Exclude advance interest days from billable period
-  // Customer already paid for first 30 days (or advance_interest_months * 30) at loan creation
   const billableDays = Math.max(0, days - advanceInterestDays);
-  
-  // Calculate on actual principal for BILLABLE days only
-  const shownInterest = calculateInterest(actualPrincipal, scheme.shown_rate, billableDays);
-  const actualInterest = calculateInterest(actualPrincipal, scheme.effective_rate, billableDays);
-  const differential = actualInterest - shownInterest;
-  
-  // Penalty if overdue (beyond grace period after 30 days from when billing starts)
-  // Grace period starts after the first billing cycle (30 days after advance period ends)
+
+  let shownInterest: number;
+  let actualInterest: number;
+  let differential: number;
+  let slabBreakdown: SlabBreakdownEntry[] | undefined;
+
+  // Use slab calculation if slabs are configured
+  if (scheme.interest_rate_slabs && scheme.interest_rate_slabs.length > 0) {
+    const slabResult = calculateSlabInterest(
+      actualPrincipal,
+      billableDays,
+      scheme.interest_rate_slabs,
+      scheme.slab_mode || 'prospective'
+    );
+    shownInterest = slabResult.shownInterest;
+    actualInterest = slabResult.actualInterest;
+    differential = slabResult.differential;
+    slabBreakdown = slabResult.slabBreakdown;
+  } else {
+    // Flat-rate logic (existing behavior)
+    shownInterest = calculateInterest(actualPrincipal, scheme.shown_rate, billableDays);
+    actualInterest = calculateInterest(actualPrincipal, scheme.effective_rate, billableDays);
+    differential = actualInterest - shownInterest;
+  }
+
+  // Penalty calculation
   let penalty = 0;
   const overdueDays = Math.max(0, billableDays - 30 - gracePeriodDays);
-  if (overdueDays > 0 && scheme.penalty_rate) {
-    penalty = calculateInterest(actualPrincipal, scheme.penalty_rate * 12, overdueDays);
+
+  if (overdueDays > 0) {
+    if (scheme.penalty_slabs && scheme.penalty_slabs.length > 0) {
+      penalty = calculateSlabPenalty(actualPrincipal, overdueDays, scheme.penalty_slabs);
+    } else if (scheme.penalty_rate) {
+      penalty = calculateInterest(actualPrincipal, scheme.penalty_rate * 12, overdueDays);
+    }
   }
-  
-  // Customer pays: shown interest + differential (as part payment) + penalty
-  // On receipt: Interest (18%) + Part Payment (differential) + Penalty
+
   const totalDue = shownInterest + differential + penalty;
-  
+
   return {
     shownInterest: Math.round(shownInterest),
     actualInterest: Math.round(actualInterest),
@@ -336,7 +496,7 @@ export function calculateDualRateInterest(
     penalty: Math.round(penalty),
     totalDue: Math.round(totalDue),
     days,
-    billableDays,  // Days actually charged (for display/transparency)
+    billableDays,
   };
 }
 

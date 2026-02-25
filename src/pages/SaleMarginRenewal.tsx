@@ -153,7 +153,7 @@ export default function SaleMarginRenewal() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days, interest_rate_slabs, slab_mode, penalty_slabs)
         `)
         .eq('client_id', client.id)
         .eq('transaction_type', 'sale_agreement')
@@ -204,7 +204,10 @@ export default function SaleMarginRenewal() {
         minimum_days: agreement.scheme.minimum_days || 30,
         penalty_rate: agreement.scheme.penalty_rate || 2,
         grace_period_days: agreement.scheme.grace_period_days || 7,
-        advance_interest_months: 1, // Default 1 month = 30 days advance margin
+        advance_interest_months: 1,
+        interest_rate_slabs: (agreement.scheme as any).interest_rate_slabs || [],
+        slab_mode: (agreement.scheme as any).slab_mode || 'prospective',
+        penalty_slabs: (agreement.scheme as any).penalty_slabs || [],
       };
 
       // Calculate advance margin days from scheme (default 30 days = 1 month)

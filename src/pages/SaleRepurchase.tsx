@@ -227,7 +227,7 @@ export default function SaleRepurchase() {
         .select(`
           *,
           customer:customers(id, customer_code, full_name, phone),
-          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days)
+          scheme:schemes(id, scheme_code, scheme_name, interest_rate, shown_rate, effective_rate, minimum_days, penalty_rate, grace_period_days, interest_rate_slabs, slab_mode, penalty_slabs)
         `)
         .eq('client_id', client.id)
         .eq('status', 'active')
@@ -282,9 +282,12 @@ export default function SaleRepurchase() {
       shown_rate: selectedAgreement.scheme.shown_rate || 18,
       effective_rate: selectedAgreement.scheme.effective_rate || selectedAgreement.scheme.interest_rate * 12,
       minimum_days: selectedAgreement.scheme.minimum_days || 30,
-      advance_interest_months: 1, // Default 1 month = 30 days advance margin
+      advance_interest_months: 1,
       penalty_rate: selectedAgreement.scheme.penalty_rate || 2,
       grace_period_days: selectedAgreement.scheme.grace_period_days || 7,
+      interest_rate_slabs: (selectedAgreement.scheme as any).interest_rate_slabs || [],
+      slab_mode: (selectedAgreement.scheme as any).slab_mode || 'prospective',
+      penalty_slabs: (selectedAgreement.scheme as any).penalty_slabs || [],
     };
 
     const lastPaidDate = selectedAgreement.last_interest_paid_date || selectedAgreement.loan_date;

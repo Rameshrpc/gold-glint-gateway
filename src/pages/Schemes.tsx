@@ -10,10 +10,13 @@ import { ResponsiveTable } from '@/components/ui/responsive-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, Edit, Trash2, Percent, Calendar, IndianRupee } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Plus, Settings, Edit, Trash2, Percent, Calendar, IndianRupee, Layers } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import type { InterestRateSlab, PenaltySlab } from '@/lib/interestCalculations';
 
 interface Scheme {
   id: string;
@@ -39,6 +42,9 @@ interface Scheme {
   grace_period_days: number | null;
   is_active: boolean;
   created_at: string;
+  interest_rate_slabs?: InterestRateSlab[];
+  slab_mode?: string;
+  penalty_slabs?: PenaltySlab[];
 }
 
 export default function Schemes() {
@@ -73,6 +79,15 @@ export default function Schemes() {
   const [gracePeriodDays, setGracePeriodDays] = useState('7');
   const [submitting, setSubmitting] = useState(false);
 
+  // Slab interest state
+  const [useSlabs, setUseSlabs] = useState(false);
+  const [slabMode, setSlabMode] = useState<'prospective' | 'retroactive'>('prospective');
+  const [interestSlabs, setInterestSlabs] = useState<InterestRateSlab[]>([]);
+
+  // Penalty slab state
+  const [usePenaltySlabs, setUsePenaltySlabs] = useState(false);
+  const [penaltySlabsList, setPenaltySlabsList] = useState<PenaltySlab[]>([]);
+
   const canManageSchemes = isPlatformAdmin() || hasRole('tenant_admin');
 
   useEffect(() => {
@@ -90,7 +105,12 @@ export default function Schemes() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSchemes(data || []);
+      setSchemes((data || []).map(d => ({
+        ...d,
+        interest_rate_slabs: (d.interest_rate_slabs as unknown as InterestRateSlab[]) || [],
+        slab_mode: (d.slab_mode as string) || 'prospective',
+        penalty_slabs: (d.penalty_slabs as unknown as PenaltySlab[]) || [],
+      })) as Scheme[]);
     } catch (error: any) {
       toast.error('Failed to fetch schemes');
     } finally {
@@ -120,6 +140,11 @@ export default function Schemes() {
     setPenaltyRate('2');
     setGracePeriodDays('7');
     setEditingScheme(null);
+    setUseSlabs(false);
+    setSlabMode('prospective');
+    setInterestSlabs([]);
+    setUsePenaltySlabs(false);
+    setPenaltySlabsList([]);
   };
 
   const openAddDialog = () => {
@@ -149,6 +174,14 @@ export default function Schemes() {
     setDocumentChargesPercentage(scheme.document_charges?.toString() || '0');
     setPenaltyRate(scheme.penalty_rate?.toString() || '2');
     setGracePeriodDays(scheme.grace_period_days?.toString() || '7');
+    // Slab fields
+    const slabs = scheme.interest_rate_slabs || [];
+    setUseSlabs(slabs.length > 0);
+    setSlabMode((scheme.slab_mode as 'prospective' | 'retroactive') || 'prospective');
+    setInterestSlabs(slabs);
+    const pSlabs = scheme.penalty_slabs || [];
+    setUsePenaltySlabs(pSlabs.length > 0);
+    setPenaltySlabsList(pSlabs);
     setDialogOpen(true);
   };
 
@@ -176,6 +209,9 @@ export default function Schemes() {
         document_charges: parseFloat(documentChargesPercentage) || null,
         penalty_rate: parseFloat(penaltyRate) || null,
         grace_period_days: parseInt(gracePeriodDays) || null,
+        interest_rate_slabs: JSON.parse(JSON.stringify(useSlabs ? interestSlabs : [])),
+        slab_mode: useSlabs ? slabMode : 'prospective',
+        penalty_slabs: JSON.parse(JSON.stringify(usePenaltySlabs ? penaltySlabsList : [])),
       };
 
       if (editingScheme) {
@@ -638,6 +674,100 @@ export default function Schemes() {
                         placeholder="e.g., 7"
                       />
                     </div>
+                  </div>
+
+                  {/* Interest Rate Slabs Configuration */}
+                  <div className="p-4 border rounded-lg bg-muted/30 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Layers className="h-4 w-4 text-primary" />
+                        <Label className="font-semibold">Interest Rate Slabs</Label>
+                      </div>
+                      <Switch checked={useSlabs} onCheckedChange={setUseSlabs} />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Enable time-based rate tiers (e.g., 18% for 0-90 days, 24% for 91-180 days)
+                    </p>
+
+                    {useSlabs && (
+                      <div className="space-y-3">
+                        <RadioGroup value={slabMode} onValueChange={(v) => setSlabMode(v as 'prospective' | 'retroactive')} className="flex gap-4">
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="prospective" id="prospective" />
+                            <Label htmlFor="prospective" className="text-sm font-normal">Prospective (each slab applies to its own period)</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="retroactive" id="retroactive" />
+                            <Label htmlFor="retroactive" className="text-sm font-normal">Retroactive (highest slab applies to all days)</Label>
+                          </div>
+                        </RadioGroup>
+
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-24">From Day</TableHead>
+                              <TableHead className="w-24">To Day</TableHead>
+                              <TableHead>Shown Rate (% p.a.)</TableHead>
+                              <TableHead>Effective Rate (% p.a.)</TableHead>
+                              <TableHead className="w-12"></TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {interestSlabs.map((slab, idx) => (
+                              <TableRow key={idx}>
+                                <TableCell>
+                                  <Input type="number" value={slab.from_day} onChange={(e) => {
+                                    const updated = [...interestSlabs];
+                                    updated[idx] = { ...slab, from_day: parseInt(e.target.value) || 0 };
+                                    setInterestSlabs(updated);
+                                  }} className="h-8" />
+                                </TableCell>
+                                <TableCell>
+                                  <Input type="number" value={slab.to_day ?? ''} placeholder="∞" onChange={(e) => {
+                                    const updated = [...interestSlabs];
+                                    updated[idx] = { ...slab, to_day: e.target.value ? parseInt(e.target.value) : null };
+                                    setInterestSlabs(updated);
+                                  }} className="h-8" />
+                                </TableCell>
+                                <TableCell>
+                                  <Input type="number" step="0.01" value={slab.shown_rate} onChange={(e) => {
+                                    const updated = [...interestSlabs];
+                                    updated[idx] = { ...slab, shown_rate: parseFloat(e.target.value) || 0 };
+                                    setInterestSlabs(updated);
+                                  }} className="h-8" />
+                                </TableCell>
+                                <TableCell>
+                                  <Input type="number" step="0.01" value={slab.effective_rate} onChange={(e) => {
+                                    const updated = [...interestSlabs];
+                                    updated[idx] = { ...slab, effective_rate: parseFloat(e.target.value) || 0 };
+                                    setInterestSlabs(updated);
+                                  }} className="h-8" />
+                                </TableCell>
+                                <TableCell>
+                                  <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                    setInterestSlabs(interestSlabs.filter((_, i) => i !== idx));
+                                  }}>
+                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        <Button type="button" variant="outline" size="sm" onClick={() => {
+                          const lastSlab = interestSlabs[interestSlabs.length - 1];
+                          const nextFrom = lastSlab ? (lastSlab.to_day ?? lastSlab.from_day + 90) : 0;
+                          setInterestSlabs([...interestSlabs, {
+                            from_day: nextFrom,
+                            to_day: null,
+                            shown_rate: parseFloat(shownRate) || 18,
+                            effective_rate: parseFloat(effectiveRate) || 24,
+                          }]);
+                        }}>
+                          <Plus className="h-3 w-3 mr-1" /> Add Slab
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-end gap-2 pt-4">
