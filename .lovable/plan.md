@@ -1,183 +1,106 @@
 
 
-## Plan: WhatsApp Business API Integration with Templates & Automated Reminders
+## Plan: WhatsApp Shared Inbox Tables (Periskope-style)
 
-### Overview
+### Context
 
-Build a complete WhatsApp notification system with two modes:
-1. **API mode** -- Automated server-side sending via MSG91 WhatsApp Business API for scheduled reminders
-2. **Manual mode** -- wa.me links for one-off messages from staff (current approach, enhanced)
+Your project **already has** the following tables that cover the first two requirements:
+- **`customers`** -- Full KYC, phone number, branch/client scoping
+- **`loans`** + **`gold_items`** -- Loan ID, principal, interest rate, weights, status
 
-Add WhatsApp/SMS send buttons to Loans, Interest, Redemption, and Auction pages, and build a backend function that automatically sends due-date reminders daily.
-
----
-
-### Architecture
-
-```text
-+------------------+      +-------------------+      +----------+
-|  Staff clicks    |----->| QuickSendDialog   |----->| wa.me    |
-|  WhatsApp button |      | (manual send)     |      | (browser)|
-+------------------+      +-------------------+      +----------+
-                                   |
-                                   v
-                           notification_logs (logged)
-
-+------------------+      +-------------------+      +----------+
-|  pg_cron daily   |----->| Edge Function:    |----->| MSG91    |
-|  at 9:00 AM      |      | send-reminders    |      | WhatsApp |
-+------------------+      +-------------------+      | API      |
-                                   |                  +----------+
-                                   v
-                           notification_logs (with delivery status)
-```
+So **no new tables are needed** for customers or gold pledges. We only need to create the two WhatsApp shared inbox tables.
 
 ---
 
-### Step 1: Add WhatsApp/SMS Send Buttons to Pages
+### New Tables
 
-Add the existing `SendButtons` component to customer rows on these pages:
+#### 1. `whatsapp_chats`
 
-| Page | Where | Template |
-|------|-------|----------|
-| `src/pages/Loans.tsx` | Loan list table -- actions column | `loan_disbursed` |
-| `src/pages/Interest.tsx` | Loan list & after payment success | `interest_reminder`, `payment_received` |
-| `src/pages/Redemption.tsx` | After redemption success | `redemption_complete` |
-| `src/pages/Auction.tsx` | Auction candidates list | `auction_notice` |
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `client_id` | UUID FK → clients | Multi-tenant isolation |
+| `customer_id` | UUID FK → customers | Linked customer |
+| `customer_phone` | VARCHAR NOT NULL | WhatsApp number (E.164) |
+| `status` | VARCHAR DEFAULT 'open' | `open`, `resolved`, `bot_handled` |
+| `assigned_to` | UUID FK → profiles(user_id) | Staff agent handling chat |
+| `last_message_at` | TIMESTAMPTZ | For sorting inbox |
+| `last_message_preview` | TEXT | Snippet for inbox list |
+| `unread_count` | INT DEFAULT 0 | Unread messages for agent |
+| `tags` | TEXT[] | Labels like "overdue", "payment" |
+| `created_at` / `updated_at` | TIMESTAMPTZ | |
 
-Each button opens the existing `QuickSendDialog` with the right template pre-filled.
+Unique constraint on `(client_id, customer_phone)` -- one chat per customer per tenant.
 
----
+#### 2. `whatsapp_messages`
 
-### Step 2: Template Management Settings Page
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID PK | |
+| `chat_id` | UUID FK → whatsapp_chats | Parent chat |
+| `client_id` | UUID FK → clients | Denormalized for RLS |
+| `sender_type` | VARCHAR NOT NULL | `customer`, `bot`, `human` |
+| `sender_id` | UUID NULL | Staff user_id if `human` |
+| `message_text` | TEXT | |
+| `message_type` | VARCHAR DEFAULT 'text' | `text`, `image`, `document`, `template` |
+| `media_url` | TEXT NULL | Attachment URL |
+| `provider_message_id` | VARCHAR NULL | MSG91/WhatsApp message ID |
+| `delivery_status` | VARCHAR DEFAULT 'sent' | `sent`, `delivered`, `read`, `failed` |
+| `is_outbound` | BOOLEAN DEFAULT false | true = sent by staff/bot |
+| `created_at` | TIMESTAMPTZ | |
 
-Create a new settings tab or section under Settings for managing notification templates.
-
-**New file:** `src/components/settings/NotificationTemplateSettings.tsx`
-
-Features:
-- List all templates from `notification_templates` table (already seeded per client)
-- Edit template content (both SMS and WhatsApp versions)
-- Toggle templates active/inactive
-- Preview with sample data
-- Add custom templates
-- Show template variables as chips (e.g., `{{customer_name}}`, `{{loan_number}}`)
-
-Integrate into `src/pages/Settings.tsx` as a new sidebar tab (only visible when `supports_notifications` is true).
-
----
-
-### Step 3: Notification Settings Panel
-
-**New file:** `src/components/settings/NotificationSettings.tsx`
-
-Uses existing `client_notification_settings` table to configure:
-- MSG91 Auth Key, Sender ID, DLT Entity ID (stored in DB, encrypted)
-- WhatsApp template namespace
-- Enable/disable SMS and WhatsApp channels
-- Daily/monthly SMS limits
-- Default send time for automated reminders
+Index on `(chat_id, created_at)` for message history queries.
 
 ---
 
-### Step 4: Edge Function for Automated Reminders
+### RLS Policies
 
-**New file:** `supabase/functions/send-reminders/index.ts`
-
-This edge function:
-1. Queries all active clients with `supports_notifications = true` and `whatsapp_enabled = true`
-2. For each client, finds loans where `next_interest_due_date` is 7 days, 3 days, or 1 day away
-3. Matches to the appropriate template (DUE_REMINDER_7D, DUE_REMINDER_3D, DUE_REMINDER_1D)
-4. Also finds overdue loans (past due date) for OVERDUE_NOTICE
-5. Sends via MSG91 WhatsApp API using the client's stored `msg91_auth_key`
-6. Logs each send to `notification_logs` with provider response and delivery status
-
-**Config:** Add to `supabase/config.toml`:
-```toml
-[functions.send-reminders]
-verify_jwt = false
-```
-
----
-
-### Step 5: Schedule the Cron Job
-
-Use `pg_cron` + `pg_net` to call the edge function daily at 9:00 AM IST:
+Both tables use the existing `get_user_client_id()` security definer function for tenant isolation:
 
 ```sql
-SELECT cron.schedule(
-  'daily-reminders',
-  '30 3 * * *',  -- 3:30 UTC = 9:00 AM IST
-  $$ SELECT net.http_post(...) $$
-);
+-- whatsapp_chats: Staff can only see their tenant's chats
+CREATE POLICY "tenant_isolation" ON whatsapp_chats
+  FOR ALL TO authenticated
+  USING (client_id = get_user_client_id(auth.uid()));
+
+-- whatsapp_messages: Staff can only see their tenant's messages  
+CREATE POLICY "tenant_isolation" ON whatsapp_messages
+  FOR ALL TO authenticated
+  USING (client_id = get_user_client_id(auth.uid()));
 ```
 
-This will be set up via the insert tool (not migration) since it contains project-specific URLs.
-
 ---
 
-### Step 6: Enhanced Notification Logs Page
+### Realtime
 
-Update `src/pages/NotificationLogs.tsx` to show:
-- Delivery status from API (sent, delivered, failed, read)
-- Provider message ID for tracking
-- Filter by template type
-- Resend failed messages button
-- Cost/credits tracking
-
----
-
-### Step 7: Database Changes
-
-**Migration -- add `whatsapp` channel support to templates:**
+Enable realtime on both tables so the shared inbox updates live when new messages arrive:
 
 ```sql
--- Add WhatsApp-specific template content column
-ALTER TABLE notification_templates 
-  ADD COLUMN IF NOT EXISTS template_content_whatsapp TEXT,
-  ADD COLUMN IF NOT EXISTS channel_type VARCHAR DEFAULT 'both' 
-    CHECK (channel_type IN ('sms', 'whatsapp', 'both'));
-
--- Seed WhatsApp versions of existing templates
-UPDATE notification_templates 
-SET template_content_whatsapp = CASE template_code
-  WHEN 'DUE_REMINDER_7D' THEN 'Dear *{{customer_name}}*,...(rich WhatsApp format)'
-  ...
-END
-WHERE template_content_whatsapp IS NULL;
+ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_chats;
+ALTER PUBLICATION supabase_realtime ADD TABLE whatsapp_messages;
 ```
 
 ---
 
-### Files Summary
+### What This Does NOT Include (Future Phases)
 
-| File | Action |
+- **Inbox UI page** -- React component for the shared inbox view (chat list + message thread)
+- **Webhook endpoint** -- Edge function to receive incoming WhatsApp messages from MSG91
+- **Bot routing logic** -- Auto-reply rules before escalating to human agent
+- **Assignment logic** -- Round-robin or manual agent assignment
+
+These can be built incrementally once the schema is in place.
+
+---
+
+### Files to Create/Modify
+
+| File | Change |
 |------|--------|
-| `src/pages/Loans.tsx` | Add SendButtons to loan table rows |
-| `src/pages/Interest.tsx` | Add SendButtons to loan list + post-payment |
-| `src/pages/Redemption.tsx` | Add SendButtons post-redemption |
-| `src/pages/Auction.tsx` | Add SendButtons to auction candidates |
-| `src/components/settings/NotificationTemplateSettings.tsx` | **New** -- Template CRUD UI |
-| `src/components/settings/NotificationSettings.tsx` | **New** -- MSG91 config + channel settings |
-| `src/pages/Settings.tsx` | Add notification tabs to settings sidebar |
-| `src/pages/NotificationLogs.tsx` | Enhance with delivery status, filters, resend |
-| `supabase/functions/send-reminders/index.ts` | **New** -- Automated daily reminder sender |
-| `supabase/config.toml` | Add send-reminders function config |
-| Database migration | Add WhatsApp template content column |
-| pg_cron setup | Schedule daily 9 AM IST reminder job |
-
----
-
-### Security
-
-- MSG91 auth keys stored in `client_notification_settings` table (per-tenant, RLS-protected)
-- Edge function validates caller via cron secret or admin JWT
-- Rate limiting via `daily_sms_limit` and `monthly_sms_limit` columns
-- All sends logged to `notification_logs` for audit trail
+| Database Migration | Create `whatsapp_chats` and `whatsapp_messages` tables with FKs, RLS, indexes, realtime |
+| `src/integrations/supabase/types.ts` | Auto-updated after migration |
 
 ### No Breaking Changes
 
-- Existing wa.me manual sending continues to work
-- SendButtons are additive UI -- no existing functionality removed
-- Templates already seeded via `initialize_notification_templates` function
+Additive schema only. No existing tables or code are modified.
 
