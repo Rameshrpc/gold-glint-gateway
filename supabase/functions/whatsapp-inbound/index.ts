@@ -12,8 +12,43 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phone, message_text, message_type, client_id, provider_message_id } =
-      await req.json();
+    const rawPayload = await req.json();
+
+    // Detect WAHA webhook format vs legacy format
+    let phone: string;
+    let message_text: string;
+    let message_type: string;
+    let client_id: string;
+    let provider_message_id: string | null;
+
+    if (rawPayload.event === "message" && rawPayload.payload) {
+      // ── WAHA webhook format ──
+      const payload = rawPayload.payload;
+      // WAHA sends from as "11111111111@c.us" — strip @c.us
+      phone = (payload.from || "").replace(/@c\.us$|@s\.whatsapp\.net$/, "");
+      message_text = payload.body || "";
+      message_type = payload.hasMedia ? "media" : "text";
+      provider_message_id = payload.id || null;
+
+      // client_id can be passed via WAHA session metadata or query param
+      client_id = rawPayload.metadata?.client_id || 
+                  new URL(req.url).searchParams.get("client_id") || "";
+
+      // Skip messages from self (outbound echoed back)
+      if (payload.fromMe) {
+        return new Response(
+          JSON.stringify({ success: true, skipped: "fromMe message" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // ── Legacy format (direct call) ──
+      phone = rawPayload.phone;
+      message_text = rawPayload.message_text;
+      message_type = rawPayload.message_type || "text";
+      client_id = rawPayload.client_id;
+      provider_message_id = rawPayload.provider_message_id || null;
+    }
 
     if (!phone || !message_text || !client_id) {
       return new Response(
@@ -74,30 +109,25 @@ Deno.serve(async (req) => {
       client_id,
       sender_type: "customer",
       message_text,
-      message_type: message_type || "text",
+      message_type,
       is_outbound: false,
       delivery_status: "delivered",
-      provider_message_id: provider_message_id || null,
+      provider_message_id,
     });
 
     if (msgError) throw msgError;
 
     // Update chat metadata
-    const { error: updateError } = await supabase
+    await supabase
       .from("whatsapp_chats")
       .update({
         last_message_at: new Date().toISOString(),
         last_message_preview: message_text.substring(0, 100),
-        unread_count: supabase.rpc ? undefined : 1, // fallback
       })
       .eq("id", chatId);
 
-    // Increment unread_count via raw SQL workaround
-    await supabase.rpc("increment_unread_count" as any, { p_chat_id: chatId }).catch(() => {
-      // If RPC doesn't exist, just set to 1 above
-    });
-
-    if (updateError) throw updateError;
+    // Increment unread_count
+    await supabase.rpc("increment_unread_count" as any, { p_chat_id: chatId }).catch(() => {});
 
     return new Response(
       JSON.stringify({ success: true, chat_id: chatId }),

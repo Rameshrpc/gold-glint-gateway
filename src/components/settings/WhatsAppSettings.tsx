@@ -7,16 +7,20 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, CheckCircle2, XCircle, Send, MessageSquare } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Send, MessageSquare, Copy, Check } from 'lucide-react';
 
 export function WhatsAppSettings() {
   const { client } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [makeWebhookUrl, setMakeWebhookUrl] = useState('');
-  const [wasenderApiKey, setWasenderApiKey] = useState('');
+  const [wahaApiUrl, setWahaApiUrl] = useState('');
+  const [wahaApiKey, setWahaApiKey] = useState('');
+  const [wahaSessionName, setWahaSessionName] = useState('default');
   const [connectionStatus, setConnectionStatus] = useState<'unknown' | 'connected' | 'disconnected'>('unknown');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
 
   useEffect(() => {
     if (client?.id) fetchSettings();
@@ -27,18 +31,17 @@ export function WhatsAppSettings() {
     try {
       const { data, error } = await supabase
         .from('client_notification_settings')
-        .select('make_webhook_url, wasender_api_key')
+        .select('waha_api_url, waha_api_key, waha_session_name')
         .eq('client_id', client!.id)
         .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
-        setMakeWebhookUrl((data as any).make_webhook_url || '');
-        setWasenderApiKey((data as any).wasender_api_key || '');
-        setConnectionStatus(
-          (data as any).make_webhook_url && (data as any).wasender_api_key ? 'connected' : 'disconnected'
-        );
+        setWahaApiUrl((data as any).waha_api_url || '');
+        setWahaApiKey((data as any).waha_api_key || '');
+        setWahaSessionName((data as any).waha_session_name || 'default');
+        setConnectionStatus((data as any).waha_api_url ? 'connected' : 'disconnected');
       }
     } catch (err) {
       console.error('Error fetching WhatsApp settings:', err);
@@ -55,14 +58,15 @@ export function WhatsAppSettings() {
         .from('client_notification_settings')
         .upsert({
           client_id: client.id,
-          make_webhook_url: makeWebhookUrl || null,
-          wasender_api_key: wasenderApiKey || null,
+          waha_api_url: wahaApiUrl || null,
+          waha_api_key: wahaApiKey || null,
+          waha_session_name: wahaSessionName || 'default',
         } as any, { onConflict: 'client_id' });
 
       if (error) throw error;
 
-      setConnectionStatus(makeWebhookUrl && wasenderApiKey ? 'connected' : 'disconnected');
-      toast({ title: 'Settings saved', description: 'WhatsApp configuration updated successfully.' });
+      setConnectionStatus(wahaApiUrl ? 'connected' : 'disconnected');
+      toast({ title: 'Settings saved', description: 'WAHA configuration updated successfully.' });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
@@ -71,30 +75,24 @@ export function WhatsAppSettings() {
   };
 
   const handleTestConnection = async () => {
-    if (!makeWebhookUrl) {
-      toast({ title: 'Missing webhook URL', description: 'Enter a Make.com webhook URL first.', variant: 'destructive' });
+    if (!wahaApiUrl) {
+      toast({ title: 'Missing WAHA URL', description: 'Enter your WAHA API URL first.', variant: 'destructive' });
       return;
     }
     setTesting(true);
     try {
-      const res = await fetch(makeWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          test: true,
-          client_id: client?.id,
-          message_text: 'Test connection from GLMS',
-          phone: '0000000000',
-          timestamp: new Date().toISOString(),
-        }),
-      });
+      const url = wahaApiUrl.replace(/\/+$/, '');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (wahaApiKey) headers['X-Api-Key'] = wahaApiKey;
+
+      const res = await fetch(`${url}/api/sessions/`, { method: 'GET', headers });
 
       if (res.ok) {
         setConnectionStatus('connected');
-        toast({ title: 'Connection successful', description: 'Make.com webhook responded successfully.' });
+        toast({ title: 'Connection successful', description: 'WAHA API is reachable and responding.' });
       } else {
         setConnectionStatus('disconnected');
-        toast({ title: 'Connection failed', description: `Webhook returned status ${res.status}`, variant: 'destructive' });
+        toast({ title: 'Connection failed', description: `WAHA returned status ${res.status}`, variant: 'destructive' });
       }
     } catch (err: any) {
       setConnectionStatus('disconnected');
@@ -103,6 +101,15 @@ export function WhatsAppSettings() {
       setTesting(false);
     }
   };
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const inboundUrl = `https://${projectId}.supabase.co/functions/v1/whatsapp-inbound?client_id=${client?.id || ''}`;
+  const statusUrl = `https://${projectId}.supabase.co/functions/v1/whatsapp-status-update`;
 
   if (loading) {
     return (
@@ -120,10 +127,10 @@ export function WhatsAppSettings() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                WhatsApp Integration
+                WhatsApp Integration (WAHA)
               </CardTitle>
               <CardDescription>
-                Connect WhatsApp via Wasender + Make.com for two-way messaging
+                Connect WhatsApp via WAHA (WhatsApp HTTP API) for two-way messaging
               </CardDescription>
             </div>
             <Badge
@@ -142,29 +149,42 @@ export function WhatsAppSettings() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="make-webhook">Make.com Webhook URL</Label>
+            <Label htmlFor="waha-url">WAHA API URL</Label>
             <Input
-              id="make-webhook"
-              placeholder="https://hook.eu2.make.com/..."
-              value={makeWebhookUrl}
-              onChange={(e) => setMakeWebhookUrl(e.target.value)}
+              id="waha-url"
+              placeholder="http://your-server:3000"
+              value={wahaApiUrl}
+              onChange={(e) => setWahaApiUrl(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              The webhook URL from your Make.com outbound scenario
+              The base URL of your self-hosted WAHA instance (e.g. http://localhost:3000)
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="wasender-key">Wasender API Key</Label>
+            <Label htmlFor="waha-key">WAHA API Key</Label>
             <Input
-              id="wasender-key"
+              id="waha-key"
               type="password"
-              placeholder="Enter your Wasender API key..."
-              value={wasenderApiKey}
-              onChange={(e) => setWasenderApiKey(e.target.value)}
+              placeholder="Enter your WAHA API key..."
+              value={wahaApiKey}
+              onChange={(e) => setWahaApiKey(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              Your Wasender API key — used by Make.com to send messages
+              Optional — set if you configured an API key on your WAHA server
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="waha-session">Session Name</Label>
+            <Input
+              id="waha-session"
+              placeholder="default"
+              value={wahaSessionName}
+              onChange={(e) => setWahaSessionName(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">
+              WAHA session name — use "default" unless you run multiple sessions
             </p>
           </div>
 
@@ -187,26 +207,65 @@ export function WhatsAppSettings() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Setup Instructions</CardTitle>
+          <CardTitle className="text-base">WAHA Webhook Setup</CardTitle>
+          <CardDescription>Configure these webhook URLs in your WAHA session to receive messages and delivery updates</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm text-muted-foreground">
+        <CardContent className="space-y-4 text-sm">
           <div>
-            <p className="font-medium text-foreground mb-1">1. Outbound (Send messages)</p>
-            <p>Create a Make.com scenario: Custom Webhook → HTTP POST to Wasender <code className="text-xs bg-muted px-1 rounded">/api/v1/send-text</code></p>
+            <p className="font-medium text-foreground mb-1">1. Inbound Messages (message event)</p>
+            <p className="text-muted-foreground mb-2">Set this URL as the webhook for the <code className="text-xs bg-muted px-1 rounded">message</code> event in your WAHA session config:</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-muted px-2 py-1.5 rounded break-all">
+                {inboundUrl}
+              </code>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(inboundUrl, 'inbound')}
+              >
+                {copiedField === 'inbound' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
+
           <div>
-            <p className="font-medium text-foreground mb-1">2. Inbound (Receive replies)</p>
-            <p>Create a Make.com scenario: Wasender Webhook → HTTP POST to your inbound endpoint</p>
-            <code className="block text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
-              {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-inbound`}
-            </code>
+            <p className="font-medium text-foreground mb-1">2. Delivery Status (message.ack event)</p>
+            <p className="text-muted-foreground mb-2">Set this URL as the webhook for the <code className="text-xs bg-muted px-1 rounded">message.ack</code> event:</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-muted px-2 py-1.5 rounded break-all">
+                {statusUrl}
+              </code>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => copyToClipboard(statusUrl, 'status')}
+              >
+                {copiedField === 'status' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
-          <div>
-            <p className="font-medium text-foreground mb-1">3. Delivery Status</p>
-            <p>Optionally forward delivery receipts to:</p>
-            <code className="block text-xs bg-muted px-2 py-1 rounded mt-1 break-all">
-              {`https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/whatsapp-status-update`}
-            </code>
+
+          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+            <p className="font-medium text-foreground mb-2">Example WAHA Session Config</p>
+            <pre className="text-xs text-muted-foreground whitespace-pre-wrap">{`POST /api/sessions/
+{
+  "name": "${wahaSessionName || 'default'}",
+  "config": {
+    "metadata": {
+      "client_id": "${client?.id || 'your-client-id'}"
+    },
+    "webhooks": [
+      {
+        "url": "${inboundUrl}",
+        "events": ["message"]
+      },
+      {
+        "url": "${statusUrl}",
+        "events": ["message.ack"]
+      }
+    ]
+  }
+}`}</pre>
           </div>
         </CardContent>
       </Card>
