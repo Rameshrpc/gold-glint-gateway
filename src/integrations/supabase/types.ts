@@ -1034,6 +1034,9 @@ export type Database = {
           sms_sent_this_month: number | null
           sms_sent_today: number | null
           updated_at: string | null
+          waha_api_key: string | null
+          waha_api_url: string | null
+          waha_session_name: string | null
           wasender_api_key: string | null
           whatsapp_enabled: boolean | null
           whatsapp_template_namespace: string | null
@@ -1055,6 +1058,9 @@ export type Database = {
           sms_sent_this_month?: number | null
           sms_sent_today?: number | null
           updated_at?: string | null
+          waha_api_key?: string | null
+          waha_api_url?: string | null
+          waha_session_name?: string | null
           wasender_api_key?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_template_namespace?: string | null
@@ -1076,6 +1082,9 @@ export type Database = {
           sms_sent_this_month?: number | null
           sms_sent_today?: number | null
           updated_at?: string | null
+          waha_api_key?: string | null
+          waha_api_url?: string | null
+          waha_session_name?: string | null
           wasender_api_key?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_template_namespace?: string | null

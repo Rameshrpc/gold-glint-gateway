@@ -370,7 +370,8 @@ export default function WhatsAppInbox() {
     setNewMessage('');
     setShowTemplates(false);
 
-    const { error } = await supabase.from('whatsapp_messages').insert({
+    // Insert message into DB first (optimistic)
+    const { data: insertedMsg, error } = await supabase.from('whatsapp_messages').insert({
       chat_id: selectedChatId,
       client_id: clientId,
       sender_type: 'human',
@@ -378,18 +379,41 @@ export default function WhatsAppInbox() {
       message_text: msgText,
       message_type: 'text',
       is_outbound: true,
-      delivery_status: 'sent',
-    });
+      delivery_status: 'pending',
+    }).select('id').single();
 
     if (error) {
       toast.error('Failed to send message');
       setNewMessage(msgText);
-    } else {
-      await supabase.from('whatsapp_chats').update({
-        last_message_at: new Date().toISOString(),
-        last_message_preview: msgText.slice(0, 100),
-      }).eq('id', selectedChatId);
+      setSending(false);
+      return;
     }
+
+    // Update chat metadata
+    await supabase.from('whatsapp_chats').update({
+      last_message_at: new Date().toISOString(),
+      last_message_preview: msgText.slice(0, 100),
+    }).eq('id', selectedChatId);
+
+    // Send via WAHA through edge function
+    const phone = selectedChat?.customer_phone;
+    if (phone && insertedMsg?.id) {
+      const { error: sendError } = await supabase.functions.invoke('whatsapp-send', {
+        body: {
+          message_id: insertedMsg.id,
+          chat_id: selectedChatId,
+          client_id: clientId,
+          phone,
+          message_text: msgText,
+        },
+      });
+
+      if (sendError) {
+        console.error('WAHA send error:', sendError);
+        toast.error('Message saved but failed to deliver via WhatsApp');
+      }
+    }
+
     setSending(false);
   };
 

@@ -6,27 +6,72 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Map WAHA ack values to our delivery_status
+function mapAckToStatus(ack: number): string | null {
+  switch (ack) {
+    case -1: return "failed";
+    case 0: return "pending";
+    case 1: return "sent";
+    case 2: return "delivered";
+    case 3: return "read";
+    case 4: return "read"; // played = read for our purposes
+    default: return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { provider_message_id, delivery_status, message_id } = await req.json();
+    const rawPayload = await req.json();
 
-    if (!delivery_status || (!provider_message_id && !message_id)) {
-      return new Response(
-        JSON.stringify({ error: "Missing provider_message_id/message_id and delivery_status" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    let delivery_status: string;
+    let provider_message_id: string | null = null;
+    let message_id: string | null = null;
 
-    const validStatuses = ["sent", "delivered", "read", "failed"];
-    if (!validStatuses.includes(delivery_status)) {
-      return new Response(
-        JSON.stringify({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (rawPayload.event === "message.ack" && rawPayload.payload) {
+      // ── WAHA webhook format ──
+      const payload = rawPayload.payload;
+      provider_message_id = payload.id || null;
+      const ack = typeof payload.ack === "number" ? payload.ack : null;
+      
+      if (ack === null || !provider_message_id) {
+        return new Response(
+          JSON.stringify({ error: "Missing ack or message id in WAHA payload" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const mapped = mapAckToStatus(ack);
+      if (!mapped) {
+        return new Response(
+          JSON.stringify({ error: `Unknown ack value: ${ack}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      delivery_status = mapped;
+    } else {
+      // ── Legacy format ──
+      delivery_status = rawPayload.delivery_status;
+      provider_message_id = rawPayload.provider_message_id || null;
+      message_id = rawPayload.message_id || null;
+
+      if (!delivery_status || (!provider_message_id && !message_id)) {
+        return new Response(
+          JSON.stringify({ error: "Missing provider_message_id/message_id and delivery_status" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const validStatuses = ["sent", "delivered", "read", "failed"];
+      if (!validStatuses.includes(delivery_status)) {
+        return new Response(
+          JSON.stringify({ error: `Invalid status. Must be one of: ${validStatuses.join(", ")}` }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     const supabase = createClient(
@@ -40,7 +85,7 @@ Deno.serve(async (req) => {
 
     if (message_id) {
       query = query.eq("id", message_id);
-    } else {
+    } else if (provider_message_id) {
       query = query.eq("provider_message_id", provider_message_id);
     }
 
